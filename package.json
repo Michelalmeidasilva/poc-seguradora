@@ -1,6 +1,7 @@
 {
   "name": "seguradora-services",
   "private": true,
+  "packageManager": "pnpm@10.29.1",
   "type": "module",
   "engines": {
     "node": ">=20"
