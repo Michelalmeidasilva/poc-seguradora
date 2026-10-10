@@ -350,6 +350,8 @@ Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem tra
 - Quando uma ferramenta nova passar a trabalhar no repositório, adiciona-se o apontador dela e atualiza-se esta lista, sem copiar as regras.
 - O `scripts/workboard-check.mjs` também verifica que cada apontador existe e menciona `AGENTS.md`.
 
+**Skill do repositório:** `.claude/skills/workboard-protocol/SKILL.md` empacota esta seção (protocolo do `WORKBOARD.md`, `CHECKLIST.md` e as regras de código da seção 14) como uma skill para o Claude. Ela é invocada antes de iniciar, continuar ou concluir qualquer tarefa no repositório. Os outros agentes seguem as mesmas regras pelo `AGENTS.md`. Em caso de divergência, o spec prevalece e a skill é corrigida.
+
 **Validação:** `scripts/workboard-check.mjs` (Node, sem dependências) falha com código ≠ 0 se:
 - o cabeçalho ou uma linha da tabela estiver mal formado;
 - `Status` ou `Dono` tiver valor fora dos permitidos;
