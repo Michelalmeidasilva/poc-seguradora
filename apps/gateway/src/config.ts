@@ -1,26 +1,35 @@
 import { err, ok, type Result } from '@seguradora/protocol';
 import { z } from 'zod';
 
-const flag = (fallback: 'true' | 'false') =>
-  z
-    .enum(['true', 'false'])
-    .default(fallback)
-    .transform((v) => v === 'true');
+/** An empty env string (`KEY=`) behaves like a missing key. */
+const blankAsMissing = (v: unknown) => (v === '' ? undefined : v);
+const optional = <T extends z.ZodTypeAny>(schema: T) => z.preprocess(blankAsMissing, schema);
 
-const int = (fallback: number, min = 0) => z.coerce.number().int().min(min).default(fallback);
+const flag = (fallback: 'true' | 'false') =>
+  optional(
+    z
+      .enum(['true', 'false'])
+      .default(fallback)
+      .transform((v) => v === 'true'),
+  );
+
+const int = (fallback: number, min = 0) =>
+  optional(z.coerce.number().int().min(min).default(fallback));
+
+const positive = (fallback: number) => optional(z.coerce.number().positive().default(fallback));
 
 export const ConfigSchema = z
   .object({
-    PORT: z.coerce.number().int().min(1).max(65535).default(8080),
-    HOST: z.string().min(1).default('0.0.0.0'),
-    LOG_LEVEL: z
-      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-      .default('info'),
+    PORT: optional(z.coerce.number().int().min(1).max(65535).default(8080)),
+    HOST: optional(z.string().min(1).default('0.0.0.0')),
+    LOG_LEVEL: optional(
+      z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+    ),
     CHATBOT_URL: z.string().url(),
     SESSION_SECRET: z.string().min(32),
     ALLOWED_ORIGIN: z.string().url(),
     COOKIE_SECURE: flag('true'),
-    COOKIE_SAME_SITE: z.enum(['none', 'lax', 'strict']).default('none'),
+    COOKIE_SAME_SITE: optional(z.enum(['none', 'lax', 'strict']).default('none')),
     // Number of trusted proxies in front of the gateway (0 = trust none; Cloud Run = 1).
     TRUST_PROXY_HOPS: int(0, 0),
     SESSION_TTL_SECONDS: int(43200, 60),
@@ -41,13 +50,20 @@ export const ConfigSchema = z
     BULKHEAD_MAX_QUEUE: int(50, 0),
     MAX_QUEUED_TURNS: int(5, 1),
     SESSION_RATE_CAPACITY: int(40, 1),
-    SESSION_RATE_PER_SECOND: z.coerce.number().positive().default(10),
+    SESSION_RATE_PER_SECOND: positive(10),
     IP_RATE_CAPACITY: int(120, 1),
-    IP_RATE_PER_SECOND: z.coerce.number().positive().default(30),
+    IP_RATE_PER_SECOND: positive(30),
     SESSION_CREATE_CAPACITY: int(5, 1),
-    SESSION_CREATE_PER_MINUTE: z.coerce.number().positive().default(5),
+    SESSION_CREATE_PER_MINUTE: positive(5),
   })
   .superRefine((c, ctx) => {
+    if (c.CHATBOT_RETRY_MAX_MS < c.CHATBOT_RETRY_BASE_MS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CHATBOT_RETRY_MAX_MS'],
+        message: 'CHATBOT_RETRY_MAX_MS must be >= CHATBOT_RETRY_BASE_MS',
+      });
+    }
     if (c.COOKIE_SAME_SITE === 'none' && !c.COOKIE_SECURE) {
       ctx.addIssue({
         code: 'custom',
