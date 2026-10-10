@@ -20,6 +20,7 @@ describe('loadConfig', () => {
     expect(r.value.SESSION_CREATE_CAPACITY).toBe(5);
     expect(r.value.SESSION_CREATE_PER_MINUTE).toBe(5);
     expect(r.value.UNUSED_SESSION_TTL_SECONDS).toBe(1800);
+    expect(r.value.MAX_QUEUED_TURNS).toBe(5);
     expect(r.value.BUFFER_CAPACITY).toBe(200);
     expect(r.value.HEARTBEAT_MS).toBe(15000);
     expect(r.value.CHATBOT_TURN_TIMEOUT_MS).toBe(60000);
@@ -60,6 +61,7 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...valid, COOKIE_SECURE: 'yes' }).ok).toBe(false);
     expect(loadConfig({ ...valid, TRUST_PROXY_HOPS: '-1' }).ok).toBe(false);
     expect(loadConfig({ ...valid, SESSION_CREATE_CAPACITY: '0' }).ok).toBe(false);
+    expect(loadConfig({ ...valid, MAX_QUEUED_TURNS: '0' }).ok).toBe(false);
     expect(loadConfig({ ...valid, PORT: '70000' }).ok).toBe(false);
   });
 });

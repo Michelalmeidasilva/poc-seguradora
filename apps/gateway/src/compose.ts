@@ -83,6 +83,7 @@ export async function createGateway(
     chatbot,
     sessionLimiter,
     ipLimiter,
+    maxQueuedTurns: config.MAX_QUEUED_TURNS,
     newId,
     now,
     logger,

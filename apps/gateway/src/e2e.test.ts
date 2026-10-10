@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { serializeChatbotLine } from '@seguradora/protocol';
 import pino from 'pino';
 import { createGateway, type Gateway } from './compose';
 import { clientText } from './test/fixtures';
-import { failWith, replyText, startFakeChatbot, type FakeChatbot } from './test/fake-chatbot';
+import {
+  failWith,
+  replyText,
+  startFakeChatbot,
+  textEvent,
+  type FakeChatbot,
+} from './test/fake-chatbot';
 import { testConfig } from './test/harness';
 import { openSse } from './test/sse-client';
 
@@ -144,6 +151,39 @@ describe('gateway end to end', () => {
     expect(resent[0].payload.messageId).toBe(event.id);
   });
 
+  it('answers two quick POSTs one turn at a time, in the order they were posted', async () => {
+    const { sessionId, cookie } = await login();
+    const conn = await stream(cookie);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    chatbot.setBehavior(async (req, res) => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      // The first turn is slower: without serialization its reply would come last.
+      await sleep(req.event.type === 'user.text' && req.event.payload.text === 'um' ? 150 : 10);
+      res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+      res.end(
+        serializeChatbotLine(
+          textEvent(req, `resposta a ${(req.event.payload as { text: string }).text}`),
+        ),
+      );
+      inFlight--;
+    });
+    const first = await send(cookie, clientText(1, sessionId, 'um'));
+    const second = await send(cookie, clientText(2, sessionId, 'dois'));
+    expect([first.status, second.status]).toEqual([202, 202]);
+    const events = (await conn.waitFor(4)).map((m) => JSON.parse(m.data ?? '{}'));
+    expect(events.map((e) => e.type)).toEqual([
+      'status.delivered',
+      'message.text',
+      'status.delivered',
+      'message.text',
+    ]);
+    expect(events[1].payload.text).toBe('resposta a um');
+    expect(events[3].payload.text).toBe('resposta a dois');
+    expect(maxInFlight).toBe(1);
+  });
+
   it('turns an invalid chatbot line into internal_error without crashing the gateway', async () => {
     const { sessionId, cookie } = await login();
     const conn = await stream(cookie);
@@ -155,6 +195,7 @@ describe('gateway end to end', () => {
     const messages = await conn.waitFor(2);
     const last = JSON.parse(messages[1]?.data ?? '{}');
     expect(last.payload.code).toBe('internal_error');
+    expect(last.payload.messageId).toBeUndefined();
     expect((await fetch(`${baseUrl}/health`)).status).toBe(200);
   });
 });

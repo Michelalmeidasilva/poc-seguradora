@@ -15,6 +15,8 @@ export class SessionState {
   private readonly buffer: EventBuffer;
   private readonly seen: IdempotencyCache;
   private readonly listeners = new Set<Listener>();
+  private turnTail: Promise<void> = Promise.resolve();
+  private pendingTurns = 0;
 
   constructor(
     readonly sessionId: string,
@@ -55,5 +57,20 @@ export class SessionState {
 
   forgetEvent(id: string): void {
     this.seen.forget(id);
+  }
+
+  /**
+   * Runs `task` after every previously queued task settled (FIFO, one at a time).
+   * `maxPending` caps running + waiting tasks; beyond it the task is NOT run and 'full' is returned.
+   * A rejecting task never breaks the chain.
+   */
+  enqueueTurn(task: () => Promise<void>, maxPending: number): 'queued' | 'full' {
+    if (this.pendingTurns >= maxPending) return 'full';
+    this.pendingTurns++;
+    const settle = (): void => {
+      this.pendingTurns--;
+    };
+    this.turnTail = this.turnTail.then(task).then(settle, settle);
+    return 'queued';
   }
 }

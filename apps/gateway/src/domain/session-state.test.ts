@@ -51,4 +51,66 @@ describe('SessionState', () => {
   it('exposes the session id', () => {
     expect(make().sessionId).toBe('s1');
   });
+
+  describe('enqueueTurn', () => {
+    const deferred = () => {
+      let resolve!: () => void;
+      let reject!: (e: unknown) => void;
+      const promise = new Promise<void>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    };
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+
+    it('runs tasks strictly one at a time in FIFO order', async () => {
+      const session = make();
+      const log: string[] = [];
+      const gates = [deferred(), deferred(), deferred()];
+      gates.forEach((gate, i) => {
+        const r = session.enqueueTurn(async () => {
+          log.push(`start ${i}`);
+          await gate.promise;
+          log.push(`end ${i}`);
+        }, 5);
+        expect(r).toBe('queued');
+      });
+      await tick();
+      expect(log).toEqual(['start 0']);
+      gates[0]?.resolve();
+      await tick();
+      expect(log).toEqual(['start 0', 'end 0', 'start 1']);
+      gates[1]?.resolve();
+      gates[2]?.resolve();
+      await tick();
+      expect(log).toEqual(['start 0', 'end 0', 'start 1', 'end 1', 'start 2', 'end 2']);
+    });
+
+    it('returns full without running the task when running plus waiting reaches the cap', async () => {
+      const session = make();
+      const gate = deferred();
+      const ran = vi.fn();
+      expect(session.enqueueTurn(() => gate.promise, 2)).toBe('queued');
+      expect(session.enqueueTurn(async () => ran('second'), 2)).toBe('queued');
+      expect(session.enqueueTurn(async () => ran('third'), 2)).toBe('full');
+      gate.resolve();
+      await tick();
+      expect(ran.mock.calls).toEqual([['second']]);
+      // Capacity is released as tasks settle.
+      expect(session.enqueueTurn(async () => ran('fourth'), 2)).toBe('queued');
+      await tick();
+      expect(ran.mock.calls).toEqual([['second'], ['fourth']]);
+    });
+
+    it('does not stall the queue when a task rejects', async () => {
+      const session = make();
+      const ran = vi.fn();
+      session.enqueueTurn(() => Promise.reject(new Error('boom')), 3);
+      session.enqueueTurn(async () => ran(), 3);
+      await tick();
+      expect(ran).toHaveBeenCalledTimes(1);
+      expect(session.enqueueTurn(async () => ran(), 1)).toBe('queued');
+    });
+  });
 });

@@ -17,13 +17,18 @@ export interface HandleClientEventDeps {
   chatbot: ChatbotPort;
   sessionLimiter: RateLimiter;
   ipLimiter: RateLimiter;
+  /** Max turns of one session running + waiting; beyond it events are rate limited. */
+  maxQueuedTurns: number;
   newId: IdGenerator;
   now: Clock;
   logger: Logger;
 }
 
 const UNAVAILABLE_MESSAGE = 'O atendimento está indisponível no momento. Tente novamente.';
-const INTERNAL_MESSAGE = 'Não foi possível processar a resposta do atendimento.';
+/** After delivery the id stays registered: do not promise a retry of the same message. */
+const INTERRUPTED_MESSAGE =
+  'A resposta foi interrompida. Envie sua mensagem novamente como uma nova mensagem.';
+const QUEUE_FULL_RETRY_MS = 1000;
 
 const describeError = (error: unknown): { name: string; message: string } =>
   error instanceof Error
@@ -44,17 +49,31 @@ export class HandleClientEvent {
       };
     }
 
+    // Idempotent and cheap: they must not occupy (or evict) real message ids.
+    if (event.type === 'user.ack') {
+      session.acknowledge(event.payload.lastSeq);
+      return { status: 'accepted', completion: Promise.resolve() };
+    }
+    if (event.type === 'user.typing') {
+      return { status: 'accepted', completion: Promise.resolve() };
+    }
+
     if (session.registerEvent(event.id) === 'duplicate') return { status: 'duplicate' };
 
-    switch (event.type) {
-      case 'user.ack':
-        session.acknowledge(event.payload.lastSeq);
-        return { status: 'accepted', completion: Promise.resolve() };
-      case 'user.typing':
-        return { status: 'accepted', completion: Promise.resolve() };
-      default:
-        return { status: 'accepted', completion: this.forward(session, event) };
+    // Turns of one session run one at a time, in arrival order.
+    let finish!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const queued = session.enqueueTurn(
+      () => this.forward(session, event).finally(finish),
+      this.d.maxQueuedTurns,
+    );
+    if (queued === 'full') {
+      session.forgetEvent(event.id);
+      return { status: 'rate_limited', retryAfterMs: QUEUE_FULL_RETRY_MS };
     }
+    return { status: 'accepted', completion };
   }
 
   private async forward(session: SessionState, event: ClientEvent): Promise<void> {
@@ -78,7 +97,7 @@ export class HandleClientEvent {
         // Nothing reached the chatbot: allow the client to resend the same id.
         session.forgetEvent(event.id);
         this.d.logger.warn({ ...log, err: describeError(error) }, 'chatbot unavailable');
-        this.publishError(session, event, 'upstream_unavailable', UNAVAILABLE_MESSAGE);
+        this.publishError(session, event, 'upstream_unavailable', UNAVAILABLE_MESSAGE, true);
         return;
       }
 
@@ -101,11 +120,9 @@ export class HandleClientEvent {
         }
       } catch (error) {
         this.d.logger.warn({ ...log, err: describeError(error) }, 'chatbot stream failed');
-        if (error instanceof ChatbotProtocolError) {
-          this.publishError(session, event, 'internal_error', INTERNAL_MESSAGE);
-        } else {
-          this.publishError(session, event, 'upstream_unavailable', UNAVAILABLE_MESSAGE);
-        }
+        const code =
+          error instanceof ChatbotProtocolError ? 'internal_error' : 'upstream_unavailable';
+        this.publishError(session, event, code, INTERRUPTED_MESSAGE, false);
       }
     } catch (error) {
       // Last resort so a completion promise never rejects unobserved.
@@ -131,11 +148,12 @@ export class HandleClientEvent {
     event: ClientEvent,
     code: ErrorCode,
     message: string,
+    retryable: boolean,
   ): void {
     session.publish({
       ...this.base(session, event.correlationId),
       type: 'error',
-      payload: { code, message, messageId: event.id },
+      payload: { code, message, ...(retryable ? { messageId: event.id } : {}) },
     });
   }
 }

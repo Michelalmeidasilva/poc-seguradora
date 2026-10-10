@@ -39,6 +39,7 @@ export const ConfigSchema = z
     BREAKER_RESET_MS: int(10000, 0),
     BULKHEAD_MAX_CONCURRENT: int(20, 1),
     BULKHEAD_MAX_QUEUE: int(50, 0),
+    MAX_QUEUED_TURNS: int(5, 1),
     SESSION_RATE_CAPACITY: int(40, 1),
     SESSION_RATE_PER_SECOND: z.coerce.number().positive().default(10),
     IP_RATE_CAPACITY: int(120, 1),
