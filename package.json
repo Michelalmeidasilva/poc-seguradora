@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.29.1",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "typecheck": "pnpm -r typecheck",

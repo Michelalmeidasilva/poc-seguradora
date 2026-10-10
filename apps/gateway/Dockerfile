@@ -11,6 +11,7 @@ RUN pnpm --filter @seguradora/gateway deploy --legacy --prod /out
 FROM node:22-slim
 ENV NODE_ENV=production
 WORKDIR /app
+RUN printf '{"type":"module"}' > package.json
 COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /repo/apps/gateway/dist ./dist
 USER node

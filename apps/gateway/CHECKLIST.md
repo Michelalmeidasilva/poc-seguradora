@@ -32,4 +32,4 @@
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
 - A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.
 - No encerramento (SIGTERM/SIGINT) turnos do chatbot ainda em andamento são interrompidos; o estado vive em memória e o cliente reenvia com o mesmo id (idempotência).
-- Dockerfile escrito mas não verificado (sem Docker no ambiente de desenvolvimento: o daemon não estava em execução).
+- Dockerfile: `pnpm deploy --legacy --prod` e o layout da imagem (node_modules + dist + package.json de tipo) foram verificados localmente sem Docker; `docker build` em si não foi executado (daemon indisponível).
