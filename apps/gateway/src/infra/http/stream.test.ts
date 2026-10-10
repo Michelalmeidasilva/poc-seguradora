@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { JoseTokenService } from '../jose-token-service';
 import { clientText, unsequencedText } from '../../test/fixtures';
 import { makeHarness } from '../../test/harness';
 import { openSse } from '../../test/sse-client';
@@ -8,6 +9,7 @@ let h: Harness;
 const opened: Array<{ close(): void }> = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const c of opened.splice(0)) c.close();
   await h.app.close();
 });
@@ -165,5 +167,32 @@ describe('GET /v1/stream', () => {
     await h.app.close();
     await conn.closed;
     h = await makeHarness();
+  });
+
+  it('does not leak a listener or heartbeat when the client aborts while the token is being verified', async () => {
+    h = await makeHarness();
+    const url = await h.listen();
+    const { sessionId, cookie } = await h.login();
+    const original = JoseTokenService.prototype.verify;
+    vi.spyOn(JoseTokenService.prototype, 'verify').mockImplementation(async function (
+      this: JoseTokenService,
+      token: string,
+    ) {
+      await sleep(120);
+      return original.call(this, token);
+    });
+    const touch = vi.spyOn(h.registry, 'touch');
+    const controller = new AbortController();
+    const pending = fetch(`${url}/v1/stream`, { headers: { cookie }, signal: controller.signal })
+      .then(() => undefined)
+      .catch((error: Error) => expect(error.name).toBe('AbortError'));
+    await sleep(30);
+    controller.abort();
+    await pending;
+    await sleep(300);
+    expect(h.registry.get(sessionId)?.listenerCount).toBe(0);
+    touch.mockClear();
+    await sleep(200);
+    expect(touch).not.toHaveBeenCalled();
   });
 });

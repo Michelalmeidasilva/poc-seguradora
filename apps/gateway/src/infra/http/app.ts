@@ -169,6 +169,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       ...(reply.getHeaders() as OutgoingHttpHeaders),
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache, no-transform',
+      'x-content-type-options': 'nosniff',
       connection: 'keep-alive',
       'x-accel-buffering': 'no',
     });
@@ -197,6 +198,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     streams.set(session.sessionId, close);
     request.raw.on('close', close);
+    raw.on('close', close);
+    // The client may have gone while we were authenticating; 'close' does not fire again.
+    if (request.raw.destroyed || raw.destroyed) {
+      close();
+      return;
+    }
 
     const handle = openStream(session, lastSeq, (event) => write(formatSseEvent(event)));
     unsubscribe = handle.unsubscribe;
