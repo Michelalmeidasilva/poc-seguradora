@@ -1,0 +1,6 @@
+{
+  "name": "@seguradora/svc-sinistro",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module"
+}

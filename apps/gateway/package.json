@@ -1,0 +1,6 @@
+{
+  "name": "@seguradora/gateway",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module"
+}
