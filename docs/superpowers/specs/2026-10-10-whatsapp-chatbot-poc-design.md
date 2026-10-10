@@ -1,0 +1,207 @@
+# POC Chatbot Web com UI estilo WhatsApp: Design
+
+Data: 2026-10-10 · Status: aguardando revisão
+
+## 1. Objetivo e escopo
+
+POC para apresentar ao time de negócios um chatbot web que reproduz os elementos de chat do WhatsApp e os componentes de WhatsApp Flows da Meta. Deve ser **funcional de ponta a ponta** e **visualmente fiel** ao layout da Meta.
+
+**Dentro do escopo**
+1. Interface web com mensagens (texto, voz, código, location, template, carousel, quick-reply) e motor de Flows.
+2. Mensageria entre web e chatbot com protocolo próprio sobre SSE + POST.
+3. Arquitetura de serviços (gateway, chatbot, serviços internos) com resiliência e segurança básicas.
+
+**Premissas**
+- Publicada no Google Cloud, URL pública **sem login**, apenas dados fictícios.
+- Serviços internos (cotação, apólice, sinistro) são APIs reais que leem JSON do filesystem.
+- LLM mockado atrás de uma interface trocável.
+- Sem observabilidade além de logs da aplicação.
+- Sem integração com a WhatsApp Cloud API da Meta.
+
+**Fora do escopo:** broker de mensagens, autenticação de usuário, persistência durável, métricas e tracing, mensagens proativas do chatbot.
+
+**Critérios de sucesso**
+- Um cenário de demo exercita todos os tipos de mensagem e todos os componentes de Flows listados na seção 5.
+- Derrubar um serviço interno (ou ativar a injeção de falha) resulta em fallback amigável, e a conversa continua.
+- A reconexão do SSE não duplica nem perde mensagens.
+
+## 2. Arquitetura
+
+```
+Web (React+Vite) ⇄ Gateway (SSE + POST) ──HTTP stream──▶ Chatbot ──HTTP──▶ svc-cotacao
+                                                                    ├────▶ svc-apolice
+                                                                    └────▶ svc-sinistro
+                                                              (JSON no filesystem)
+```
+
+Monorepo pnpm, TypeScript de ponta a ponta:
+```
+packages/protocol     schemas Zod + tipos (compartilhado)
+packages/resilience   timeout, retry, circuit breaker, bulkhead
+apps/web  apps/gateway  apps/chatbot
+apps/svc-cotacao  apps/svc-apolice  apps/svc-sinistro
+```
+
+Cada app é um serviço Cloud Run (incluindo a web, servida por nginx). Estado de sessão em memória.
+
+## 3. Protocolo (SSE + POST)
+
+**Canais:** `GET /v1/stream` (SSE, servidor→cliente) e `POST /v1/events` (cliente→servidor).
+
+**Envelope**
+```ts
+Envelope = {
+  v: 1,
+  id: string,            // messageId (UUID v7), chave de idempotência
+  seq: number,           // por sessão, atribuído pelo gateway (servidor→cliente)
+  sessionId: string,
+  correlationId: string,
+  ts: string,            // ISO 8601
+  type: string,
+  payload: object
+}
+```
+
+**Servidor→cliente:** `message.text`, `message.voice`, `message.code`, `message.location`, `message.template`, `message.carousel`, `message.quick_replies`, `message.flow`, `status.typing`, `status.delivered`, `status.read`, `error`.
+
+**Cliente→servidor:** `user.text`, `user.voice` (mídia enviada antes por upload e referenciada por ID), `user.quick_reply`, `user.flow_submit`, `user.flow_data_exchange`, `user.typing`, `user.ack`.
+
+**Garantias**
+1. **Idempotência:** `id` repetido devolve o resultado anterior e não reexecuta a lógica (gateway e chatbot guardam os `id`s recentes por sessão).
+2. **Ordenação:** `seq` monotônico por sessão. O cliente descarta duplicatas e detecta lacunas.
+3. **Retomada:** `id:` do SSE = `seq`. Na reconexão, `Last-Event-ID` faz o gateway reenviar do buffer (janela de 200 eventos por sessão).
+4. **Entrega:** `status.delivered` quando a mensagem do usuário chega ao chatbot. `user.ack` carrega o último `seq` processado.
+5. **Reenvio no cliente:** fila local com estados enviando/falhou e botão de reenviar. O reenvio usa o mesmo `id`.
+6. **Saúde da conexão:** heartbeat a cada ~15 s, `retry:` definido pelo servidor, backoff com jitter. Reconexão antes do timeout do Cloud Run é transparente.
+7. **Sessão:** JWT anônimo curto em cookie `HttpOnly` + `SameSite`. Token inválido ou expirado → 401, e a web inicia nova sessão.
+8. **Limites:** tamanho máximo de payload, rate limit por sessão e por IP, `error` com códigos estáveis (`rate_limited`, `invalid_schema`, `upstream_unavailable`).
+9. **Versionamento:** campo `v` e prefixo `/v1`.
+
+O protocolo é independente do transporte. Um adaptador WebSocket pode ser adicionado ao gateway depois, sem mudar o schema.
+
+## 4. Web (React + Vite + TypeScript)
+
+```
+apps/web/src
+  chat/        lista de mensagens, composer, status, reconexão
+  renderers/   registry type → componente
+  flows/       motor de Flows
+  transport/   cliente SSE + POST, fila de reenvio, ack
+  ui/          tokens de design do WhatsApp (cores, tipografia, bolhas)
+```
+
+**Renderers de mensagem**
+- **Texto:** formatação estilo WhatsApp (negrito, itálico, tachado, monoespaçado), links, horário e ticks.
+- **Voz:** player com waveform e velocidade.
+- **Código:** bloco monoespaçado com botão de copiar.
+- **Location:** cartão com mapa estático e botão de abrir.
+- **Template:** cabeçalho, corpo, rodapé e botões (CTA e resposta rápida).
+- **Carousel:** cartões horizontais com mídia e botões.
+- **Quick-reply:** botões sob a bolha, desativados após o uso.
+- **Digitando:** indicador de três pontos.
+
+**Estado e acessibilidade:** estado local por mensagem (enviando, enviado, entregue, lido, falhou), navegação por teclado, `aria-live` para novas mensagens, tema claro e escuro.
+
+## 5. Motor de Flows
+
+Um Flow é um JSON declarativo (`version`, `screens[]`, `routing_model`). Abre em tela cheia (bottom sheet) a partir de `message.flow` e tem cabeçalho, conteúdo rolável e Footer fixo.
+
+**Componentes cobertos** (propriedades e limites conferidos na documentação da Meta em 2026-10-10: `developers.facebook.com/documentation/business-messaging/whatsapp/flows/guides/components`)
+
+| Grupo | Componentes |
+|---|---|
+| Texto | TextHeading (80), TextSubheading (80), TextBody (4096), TextCaption (409), RichText (5.1+) |
+| Entrada | TextInput, TextArea, CheckboxGroup (1–20 opções), RadioButtonsGroup, Dropdown (1–200 opções), OptIn (máx. 5/tela), DatePicker, CalendarPicker (6.1+, modos single e range), Media upload |
+| Navegação/exibição | Footer (máx. 1/tela), EmbeddedLink (máx. 2/tela), Image (máx. 3/tela), NavigationList (6.2), Chips Selector (6.3), Image Carousel (7.1) |
+| Estruturais | If (4.0+, até 3 níveis), Switch (4.0+) |
+
+Máximo de 50 componentes por tela.
+
+**Media upload** (guia `.../flows/guides/media_upload`, Flow JSON 4.0+)
+- `PhotoPicker`: `label` (80), `description` (300), `photo-source` (`camera_gallery` | `camera` | `gallery`), `min-uploaded-photos` (0–30, >0 torna obrigatório), `max-uploaded-photos` (1–30), `max-file-size-kb` (1–25600), `enabled`, `visible`, `error-message`.
+- `DocumentPicker`: mesmas propriedades, com `min/max-uploaded-documents` e `allowed-mime-types` no lugar de `photo-source` e das contagens de fotos.
+- Restrições: um PhotoPicker ou DocumentPicker por tela (nunca os dois); não aceita `init-value`; o valor não vai em `navigate` e, em `data_exchange` ou `complete`, deve ser uma propriedade de primeiro nível.
+- Na POC, o arquivo é enviado ao gateway por upload e o payload carrega só uma referência (`media_id`, `file_name`). A criptografia AES-256-CBC do endpoint real da Meta não é reproduzida.
+
+**NavigationList, Chips Selector e Image Carousel** não estão na página oficial de componentes nem no índice da documentação. O que se confirmou pelo changelog da Meta e por fontes secundárias:
+- `NavigationList`: Flow JSON 6.2. Cada item navega para outra tela e pode mostrar texto, imagens e tags.
+- `ChipsSelector`: Flow JSON 6.3. Seletor compacto de opções (preferências, horários). Desde a 7.1 funciona dentro de `If`/`Switch` e aceita `on-select-action` e `on-unselect-action`.
+- `ImageCarousel`: Flow JSON 7.1. Propriedades confirmadas só em fonte secundária (8x8): `type`, `images[]` com `src` e `alt-text`.
+- Propriedades, limites de itens e de caracteres **não estão documentados em fonte oficial acessível**. A POC implementa o que foi confirmado acima e documenta as demais escolhas (por exemplo, limites de itens) como decisões próprias, validadas contra o Playground da Meta quando possível.
+
+**Expressões:** `${data.campo}` (dados do servidor) e `${form.campo}` (campos preenchidos). Condições de `If` com `==`, `!=`, `&&`, `||`, `!`, `>`, `>=`, `<`, `<=` e parênteses, devem conter ao menos um valor dinâmico e resolver para booleano. Regra do Footer dentro de `If`: se um ramo tem Footer, o outro também deve ter, e nenhum Footer pode existir fora do `If`.
+
+**Ações** (guia Flow JSON da Meta):
+- `navigate`: vai para outra tela. O `payload` fica disponível na próxima tela como `${data.campo}`. Não deve ser usada no Footer de uma tela terminal.
+- `complete`: encerra o Flow e envia a resposta ao chat (na POC, `user.flow_submit`). Fica numa tela terminal, com payload mínimo (só dados digitados, sem imagens base64).
+- `data_exchange`: envia o payload ao endpoint antes de avançar ou finalizar (na POC, `user.flow_data_exchange`). O servidor decide o próximo passo.
+- `open_url` (6.0+): abre um link externo.
+- `update_data` (6.0+): atualiza a tela atual em resposta a uma interação, e `on-unselect-action` o reverte. Documentado só no changelog, então a semântica fica a validar.
+
+**Propriedades de tela:** `id` (obrigatório, `SUCCESS` é reservado), `layout`, `title`, `terminal` (a tela terminal exige Footer), `success` (padrão `true`), `data` (JSON Schema com `__example__`), `refresh_on_back` (só com endpoint) e `sensitive` (5.1+, oculta campos no resumo).
+
+**`routing_model`:** mapeia cada tela às telas de destino, com limite de 10 ramos. Lista só arestas de ida (o botão voltar é implícito). Exige uma tela de entrada sem arestas de entrada, e todos os caminhos terminam numa tela terminal.
+
+**Validação:** `required`, tipo de entrada, `min-chars`/`max-chars`, `helper-text` e `error-message`. Footer bloqueado enquanto houver campo inválido.
+
+## 6. Gateway (Node + Fastify)
+
+- Emite a sessão, mantém o SSE, valida com Zod, atribui `seq`, guarda o buffer de reenvio e aplica rate limit.
+- Chama o chatbot por `POST /v1/chat/events` e consome a resposta como **stream NDJSON** (uma mensagem por linha). A conexão fecha ao fim do turno.
+- Timeout, retry com backoff e jitter só para falhas seguras (idempotência pelo `id`) e circuit breaker. Circuito aberto → `error` `upstream_unavailable` amigável ao usuário.
+- CORS restrito à origem da web. Segredo do JWT no Secret Manager.
+- Cloud Run: `max-instances` baixo com afinidade de sessão, timeout de 60 min com reconexão transparente.
+
+**Evolução futura:** se o chatbot precisar enviar mensagens fora de um turno do usuário, trocar para um adaptador de entrega por callback, sem mudar o protocolo da web.
+
+## 7. Chatbot (Node + Fastify)
+
+- `api`: recebe o evento e responde por stream NDJSON.
+- `dialog`: máquina de estados por sessão (cotação, apólice, sinistro), estado em memória.
+- `llm`: interface `LlmProvider` com mock determinístico (regras e palavras-chave) para intenção, extração de campos e resposta livre.
+- `catalog`: monta mensagens e Flows (templates, carousel, quick-replies) a partir de definições JSON.
+- `clients`: clientes dos serviços internos usando `packages/resilience`.
+- Idempotência por `id`. Falha de serviço interno → fallback com explicação e opção de tentar de novo, preservando o estado.
+
+## 8. Serviços internos
+
+- `svc-cotacao`, `svc-apolice`, `svc-sinistro`: REST/JSON lendo `data/*.json` embutidos na imagem, somente leitura.
+- Operações de escrita simuladas (nova cotação, abertura de sinistro) devolvem um protocolo gerado, sem persistir.
+- Injeção de falha opcional (latência e erro por cabeçalho), habilitada por variável de ambiente e desligada por padrão. Serve para demonstrar retry e circuit breaker.
+
+## 9. Segurança
+
+- Só web e gateway são públicos. Chatbot e serviços internos usam ingress `internal` com autenticação por service account (IAM). A comunicação interna exige conector VPC ou egress direto da VPC.
+- Validação Zod em toda borda, limites de tamanho, cabeçalhos de segurança e CSP na web.
+- Upload de mídia com limite de tamanho, validação de tipo e armazenamento temporário com expiração.
+- Proteção contra abuso de custo: `max-instances` baixos, rate limit e orçamento com alerta no GCP.
+- Logs estruturados com `correlationId` e sem dados pessoais.
+- URL pública sem login: apenas dados fictícios, nunca dados reais.
+
+## 10. Resiliência
+
+| Ponto | Mecanismo |
+|---|---|
+| web → gateway | reconexão SSE com backoff e jitter, `Last-Event-ID`, fila de reenvio idempotente |
+| gateway → chatbot | timeout, retry em falhas seguras, circuit breaker |
+| chatbot → serviços | timeout, retry com backoff, circuit breaker, bulkhead por serviço, fallback na conversa |
+| sessão | estado em memória, perdido se a instância reciclar (aceito na POC; a web inicia nova sessão) |
+
+## 11. Testes
+
+- Unitários: renderers, motor de expressões, validações, `packages/resilience`.
+- Contrato: schemas do protocolo usados pelos dois lados.
+- Integração: gateway ↔ chatbot ↔ serviços (incluindo falhas injetadas e reconexão do SSE).
+- E2E (Playwright): um cenário que percorre todos os tipos de mensagem e todos os componentes de Flows.
+
+## 12. Deploy
+
+- Um Dockerfile por app, imagens no Artifact Registry, um serviço Cloud Run por app.
+- CI no GitHub Actions: build, testes e deploy.
+- `docker-compose` local equivalente para desenvolvimento.
+
+## 13. Riscos e decisões aceitas
+
+- Estado em memória no Cloud Run: instâncias recicladas perdem sessões. Mitigação: `max-instances` baixo e afinidade de sessão.
+- URL pública sem login: risco de abuso de custo e de conteúdo. Mitigação: rate limit, limites de tamanho e orçamento com alerta.
+- Fidelidade ao layout da Meta depende de referência visual. Os tokens de design ficam centralizados para ajuste.
