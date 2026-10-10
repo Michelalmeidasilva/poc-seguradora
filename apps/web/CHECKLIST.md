@@ -3,9 +3,9 @@
 Última atualização: 2026-10-10
 
 ## Estrutura
-- [ ] Pastas hexagonais criadas (domain / application / infra / main.ts)
-- [ ] Configuração por variáveis de ambiente validada na subida
-- [ ] Dockerfile e execução local
+- [ ] Pastas feature-sliced criadas (chat, renderers, transport, flows, ui)
+- [ ] Configuração por variáveis de ambiente (Vite) validada
+- [ ] Build Vite e imagem nginx para Cloud Run
 
 ## Funcionalidades
 - [ ] Transporte SSE + POST e fila de reenvio
