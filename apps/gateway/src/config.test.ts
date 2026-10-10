@@ -16,7 +16,10 @@ describe('loadConfig', () => {
     expect(r.value.HOST).toBe('0.0.0.0');
     expect(r.value.COOKIE_SECURE).toBe(true);
     expect(r.value.COOKIE_SAME_SITE).toBe('none');
-    expect(r.value.TRUST_PROXY).toBe(true);
+    expect(r.value.TRUST_PROXY_HOPS).toBe(0);
+    expect(r.value.SESSION_CREATE_CAPACITY).toBe(5);
+    expect(r.value.SESSION_CREATE_PER_MINUTE).toBe(5);
+    expect(r.value.UNUSED_SESSION_TTL_SECONDS).toBe(1800);
     expect(r.value.BUFFER_CAPACITY).toBe(200);
     expect(r.value.HEARTBEAT_MS).toBe(15000);
     expect(r.value.CHATBOT_TURN_TIMEOUT_MS).toBe(60000);
@@ -28,11 +31,11 @@ describe('loadConfig', () => {
       PORT: '3000',
       COOKIE_SECURE: 'false',
       COOKIE_SAME_SITE: 'lax',
-      TRUST_PROXY: 'false',
+      TRUST_PROXY_HOPS: '1',
     });
     expect(r.ok && r.value.PORT).toBe(3000);
     expect(r.ok && r.value.COOKIE_SECURE).toBe(false);
-    expect(r.ok && r.value.TRUST_PROXY).toBe(false);
+    expect(r.ok && r.value.TRUST_PROXY_HOPS).toBe(1);
   });
 
   it('reports a missing CHATBOT_URL', () => {
@@ -53,8 +56,10 @@ describe('loadConfig', () => {
     expect(!r.ok && r.error.some((e) => e.startsWith('COOKIE_SECURE'))).toBe(true);
   });
 
-  it('rejects an invalid boolean and an out of range port', () => {
-    expect(loadConfig({ ...valid, TRUST_PROXY: 'yes' }).ok).toBe(false);
+  it('rejects an invalid boolean, a negative hop count and an out of range port', () => {
+    expect(loadConfig({ ...valid, COOKIE_SECURE: 'yes' }).ok).toBe(false);
+    expect(loadConfig({ ...valid, TRUST_PROXY_HOPS: '-1' }).ok).toBe(false);
+    expect(loadConfig({ ...valid, SESSION_CREATE_CAPACITY: '0' }).ok).toBe(false);
     expect(loadConfig({ ...valid, PORT: '70000' }).ok).toBe(false);
   });
 });

@@ -21,8 +21,10 @@ export const ConfigSchema = z
     ALLOWED_ORIGIN: z.string().url(),
     COOKIE_SECURE: flag('true'),
     COOKIE_SAME_SITE: z.enum(['none', 'lax', 'strict']).default('none'),
-    TRUST_PROXY: flag('true'),
+    // Number of trusted proxies in front of the gateway (0 = trust none; Cloud Run = 1).
+    TRUST_PROXY_HOPS: int(0, 0),
     SESSION_TTL_SECONDS: int(43200, 60),
+    UNUSED_SESSION_TTL_SECONDS: int(1800, 1),
     MAX_SESSIONS: int(1000, 1),
     BUFFER_CAPACITY: int(200, 1),
     SEEN_CAPACITY: int(500, 1),
@@ -41,6 +43,8 @@ export const ConfigSchema = z
     SESSION_RATE_PER_SECOND: z.coerce.number().positive().default(10),
     IP_RATE_CAPACITY: int(120, 1),
     IP_RATE_PER_SECOND: z.coerce.number().positive().default(30),
+    SESSION_CREATE_CAPACITY: int(5, 1),
+    SESSION_CREATE_PER_MINUTE: z.coerce.number().positive().default(5),
   })
   .superRefine((c, ctx) => {
     if (c.COOKIE_SAME_SITE === 'none' && !c.COOKIE_SECURE) {

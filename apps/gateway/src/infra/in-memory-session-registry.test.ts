@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { uuid } from '../test/fixtures';
 import { InMemorySessionRegistry } from './in-memory-session-registry';
 
-const make = (o: { maxSessions?: number; ttlMs?: number } = {}) => {
+const make = (o: { maxSessions?: number; ttlMs?: number; unusedTtlMs?: number } = {}) => {
   const clock = { t: 0 };
   let n = 0;
   const registry = new InMemorySessionRegistry({
     maxSessions: o.maxSessions ?? 2,
     ttlMs: o.ttlMs ?? 1000,
+    unusedTtlMs: o.unusedTtlMs ?? o.ttlMs ?? 1000,
     bufferCapacity: 10,
     seenCapacity: 10,
     newId: () => uuid(++n),
@@ -76,5 +77,39 @@ describe('InMemorySessionRegistry', () => {
     registry.create();
     clock.t = 2000;
     expect(registry.create()).toBeDefined();
+  });
+
+  describe('unused sessions', () => {
+    it('expires a never-used session after unusedTtlMs', () => {
+      const { registry, clock } = make({ ttlMs: 10_000, unusedTtlMs: 1000 });
+      const a = registry.create();
+      clock.t = 1001;
+      expect(a && registry.get(a.sessionId)).toBeUndefined();
+    });
+
+    it('lives until ttlMs once marked active', () => {
+      const { registry, clock } = make({ ttlMs: 10_000, unusedTtlMs: 1000 });
+      const a = registry.create();
+      if (a) registry.markActive(a.sessionId);
+      clock.t = 5000;
+      expect(a && registry.get(a.sessionId)).toBe(a);
+      clock.t = 5000 + 10_001;
+      expect(a && registry.get(a.sessionId)).toBeUndefined();
+    });
+
+    it('sweeps unused sessions earlier than active ones', () => {
+      const { registry, clock } = make({ maxSessions: 2, ttlMs: 10_000, unusedTtlMs: 1000 });
+      const used = registry.create();
+      registry.create();
+      if (used) registry.markActive(used.sessionId);
+      clock.t = 2000;
+      expect(registry.sweep()).toBe(1);
+      expect(registry.size).toBe(1);
+      expect(used && registry.get(used.sessionId)).toBe(used);
+    });
+
+    it('ignores markActive for an unknown session', () => {
+      expect(() => make().registry.markActive('nope')).not.toThrow();
+    });
   });
 });

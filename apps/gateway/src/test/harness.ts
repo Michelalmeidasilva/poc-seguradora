@@ -13,7 +13,6 @@ export const testConfig = (overrides: Record<string, string> = {}): Config => {
     ALLOWED_ORIGIN: 'http://localhost:5173',
     COOKIE_SECURE: 'false',
     COOKIE_SAME_SITE: 'lax',
-    TRUST_PROXY: 'false',
     HEARTBEAT_MS: '50',
     LOG_LEVEL: 'silent',
     ...overrides,

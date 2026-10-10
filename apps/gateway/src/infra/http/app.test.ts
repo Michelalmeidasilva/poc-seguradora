@@ -1,5 +1,5 @@
 import type { ClientEvent } from '@seguradora/protocol';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clientAck, clientText, clientTyping } from '../../test/fixtures';
 import { makeHarness } from '../../test/harness';
 
@@ -79,13 +79,44 @@ describe('POST /v1/session', () => {
     expect(res.headers['retry-after']).toBeDefined();
   });
 
-  it('rate limits session creation per IP', async () => {
-    h = await makeHarness({ env: { IP_RATE_CAPACITY: '2', IP_RATE_PER_SECOND: '0.001' } });
-    expect((await h.app.inject({ method: 'POST', url: '/v1/session' })).statusCode).toBe(201);
-    expect((await h.app.inject({ method: 'POST', url: '/v1/session' })).statusCode).toBe(201);
-    const third = await h.app.inject({ method: 'POST', url: '/v1/session' });
-    expect(third.statusCode).toBe(429);
-    expect(third.json().error.retryAfterMs).toBeGreaterThan(0);
+  it('rate limits session creation per IP with its own stricter limiter', async () => {
+    h = await makeHarness({
+      env: { SESSION_CREATE_CAPACITY: '5', SESSION_CREATE_PER_MINUTE: '0.06' },
+    });
+    for (let i = 0; i < 5; i++) {
+      expect((await h.app.inject({ method: 'POST', url: '/v1/session' })).statusCode).toBe(201);
+    }
+    const sixth = await h.app.inject({ method: 'POST', url: '/v1/session' });
+    expect(sixth.statusCode).toBe(429);
+    expect(sixth.json().error.code).toBe('rate_limited');
+    expect(sixth.json().error.retryAfterMs).toBeGreaterThan(0);
+    expect(sixth.headers['retry-after']).toBeDefined();
+  });
+
+  it('does not let the session-create limiter block events of an existing session', async () => {
+    h = await makeHarness({
+      env: { SESSION_CREATE_CAPACITY: '1', SESSION_CREATE_PER_MINUTE: '0.06' },
+    });
+    const { sessionId, cookie } = await h.login();
+    expect((await h.app.inject({ method: 'POST', url: '/v1/session' })).statusCode).toBe(429);
+    expect((await post(cookie, clientText(1, sessionId))).statusCode).toBe(202);
+  });
+
+  it('expires a session that is never used after UNUSED_SESSION_TTL_SECONDS but not a used one', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      h = await makeHarness({
+        env: { UNUSED_SESSION_TTL_SECONDS: '60', SESSION_TTL_SECONDS: '3600' },
+      });
+      const unused = await h.login();
+      const used = await h.login();
+      expect((await post(used.cookie, clientText(1, used.sessionId))).statusCode).toBe(202);
+      vi.setSystemTime(Date.now() + 120_000);
+      expect(h.registry.get(unused.sessionId)).toBeUndefined();
+      expect(h.registry.get(used.sessionId)).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('answers CORS preflight for the allowed origin with credentials', async () => {
@@ -101,6 +132,25 @@ describe('POST /v1/session', () => {
     });
     expect(res.headers['access-control-allow-origin']).toBe(origin);
     expect(res.headers['access-control-allow-credentials']).toBe('true');
+  });
+});
+
+describe('trust proxy', () => {
+  const create = (xff: string) =>
+    h.app.inject({ method: 'POST', url: '/v1/session', headers: { 'x-forwarded-for': xff } });
+  const strictCreate = { SESSION_CREATE_CAPACITY: '1', SESSION_CREATE_PER_MINUTE: '0.06' };
+
+  it('ignores X-Forwarded-For by default (TRUST_PROXY_HOPS=0)', async () => {
+    h = await makeHarness({ env: strictCreate });
+    expect((await create('9.9.9.9')).statusCode).toBe(201);
+    expect((await create('8.8.8.8')).statusCode).toBe(429);
+  });
+
+  it('keys on the entry added by the trusted proxy, not the client-controlled left-most one', async () => {
+    h = await makeHarness({ env: { ...strictCreate, TRUST_PROXY_HOPS: '1' } });
+    expect((await create('1.1.1.1, 2.2.2.2')).statusCode).toBe(201);
+    expect((await create('3.3.3.3, 2.2.2.2')).statusCode).toBe(429);
+    expect((await create('3.3.3.3, 4.4.4.4')).statusCode).toBe(201);
   });
 });
 

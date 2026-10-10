@@ -23,6 +23,8 @@ export interface SessionRegistry {
   create(): SessionState | undefined;
   get(sessionId: string): SessionState | undefined;
   touch(sessionId: string): void;
+  /** Marks the session as used (stream opened or event accepted): it then gets the full idle TTL. */
+  markActive(sessionId: string): void;
 }
 
 export interface Logger {

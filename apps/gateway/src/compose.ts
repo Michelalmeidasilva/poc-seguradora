@@ -38,6 +38,7 @@ export async function createGateway(
   const registry = new InMemorySessionRegistry({
     maxSessions: config.MAX_SESSIONS,
     ttlMs: config.SESSION_TTL_SECONDS * 1000,
+    unusedTtlMs: config.UNUSED_SESSION_TTL_SECONDS * 1000,
     bufferCapacity: config.BUFFER_CAPACITY,
     seenCapacity: config.SEEN_CAPACITY,
     newId,
@@ -70,6 +71,10 @@ export async function createGateway(
     capacity: config.IP_RATE_CAPACITY,
     refillPerSecond: config.IP_RATE_PER_SECOND,
   });
+  const sessionCreateLimiter = new TokenBucket({
+    capacity: config.SESSION_CREATE_CAPACITY,
+    refillPerSecond: config.SESSION_CREATE_PER_MINUTE / 60,
+  });
   const sessionLimiter = new TokenBucket({
     capacity: config.SESSION_RATE_CAPACITY,
     refillPerSecond: config.SESSION_RATE_PER_SECOND,
@@ -83,6 +88,14 @@ export async function createGateway(
     logger,
   });
 
-  const app = await buildApp({ config, registry, tokens, handleClientEvent, ipLimiter, logger });
+  const app = await buildApp({
+    config,
+    registry,
+    tokens,
+    handleClientEvent,
+    ipLimiter,
+    sessionCreateLimiter,
+    logger,
+  });
   return { app, registry };
 }

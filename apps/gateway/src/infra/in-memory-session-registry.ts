@@ -3,7 +3,10 @@ import { SessionState } from '../domain/session-state';
 
 export interface RegistryOptions {
   maxSessions: number;
+  /** Idle TTL of a session that already did something (stream or event). */
   ttlMs: number;
+  /** Idle TTL of a session that was created but never used. */
+  unusedTtlMs: number;
   bufferCapacity: number;
   seenCapacity: number;
   newId: IdGenerator;
@@ -13,6 +16,7 @@ export interface RegistryOptions {
 interface Entry {
   state: SessionState;
   lastSeen: number;
+  active: boolean;
 }
 
 export class InMemorySessionRegistry implements SessionRegistry {
@@ -31,7 +35,7 @@ export class InMemorySessionRegistry implements SessionRegistry {
       bufferCapacity: this.o.bufferCapacity,
       seenCapacity: this.o.seenCapacity,
     });
-    this.entries.set(state.sessionId, { state, lastSeen: this.o.now() });
+    this.entries.set(state.sessionId, { state, lastSeen: this.o.now(), active: false });
     return state;
   }
 
@@ -39,12 +43,17 @@ export class InMemorySessionRegistry implements SessionRegistry {
     const entry = this.entries.get(sessionId);
     if (!entry) return undefined;
     const t = this.o.now();
-    if (t - entry.lastSeen > this.o.ttlMs) {
+    if (this.expired(entry, t)) {
       this.entries.delete(sessionId);
       return undefined;
     }
     entry.lastSeen = t;
     return entry.state;
+  }
+
+  markActive(sessionId: string): void {
+    const entry = this.entries.get(sessionId);
+    if (entry) entry.active = true;
   }
 
   touch(sessionId: string): void {
@@ -61,11 +70,15 @@ export class InMemorySessionRegistry implements SessionRegistry {
     const t = this.o.now();
     let removed = 0;
     for (const [id, entry] of this.entries) {
-      if (t - entry.lastSeen > this.o.ttlMs) {
+      if (this.expired(entry, t)) {
         this.entries.delete(id);
         removed++;
       }
     }
     return removed;
+  }
+
+  private expired(entry: Entry, t: number): boolean {
+    return t - entry.lastSeen > (entry.active ? this.o.ttlMs : this.o.unusedTtlMs);
   }
 }

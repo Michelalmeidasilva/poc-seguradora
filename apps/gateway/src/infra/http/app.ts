@@ -31,7 +31,7 @@ export type AppConfig = Pick<
   | 'ALLOWED_ORIGIN'
   | 'COOKIE_SECURE'
   | 'COOKIE_SAME_SITE'
-  | 'TRUST_PROXY'
+  | 'TRUST_PROXY_HOPS'
   | 'SESSION_TTL_SECONDS'
   | 'HEARTBEAT_MS'
   | 'SSE_RETRY_MS'
@@ -43,6 +43,8 @@ export interface AppDeps {
   tokens: TokenService;
   handleClientEvent: HandleClientEvent;
   ipLimiter: RateLimiter;
+  /** Stricter per-IP limiter for `POST /v1/session` only. */
+  sessionCreateLimiter: RateLimiter;
   logger: PinoLogger;
 }
 
@@ -69,12 +71,19 @@ const summarizeIssue = (error: { issues: Array<{ path: PropertyKey[]; code: stri
   return `Evento inválido em ${where} (${issue.code}).`.slice(0, 200);
 };
 
+/** `i` counts hops from the socket peer (0): the first `hops` addresses are trusted proxies. */
+const trustProxyHops = (hops: number) =>
+  hops > 0 ? (_addr: string, i: number) => i < hops : false;
+
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const { config, registry, tokens, handleClientEvent, ipLimiter, logger } = deps;
+  const { config, registry, tokens, handleClientEvent, ipLimiter, sessionCreateLimiter, logger } =
+    deps;
 
   const app: FastifyInstance = Fastify({
     loggerInstance: logger as FastifyBaseLogger,
-    trustProxy: config.TRUST_PROXY,
+    // Never `true`: the left-most X-Forwarded-For entry is client-controlled. Fastify's numeric
+    // form fails closed (it never trusts), so the hop count is expressed as a function.
+    trustProxy: trustProxyHops(config.TRUST_PROXY_HOPS),
     bodyLimit: LIMITS.maxEventBytes,
     // Node's closeIdleConnections() skips sockets that never carried a request
     // (pre-connected by browsers, proxies, undici), so close() would wait for the
@@ -162,6 +171,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const auth = await authenticate(request);
     if (!auth.ok) return deny(reply, auth.error.status, auth.error.code, auth.error.message);
     const session = auth.value;
+    registry.markActive(session.sessionId);
     const lastSeq = parseLastEventId(request.headers['last-event-id']);
 
     // A reconnect replaces the previous stream of the same session.
@@ -225,7 +235,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.post('/v1/session', { preHandler: requireAllowedOrigin }, async (request, reply) => {
-    const limit = ipLimiter.take(`ip:${request.ip}`);
+    const limit = sessionCreateLimiter.take(`ip:${request.ip}`);
     if (!limit.allowed) {
       return deny(
         reply,
@@ -267,6 +277,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
 
     const result = handleClientEvent.handle(auth.value, parsed.value, request.ip);
+    if (result.status !== 'rate_limited') registry.markActive(auth.value.sessionId);
     switch (result.status) {
       case 'accepted':
         return reply.status(202).send({ status: 'accepted' });
