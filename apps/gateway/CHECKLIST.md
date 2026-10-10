@@ -10,8 +10,11 @@
 
 ## Funcionalidades
 - [x] Buffer de eventos com seq e retomada (Last-Event-ID)
-- [x] Idempotência por id
-- [x] Rate limit por sessão e por IP
+- [x] Idempotência por id (typing e ack não ocupam o cache de ids)
+- [x] Turnos de uma sessão executam em série (fila FIFO, `MAX_QUEUED_TURNS`; fila cheia → 429)
+- [x] Rate limit por sessão e por IP (também em `GET /v1/stream`)
+- [x] Limite estrito de criação de sessão por IP (`SESSION_CREATE_CAPACITY`, `SESSION_CREATE_PER_MINUTE`) e TTL curto para sessão nunca usada (`UNUSED_SESSION_TTL_SECONDS`)
+- [x] IP do cliente confiável só por contagem de proxies (`TRUST_PROXY_HOPS`, padrão 0; Cloud Run = 1); IP fora dos logs
 - [x] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões
 - [x] POST /v1/session
 - [x] POST /v1/events (validação, limites, 202/200/4xx)
@@ -33,3 +36,9 @@
 - A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.
 - No encerramento (SIGTERM/SIGINT) turnos do chatbot ainda em andamento são interrompidos; o estado vive em memória e o cliente reenvia com o mesmo id (idempotência).
 - Dockerfile: `pnpm deploy --legacy --prod` e o layout da imagem (node_modules + dist + package.json de tipo) foram verificados localmente sem Docker; `docker build` em si não foi executado (daemon indisponível).
+- Falha no meio do stream (depois de `status.delivered`): o `error` sai sem `messageId` e o id continua registrado; o usuário envia uma nova mensagem. Falha antes da entrega mantém `messageId` e permite reenviar o mesmo id.
+- Contrato com o chatbot: `docs/superpowers/specs/2026-10-10-gateway-chatbot-contract.md`.
+- `TRUST_PROXY_HOPS` é aplicado como função (`i < hops`) porque o Fastify instalado trata o número como "não confiar em ninguém".
+- Upload de mídia (spec §5) não faz parte do gateway nesta fase; será tratado em um plano próprio antes do Plano 4 depender dele.
+- Multi-aba: uma nova conexão SSE substitui a anterior e `user.ack` apara o buffer para todas as abas; decidir no Plano 4 (uma aba ativa via BroadcastChannel ou evento de controle).
+- Backpressure de escrita do SSE não tratado (limites de taxa limitam o crescimento).

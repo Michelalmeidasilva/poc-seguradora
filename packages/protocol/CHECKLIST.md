@@ -38,3 +38,5 @@
 ## Pendências e decisões
 - flowJson é um registro genérico até o Plano 5.
 - mediaUrl/url restritos a http(s); ErrorPayload ganhou messageId e retryAfterMs; LIMITS.maxEventBytes
+- `correlationId` é restrito a `/^[\x21-\x7e]{1,128}$/` (ASCII imprimível sem espaços, 1 a 128), em eventos e em `ChatbotRequest`, para ser seguro como cabeçalho `x-correlation-id` (Plano 2).
+- Teste de deriva: a união de eventos sem `seq` deve cobrir todos os tipos da união de servidor.

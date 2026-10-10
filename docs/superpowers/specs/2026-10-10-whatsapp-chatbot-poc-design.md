@@ -148,6 +148,7 @@ Máximo de 50 componentes por tela.
 
 - Emite a sessão, mantém o SSE, valida com Zod, atribui `seq`, guarda o buffer de reenvio e aplica rate limit.
 - Chama o chatbot por `POST /v1/chat/events` e consome a resposta como **stream NDJSON** (uma mensagem por linha). A conexão fecha ao fim do turno.
+- Contrato detalhado gateway ↔ chatbot: `docs/superpowers/specs/2026-10-10-gateway-chatbot-contract.md`.
 - Timeout, retry com backoff e jitter só para falhas seguras (idempotência pelo `id`) e circuit breaker. Circuito aberto → `error` `upstream_unavailable` amigável ao usuário.
 - CORS restrito à origem da web. Segredo do JWT no Secret Manager.
 - Cloud Run: `max-instances` baixo com afinidade de sessão, timeout de 60 min com reconexão transparente.
