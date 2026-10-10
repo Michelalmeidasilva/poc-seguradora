@@ -1,3 +1,4 @@
+import type { OutgoingHttpHeaders } from 'node:http';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import {
@@ -17,9 +18,11 @@ import Fastify, {
 } from 'fastify';
 import type { Logger as PinoLogger } from 'pino';
 import type { HandleClientEvent } from '../../application/handle-client-event';
+import { openStream } from '../../application/open-stream';
 import type { RateLimiter, SessionRegistry, TokenService } from '../../application/ports';
 import type { Config } from '../../config';
 import type { SessionState } from '../../domain/session-state';
+import { formatSseEvent, parseLastEventId } from './sse';
 
 export const SESSION_COOKIE = 'sid';
 
@@ -143,6 +146,72 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.get('/health', async () => ({ status: 'ok' }));
   app.get('/ready', async () => ({ status: 'ready' }));
+
+  /** sessionId → close function of its live SSE stream (one stream per session). */
+  const streams = new Map<string, () => void>();
+
+  app.addHook('preClose', async () => {
+    for (const close of [...streams.values()]) close();
+  });
+
+  app.get('/v1/stream', { preHandler: requireAllowedOrigin }, async (request, reply) => {
+    const auth = await authenticate(request);
+    if (!auth.ok) return deny(reply, auth.error.status, auth.error.code, auth.error.message);
+    const session = auth.value;
+    const lastSeq = parseLastEventId(request.headers['last-event-id']);
+
+    // A reconnect replaces the previous stream of the same session.
+    streams.get(session.sessionId)?.();
+
+    reply.hijack();
+    const raw = reply.raw;
+    raw.writeHead(200, {
+      ...(reply.getHeaders() as OutgoingHttpHeaders),
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
+    });
+    raw.write(`retry: ${config.SSE_RETRY_MS}\n\n`);
+
+    let closed = false;
+    let unsubscribe = (): void => undefined;
+    const timers: { heartbeat?: NodeJS.Timeout } = {};
+
+    const close = (): void => {
+      if (closed) return;
+      closed = true;
+      if (timers.heartbeat) clearInterval(timers.heartbeat);
+      unsubscribe();
+      if (streams.get(session.sessionId) === close) streams.delete(session.sessionId);
+      if (!raw.writableEnded) raw.end();
+    };
+    const write = (chunk: string): void => {
+      try {
+        raw.write(chunk);
+      } catch (error) {
+        request.log.warn({ err: error }, 'sse write failed');
+        close();
+      }
+    };
+
+    streams.set(session.sessionId, close);
+    request.raw.on('close', close);
+
+    const handle = openStream(session, lastSeq, (event) => write(formatSseEvent(event)));
+    unsubscribe = handle.unsubscribe;
+    if (handle.gap) {
+      request.log.warn({ sessionId: session.sessionId, lastSeq }, 'sse replay gap');
+    }
+    if (closed) {
+      unsubscribe();
+      return;
+    }
+    timers.heartbeat = setInterval(() => {
+      registry.touch(session.sessionId);
+      write(': hb\n\n');
+    }, config.HEARTBEAT_MS);
+  });
 
   app.post('/v1/session', { preHandler: requireAllowedOrigin }, async (request, reply) => {
     const limit = ipLimiter.take(`ip:${request.ip}`);

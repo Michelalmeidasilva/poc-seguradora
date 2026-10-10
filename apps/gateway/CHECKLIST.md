@@ -15,7 +15,7 @@
 - [x] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões
 - [x] POST /v1/session
 - [x] POST /v1/events (validação, limites, 202/200/4xx)
-- [ ] GET /v1/stream (SSE, heartbeat, Last-Event-ID, substituição de stream)
+- [x] GET /v1/stream (SSE, heartbeat, Last-Event-ID, substituição de stream)
 - [x] Cliente do chatbot (NDJSON) com resiliência
 - [x] Mapeamento de falhas em eventos error (upstream_unavailable, internal_error)
 - [x] /health e /ready
@@ -30,5 +30,4 @@
 - Cookie entre origens: SameSite=None; Secure exige HTTPS e depende de o navegador aceitar cookies de terceiros; se bloquear, servir web e gateway sob o mesmo site (decidir no deploy).
 - IDs de eventos criados pelo gateway usam UUID v4 (o schema aceita qualquer versão).
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
-- A retomada por Last-Event-ID só fica completa com a rota SSE (Tarefa 8).
 - A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.
