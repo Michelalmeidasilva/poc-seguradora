@@ -6,7 +6,9 @@ const fail = async () => {
 };
 const succeed = async () => 'ok';
 
-const make = (overrides: { failureThreshold?: number; isFailure?: (e: unknown) => boolean } = {}) => {
+const make = (
+  overrides: { failureThreshold?: number; isFailure?: (e: unknown) => boolean } = {},
+) => {
   const clock = { t: 0 };
   const breaker = new CircuitBreaker({
     failureThreshold: overrides.failureThreshold ?? 2,
