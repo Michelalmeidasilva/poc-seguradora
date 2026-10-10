@@ -11,6 +11,11 @@ import { HttpChatbotClient } from './infra/http-chatbot-client';
 import { InMemorySessionRegistry } from './infra/in-memory-session-registry';
 import { JoseTokenService } from './infra/jose-token-service';
 
+/** Request log lines carry only method and URL: never the client IP or port (privacy). */
+export const REQUEST_LOG_SERIALIZERS = {
+  req: (req: { method?: string; url?: string }) => ({ method: req.method, url: req.url }),
+};
+
 export interface GatewayOverrides {
   chatbot?: ChatbotPort;
   logger?: pino.Logger;
@@ -30,6 +35,7 @@ export async function createGateway(
     overrides.logger ??
     pino({
       level: config.LOG_LEVEL,
+      serializers: REQUEST_LOG_SERIALIZERS,
       redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
     });
   const now: Clock = () => Date.now();

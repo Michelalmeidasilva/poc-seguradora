@@ -62,6 +62,36 @@ describe('GET /v1/stream', () => {
     expect(conn.status).toBe(401);
   });
 
+  it('rate limits stream connections per IP with Retry-After, after the Origin check', async () => {
+    h = await makeHarness({ env: { IP_RATE_CAPACITY: '1', IP_RATE_PER_SECOND: '0.001' } });
+    const first = await h.app.inject({ method: 'GET', url: '/v1/stream' });
+    expect(first.statusCode).toBe(401);
+    const second = await h.app.inject({ method: 'GET', url: '/v1/stream' });
+    expect(second.statusCode).toBe(429);
+    expect(second.json().error.code).toBe('rate_limited');
+    expect(Number(second.headers['retry-after'])).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not spend rate budget on a foreign Origin', async () => {
+    h = await makeHarness({ env: { IP_RATE_CAPACITY: '1', IP_RATE_PER_SECOND: '0.001' } });
+    const foreign = await h.app.inject({
+      method: 'GET',
+      url: '/v1/stream',
+      headers: { origin: 'http://evil.example' },
+    });
+    expect(foreign.statusCode).toBe(403);
+    expect((await h.app.inject({ method: 'GET', url: '/v1/stream' })).statusCode).toBe(401);
+  });
+
+  it('marks the session active when a stream opens', async () => {
+    h = await makeHarness();
+    const url = await h.listen();
+    const { sessionId, cookie } = await h.login();
+    const spy = vi.spyOn(h.registry, 'markActive');
+    await open(`${url}/v1/stream`, { cookie });
+    expect(spy).toHaveBeenCalledWith(sessionId);
+  });
+
   it('opens an event stream with the right headers and a retry hint', async () => {
     h = await makeHarness();
     const url = await h.listen();
