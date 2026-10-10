@@ -177,6 +177,7 @@ describe('POST /v1/events', () => {
     const { sessionId, cookie } = await h.login();
     const res = await post(cookie, clientText(1, sessionId), { origin: 'http://evil.example' });
     expect(res.statusCode).toBe(403);
+    expect(res.json().error.code).toBe('unauthorized');
   });
 
   it('answers 400 invalid_schema for a malformed event without echoing the input', async () => {
@@ -187,6 +188,54 @@ describe('POST /v1/events', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().error.code).toBe('invalid_schema');
     expect(res.body).not.toContain('teleport');
+  });
+
+  it('does not echo an invalid enum value from the client', async () => {
+    h = await makeHarness();
+    const { sessionId, cookie } = await h.login();
+    const bad = { ...clientTyping(1, sessionId), payload: { state: 'SECRET-xyz' } };
+    const res = await post(cookie, bad);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('invalid_schema');
+    for (const leak of ['SECRET-xyz', 'received', 'Expected']) expect(res.body).not.toContain(leak);
+  });
+
+  it('does not echo unrecognized key names from the client', async () => {
+    h = await makeHarness();
+    const { sessionId, cookie } = await h.login();
+    const bad = {
+      ...clientText(1, sessionId),
+      payload: { text: 'oi', 'cpf-12345678900': 1 },
+    };
+    const res = await post(cookie, bad);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('invalid_schema');
+    expect(res.body).not.toContain('cpf-12345678900');
+  });
+
+  it.each(['application/x-www-form-urlencoded', 'multipart/form-data; boundary=x'])(
+    'answers 415 invalid_schema for content type %s',
+    async (contentType) => {
+      h = await makeHarness();
+      const { sessionId, cookie } = await h.login();
+      const res = await h.app.inject({
+        method: 'POST',
+        url: '/v1/events',
+        headers: { 'content-type': contentType, cookie },
+        payload: JSON.stringify(clientText(1, sessionId)),
+      });
+      expect(res.statusCode).toBe(415);
+      expect(res.json().error.code).toBe('invalid_schema');
+    },
+  );
+
+  it('accepts application/json with a charset parameter', async () => {
+    h = await makeHarness();
+    const { sessionId, cookie } = await h.login();
+    const res = await post(cookie, clientText(1, sessionId), {
+      'content-type': 'application/json; charset=utf-8',
+    });
+    expect(res.statusCode).toBe(202);
   });
 
   it('answers 400 invalid_schema for whitespace-only text', async () => {
@@ -243,6 +292,6 @@ describe('POST /v1/events', () => {
     h = await makeHarness();
     const res = await h.app.inject({ method: 'GET', url: '/nope' });
     expect(res.statusCode).toBe(404);
-    expect(res.json().error.code).toBeDefined();
+    expect(res.json().error.code).toBe('invalid_schema');
   });
 });

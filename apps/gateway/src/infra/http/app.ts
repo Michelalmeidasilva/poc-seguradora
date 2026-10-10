@@ -58,11 +58,12 @@ function describeStatus(status: number): { code: ErrorCode; message: string } {
   return { code: 'internal_error', message: 'Erro interno.' };
 }
 
-const summarizeIssue = (error: { issues: Array<{ path: PropertyKey[]; message: string }> }) => {
+const summarizeIssue = (error: { issues: Array<{ path: PropertyKey[]; code: string }> }) => {
   const issue = error.issues[0];
   if (!issue) return 'Evento inválido.';
   const where = issue.path.map(String).join('.') || 'event';
-  return `Evento inválido em ${where}: ${issue.message}`.slice(0, 200);
+  // Only path and issue code: zod messages can embed client-supplied values or key names.
+  return `Evento inválido em ${where} (${issue.code}).`.slice(0, 200);
 };
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
