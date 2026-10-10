@@ -1,5 +1,5 @@
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { posix, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const STATUSES = ['not_started', 'in_progress', 'blocked', 'done'];
@@ -27,6 +27,21 @@ export const SKILL_LINKS = [
 ];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const SEPARATOR_RE = /^\|(\s*:?-+:?\s*\|)+\s*$/;
+
+export function isRealDate(value) {
+  if (!DATE_RE.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+
+// Normalizes a board path; returns null when it is empty, absolute or escapes the repo root.
+export function normalizePath(p) {
+  if (p === '' || p.startsWith('/')) return null;
+  const n = posix.normalize(p).replace(/\/+$/, '');
+  if (n === '' || n === '.' || n === '..' || n.startsWith('../')) return null;
+  return n;
+}
 
 const splitCells = (line) =>
   line
@@ -47,8 +62,13 @@ export function parseWorkboard(text) {
     errors.push(`header must be: ${HEADER.join(' | ')}`);
   }
 
+  const sepLine = lines[headerIdx + 1] ?? '';
+  const hasSeparator = SEPARATOR_RE.test(sepLine.trim());
+  if (!hasSeparator) errors.push(`line ${headerIdx + 2}: separator row missing or malformed`);
+
   const rows = [];
-  for (let i = headerIdx + 2; i < lines.length; i++) {
+  let i = hasSeparator ? headerIdx + 2 : headerIdx + 1;
+  for (; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim().startsWith('|')) break;
     const c = splitCells(line);
@@ -62,8 +82,7 @@ export function parseWorkboard(text) {
       paths: c[1]
         .replace(/`/g, '')
         .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean),
+        .map((p) => p.trim()),
       status: c[2],
       owner: c[3],
       branch: c[4],
@@ -72,10 +91,15 @@ export function parseWorkboard(text) {
       notes: c[7],
     });
   }
+  for (let j = i; j < lines.length; j++) {
+    if (lines[j].trim().startsWith('|')) {
+      errors.push(`table line after the end of the table at line ${j + 1}`);
+    }
+  }
   return { rows, errors };
 }
 
-const segments = (p) => p.replace(/\/+$/, '').split('/');
+const segments = (p) => (normalizePath(p) ?? p).split('/');
 
 export function overlaps(a, b) {
   const x = segments(a);
@@ -83,6 +107,8 @@ export function overlaps(a, b) {
   const n = Math.min(x.length, y.length);
   return x.slice(0, n).join('/') === y.slice(0, n).join('/');
 }
+
+const validPair = (a, b) => normalizePath(a) !== null && normalizePath(b) !== null;
 
 export function validateRows(rows, exists = () => true) {
   const errors = [];
@@ -96,18 +122,34 @@ export function validateRows(rows, exists = () => true) {
     if (!STATUSES.includes(r.status)) errors.push(`${at}: invalid status "${r.status}"`);
     if (!OWNER_RE.test(r.owner)) errors.push(`${at}: invalid owner "${r.owner}"`);
 
+    const started = r.status !== 'not_started';
+    if (r.status !== 'not_started' && r.owner === '-') {
+      errors.push(`${at}: ${r.status} requires an owner`);
+    }
     if (r.status === 'in_progress' || r.status === 'blocked') {
-      if (r.owner === '-') errors.push(`${at}: ${r.status} requires an owner`);
       if (r.branch === '-' || r.branch === '') errors.push(`${at}: ${r.status} requires a branch`);
-      if (!DATE_RE.test(r.started)) {
-        errors.push(`${at}: ${r.status} requires a start date (YYYY-MM-DD)`);
-      }
     }
     if (r.status === 'not_started' && r.owner !== '-') {
       errors.push(`${at}: not_started must not have an owner`);
     }
+    for (const [label, value] of [
+      ['Iniciado', r.started],
+      ['Atualizado', r.updated],
+    ]) {
+      if (isRealDate(value)) continue;
+      if (value === '-' && !started) continue;
+      errors.push(
+        `${at}: ${label} must be a real date (YYYY-MM-DD)${started ? '' : ' or "-"'}, got "${value}"`,
+      );
+    }
+    if (r.paths.length === 0) errors.push(`${at}: at least one path is required`);
     for (const p of r.paths) {
-      if (!exists(p)) errors.push(`${at}: path "${p}" does not exist`);
+      const n = normalizePath(p);
+      if (n === null) {
+        errors.push(`${at}: invalid path "${p}" (must be non-empty, relative and inside the repo)`);
+      } else if (!exists(n)) {
+        errors.push(`${at}: path "${p}" does not exist`);
+      }
     }
   }
 
@@ -116,7 +158,9 @@ export function validateRows(rows, exists = () => true) {
     for (let j = i + 1; j < active.length; j++) {
       const a = active[i];
       const b = active[j];
-      const clash = a.paths.some((pa) => b.paths.some((pb) => overlaps(pa, pb)));
+      const clash = a.paths.some((pa) =>
+        b.paths.some((pb) => validPair(pa, pb) && overlaps(pa, pb)),
+      );
       if (clash) errors.push(`paths overlap: ${a.workstream} and ${b.workstream}`);
     }
   }

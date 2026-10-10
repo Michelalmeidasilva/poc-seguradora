@@ -94,7 +94,13 @@ test('validateRows rejects an invalid status and an invalid owner', () => {
 
 test('validateRows accepts a human owner', () => {
   const rows = parse(
-    row({ status: 'in_progress', owner: 'human:maria', branch: 'b', started: '2026-10-10' }),
+    row({
+      status: 'in_progress',
+      owner: 'human:maria',
+      branch: 'b',
+      started: '2026-10-10',
+      updated: '2026-10-10',
+    }),
   );
   assert.deepEqual(validateRows(rows), []);
 });
@@ -111,7 +117,7 @@ test('validateRows requires owner, branch and start date for in_progress and blo
       status,
     );
     assert.ok(
-      errors.some((e) => /requires a start date/.test(e)),
+      errors.some((e) => /Iniciado.*real date/.test(e)),
       status,
     );
   }
@@ -147,7 +153,14 @@ test('validateRows rejects overlapping paths of rows that are not done', () => {
 test('validateRows ignores overlap when one of the rows is done', () => {
   const errors = validateRows(
     parse(
-      row({ workstream: 'web', path: 'apps/web', status: 'done', owner: 'claude' }),
+      row({
+        workstream: 'web',
+        path: 'apps/web',
+        status: 'done',
+        owner: 'claude',
+        started: '2026-10-10',
+        updated: '2026-10-10',
+      }),
       row({ workstream: 'web-chat', path: 'apps/web/src/chat' }),
     ),
   );
@@ -216,4 +229,106 @@ test('checkRepo reports a skill symlink that points to the wrong place', () => {
   assert.ok(
     checkRepo(root).some((e) => /\.claude\/skills\/workboard-protocol must resolve/.test(e)),
   );
+});
+
+// ---- fix wave: stricter validation ----
+const SEP = '|---|---|---|---|---|---|---|---|\n';
+const HDR_ONLY = HEADER.split('\n')[0] + '\n';
+const active = (o = {}) =>
+  row({
+    status: 'in_progress',
+    owner: 'claude',
+    branch: 'b',
+    started: '2026-10-10',
+    updated: '2026-10-10',
+    ...o,
+  });
+
+test('paths are normalized before the overlap check', () => {
+  for (const other of ['./packages/protocol', 'apps/../packages/protocol', 'packages/protocol/']) {
+    const errors = validateRows(
+      parse(
+        row({ workstream: 'a', path: 'packages/protocol' }),
+        row({ workstream: 'b', path: other }),
+      ),
+    );
+    assert.ok(
+      errors.some((e) => /overlap/.test(e)),
+      other,
+    );
+  }
+});
+
+test('validateRows rejects ".", absolute, parent-escaping and empty paths', () => {
+  for (const path of ['.', '/etc', '../x', 'a/../../x', '']) {
+    const errors = validateRows(parse(row({ workstream: 'ws-bad', path })));
+    assert.ok(
+      errors.some((e) => /ws-bad/.test(e) && /path/.test(e) && !/does not exist/.test(e)),
+      `"${path}": ${errors.join(';')}`,
+    );
+  }
+});
+
+test('parseWorkboard requires a well formed separator row and still validates the first row', () => {
+  const { rows, errors } = parseWorkboard(HDR_ONLY + row() + '\n');
+  assert.ok(errors.some((e) => /separator row missing or malformed/.test(e)));
+  assert.equal(rows.length, 1);
+});
+
+test('parseWorkboard accepts alignment colons in the separator row', () => {
+  const { errors } = parseWorkboard(
+    HDR_ONLY + '|:--|---:|:-:|---|---|---|---|---|\n' + row() + '\n',
+  );
+  assert.deepEqual(errors, []);
+});
+
+test('parseWorkboard rejects table lines after the end of the table', () => {
+  const text = HEADER + row() + '\n\n' + row({ workstream: 'hidden' }) + '\n';
+  const { errors } = parseWorkboard(text);
+  assert.ok(errors.some((e) => /table line after the end of the table at line 5/.test(e)));
+});
+
+test('validateRows requires an owner for done and any non not_started row', () => {
+  for (const status of ['done', 'in_progress', 'blocked']) {
+    const errors = validateRows(
+      parse(row({ status, owner: '-', branch: 'b', started: '2026-10-10', updated: '2026-10-10' })),
+    );
+    assert.ok(
+      errors.some((e) => /requires an owner/.test(e)),
+      status,
+    );
+  }
+});
+
+test('validateRows rejects non-date and impossible dates', () => {
+  for (const bad of ['yesterday', '2026-13-45', '2026-02-30']) {
+    const errors = validateRows(parse(active({ started: bad, updated: bad })));
+    assert.ok(
+      errors.some((e) => /Iniciado/.test(e)),
+      bad,
+    );
+    assert.ok(
+      errors.some((e) => /Atualizado/.test(e)),
+      bad,
+    );
+  }
+});
+
+test('validateRows requires started and updated dates for in_progress, blocked and done', () => {
+  for (const status of ['in_progress', 'blocked', 'done']) {
+    const errors = validateRows(parse(active({ status, updated: '-' })));
+    assert.ok(
+      errors.some((e) => /Atualizado/.test(e)),
+      status,
+    );
+    const errors2 = validateRows(parse(active({ status, started: '-' })));
+    assert.ok(
+      errors2.some((e) => /Iniciado/.test(e)),
+      status,
+    );
+  }
+});
+
+test('validateRows accepts a done row with owner and real dates', () => {
+  assert.deepEqual(validateRows(parse(active({ status: 'done' }))), []);
 });
