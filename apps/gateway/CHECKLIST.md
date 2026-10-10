@@ -19,11 +19,11 @@
 - [x] Cliente do chatbot (NDJSON) com resiliência
 - [x] Mapeamento de falhas em eventos error (upstream_unavailable, internal_error)
 - [x] /health e /ready
-- [ ] Encerramento gracioso
+- [x] Encerramento gracioso
 
 ## Qualidade
 - [ ] Testes unitários (domain e application)
-- [ ] Testes de integração e E2E com chatbot fake
+- [x] Testes de integração e E2E com chatbot fake
 - [ ] Lint, formatação e tsconfig estrito sem erros
 
 ## Pendências e decisões
