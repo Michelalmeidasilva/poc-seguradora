@@ -257,3 +257,49 @@ apps/<servico>/src
 - **Erros** com códigos estáveis, mapeados em um único ponto da camada HTTP.
 - **Testes:** `domain` e `application` sem I/O; adapters por teste de contrato; E2E cobrindo o fluxo completo.
 - **Qualidade:** ESLint, Prettier, `tsconfig` estrito e commits convencionais.
+
+## 15. Preparação do repositório e acompanhamento
+
+### 15.1 Repositório (pré-requisito do desenvolvimento)
+
+O projeto é um **monorepo pnpm com um único repositório git**, na raiz `seguradora-services/`. Antes de escrever qualquer código de aplicação:
+1. Executar `git init` na raiz (já feito) e confirmar que `git status` funciona. Não criar repositórios aninhados dentro de `apps/*` ou `packages/*`.
+2. Criar a estrutura de pastas da seção 2 (`apps/web`, `apps/gateway`, `apps/chatbot`, `apps/svc-cotacao`, `apps/svc-apolice`, `apps/svc-sinistro`, `packages/protocol`, `packages/resilience`), cada uma com seu `package.json`.
+3. Criar na raiz `.gitignore`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.base.json` e a configuração de lint e formatação.
+4. Fazer o commit inicial dessa estrutura. A partir daí, commits convencionais e pequenos.
+
+### 15.2 `CHECKLIST.md` por serviço
+
+Cada app e cada pacote (`apps/*` e `packages/*`) mantém na sua raiz um `CHECKLIST.md` com o que já foi feito e o que falta. Ele é criado no passo 2 da seção 15.1, antes de qualquer implementação, com todos os itens em aberto. Quem desenvolve atualiza o arquivo **no mesmo commit** que conclui o item.
+
+Formato:
+```markdown
+# Checklist: <nome do serviço>
+
+Última atualização: YYYY-MM-DD
+
+## Estrutura
+- [ ] Pastas hexagonais criadas (domain / application / infra / main.ts)
+- [ ] Configuração por variáveis de ambiente validada na subida
+- [ ] Dockerfile e execução local
+
+## Funcionalidades
+- [ ] <item específico do serviço>
+
+## Qualidade
+- [ ] Testes unitários (domain e application)
+- [ ] Testes de contrato
+- [ ] Lint, formatação e `tsconfig` estrito sem erros
+
+## Pendências e decisões
+- <bloqueios, dúvidas ou desvios do spec>
+```
+
+O bloco **Funcionalidades** de cada serviço lista:
+- `svc-cotacao`, `svc-apolice`, `svc-sinistro`: uma linha por rota do contrato, `openapi.yaml`, fixtures de `data/*.json`, injeção de falha e `/health` + `/ready`.
+- `gateway`: sessão/JWT, SSE, `POST /v1/events`, buffer de reenvio, rate limit, idempotência, cliente do chatbot com resiliência.
+- `chatbot`: API em NDJSON, máquina de estados, `LlmProvider` mock, `catalog` de mensagens e Flows, clientes dos serviços internos.
+- `web`: transporte e fila de reenvio, um item por renderer de mensagem e um por componente de Flows, motor de expressões.
+- `packages/protocol` e `packages/resilience`: um item por tipo de mensagem/evento e por mecanismo de resiliência.
+
+Um item só é marcado como concluído quando o código existe, os testes dele passam e o commit foi feito.

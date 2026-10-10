@@ -12,7 +12,12 @@ Os três serviços deste documento serão desenvolvidos **por outro agente, em p
 - siga a estrutura hexagonal da seção 14 do spec principal (`domain` / `application` / `infra` / `main.ts`);
 - cumpra exatamente os contratos abaixo (rotas, campos, nomes, tipos, códigos de status e erros);
 - não altere um contrato sem acordo prévio, porque o chatbot gera seus clientes a partir dele;
-- entregue em cada serviço um `openapi.yaml` fiel a este contrato, os fixtures de `data/*.json` da seção 6 e testes de contrato.
+- entregue em cada serviço um `openapi.yaml` fiel a este contrato, os fixtures de `data/*.json` da seção 6 e testes de contrato;
+- trabalhe dentro do **monorepo único** `seguradora-services` (um só `git init`, na raiz; não crie repositório dentro de `apps/svc-*`). Antes de implementar, a estrutura do monorepo e o `package.json` do seu serviço devem existir e estar commitados;
+- mantenha na raiz de cada serviço (`apps/svc-cotacao`, `apps/svc-apolice`, `apps/svc-sinistro`) um `CHECKLIST.md` com o que já foi feito e o que falta (uma linha por rota do contrato, `openapi.yaml`, fixtures, injeção de falha, `/health` + `/ready`, testes). Crie-o com todos os itens em aberto antes de começar e atualize-o no mesmo commit que conclui cada item. Formato na seção 15.2 do spec principal, resumido aqui:
+  - seções `Estrutura`, `Funcionalidades`, `Qualidade` e `Pendências e decisões`;
+  - itens como `- [ ]` (aberto) ou `- [x]` (concluído, com código, testes passando e commit feito);
+  - data de última atualização no topo.
 
 ## 2. Convenções comuns aos três serviços
 
