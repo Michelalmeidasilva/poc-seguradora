@@ -121,6 +121,23 @@ describe('HttpChatbotClient', () => {
     await expect(drain(stream)).rejects.toBeInstanceOf(ChatbotProtocolError);
   });
 
+  it('omits an unsafe correlation id header but keeps it in the body', async () => {
+    const unsafe = { ...request(), correlationId: 'bad\nid é中' };
+    const events = await drain(await makeClient().send(unsafe));
+    expect(events).toHaveLength(1);
+    expect(fake.hits).toBe(1);
+    expect(fake.requests[0]?.correlationId).toBe('bad\nid é中');
+    expect(fake.headers[0]?.['x-correlation-id']).toBeUndefined();
+  });
+
+  it('does not open the circuit because of an unsafe correlation id', async () => {
+    const unsafe = { ...request(), correlationId: 'bad\nid é中' };
+    const client = makeClient({ retries: 0, breakerFailureThreshold: 1 });
+    await drain(await client.send(unsafe));
+    await drain(await client.send(unsafe));
+    expect(fake.hits).toBe(2);
+  });
+
   it('aborts a stream that outlives the turn timeout', async () => {
     fake.setBehavior((req, res) => {
       res.writeHead(200, { 'content-type': 'application/x-ndjson' });
@@ -150,6 +167,14 @@ describe('retry and failure predicates', () => {
     expect(isSafeToRetry(new ChatbotHttpError(500))).toBe(false);
     expect(isSafeToRetry(new ChatbotHttpError(400))).toBe(false);
     expect(isSafeToRetry(new CircuitOpenError())).toBe(false);
+  });
+
+  it('ignores TypeErrors that are not network failures', () => {
+    const header = new TypeError('invalid header value');
+    expect(isSafeToRetry(header)).toBe(false);
+    expect(isUpstreamFailure(header)).toBe(false);
+    expect(isSafeToRetry(new TypeError('fetch failed'))).toBe(true);
+    expect(isUpstreamFailure(new TypeError('fetch failed'))).toBe(true);
   });
 
   it('counts only upstream problems as breaker failures', () => {

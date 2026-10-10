@@ -32,3 +32,4 @@
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
 - A retomada por Last-Event-ID só fica completa com a rota SSE (Tarefa 8).
 - O cookie e a rota POST /v1/session fecham na Tarefa 7.
+- A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.

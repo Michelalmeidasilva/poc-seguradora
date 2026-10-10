@@ -3,6 +3,9 @@ import { ChatbotHttpError, ChatbotProtocolError } from '../application/errors';
 import type { ChatbotPort } from '../application/ports';
 import { parseNdjson } from './ndjson';
 
+/** The correlation id is client-controlled; only header-safe values are sent as a header. */
+const HEADER_SAFE = /^[\x21-\x7e]{1,128}$/;
+
 export interface HttpChatbotClientOptions {
   baseUrl: string;
   /** Result of `createChatbotPolicy`: wraps the connection attempt only. */
@@ -28,7 +31,9 @@ export class HttpChatbotClient implements ChatbotPort {
         headers: {
           'content-type': 'application/json',
           accept: 'application/x-ndjson',
-          'x-correlation-id': request.correlationId,
+          ...(HEADER_SAFE.test(request.correlationId)
+            ? { 'x-correlation-id': request.correlationId }
+            : {}),
         },
         body: JSON.stringify(request),
         signal: AbortSignal.any([signal, AbortSignal.timeout(this.o.turnTimeoutMs)]),

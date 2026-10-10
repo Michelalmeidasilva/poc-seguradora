@@ -3,8 +3,12 @@ import { ChatbotHttpError } from '../application/errors';
 
 const RETRYABLE_STATUS = new Set([502, 503, 504]);
 
-/** `fetch` rejects with a TypeError on network failures (DNS, refused, reset). */
-const isNetworkError = (error: unknown): boolean => error instanceof TypeError;
+/**
+ * undici wraps network failures (DNS, refused, reset) in `TypeError('fetch failed')`.
+ * Other TypeErrors (invalid header value, bad arguments) are not upstream problems.
+ */
+const isNetworkError = (error: unknown): boolean =>
+  error instanceof TypeError && error.message === 'fetch failed';
 
 /** Safe to repeat: the chatbot is idempotent by event id and nothing was delivered. */
 export const isSafeToRetry = (error: unknown): boolean =>
