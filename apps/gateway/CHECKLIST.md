@@ -4,21 +4,29 @@
 
 ## Estrutura
 - [ ] Pastas hexagonais criadas (domain / application / infra / main.ts)
-- [ ] Configuração por variáveis de ambiente validada na subida
+- [x] Configuração por variáveis de ambiente validada na subida
 - [ ] Dockerfile e execução local
+- [ ] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades
-- [ ] Sessão anônima (JWT em cookie HttpOnly)
-- [ ] GET /v1/stream (SSE, heartbeat, Last-Event-ID)
-- [ ] POST /v1/events (validação, idempotência por id)
-- [ ] Buffer de reenvio por sessão
-- [ ] Rate limit e limites de payload
+- [ ] Buffer de eventos com seq e retomada (Last-Event-ID)
+- [ ] Idempotência por id
+- [ ] Rate limit por sessão e por IP
+- [ ] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões
+- [ ] POST /v1/session
+- [ ] POST /v1/events (validação, limites, 202/200/4xx)
+- [ ] GET /v1/stream (SSE, heartbeat, Last-Event-ID, substituição de stream)
 - [ ] Cliente do chatbot (NDJSON) com resiliência
+- [ ] Mapeamento de falhas em eventos error (upstream_unavailable, internal_error)
+- [ ] /health e /ready
+- [ ] Encerramento gracioso
 
 ## Qualidade
 - [ ] Testes unitários (domain e application)
-- [ ] Testes de contrato
+- [ ] Testes de integração e E2E com chatbot fake
 - [ ] Lint, formatação e tsconfig estrito sem erros
 
 ## Pendências e decisões
-- Nenhuma.
+- Cookie entre origens: SameSite=None; Secure exige HTTPS e depende de o navegador aceitar cookies de terceiros; se bloquear, servir web e gateway sob o mesmo site (decidir no deploy).
+- IDs de eventos criados pelo gateway usam UUID v4 (o schema aceita qualquer versão).
+- Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
