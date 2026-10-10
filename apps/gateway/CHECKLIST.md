@@ -17,7 +17,7 @@
 - [ ] POST /v1/events (validação, limites, 202/200/4xx)
 - [ ] GET /v1/stream (SSE, heartbeat, Last-Event-ID, substituição de stream)
 - [ ] Cliente do chatbot (NDJSON) com resiliência
-- [ ] Mapeamento de falhas em eventos error (upstream_unavailable, internal_error)
+- [x] Mapeamento de falhas em eventos error (upstream_unavailable, internal_error)
 - [ ] /health e /ready
 - [ ] Encerramento gracioso
 
