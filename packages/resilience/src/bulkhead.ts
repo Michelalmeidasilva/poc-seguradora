@@ -9,7 +9,16 @@ export class Bulkhead {
   private active = 0;
   private readonly queue: Array<() => void> = [];
 
-  constructor(private readonly o: { maxConcurrent: number; maxQueue: number }) {}
+  constructor(private readonly o: { maxConcurrent: number; maxQueue: number }) {
+    if (!Number.isInteger(o.maxConcurrent) || o.maxConcurrent < 1) {
+      throw new RangeError(
+        `Bulkhead: maxConcurrent must be an integer >= 1, got ${o.maxConcurrent}`,
+      );
+    }
+    if (!Number.isInteger(o.maxQueue) || o.maxQueue < 0) {
+      throw new RangeError(`Bulkhead: maxQueue must be an integer >= 0, got ${o.maxQueue}`);
+    }
+  }
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.active < this.o.maxConcurrent) {

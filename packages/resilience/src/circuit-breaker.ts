@@ -23,6 +23,16 @@ export class CircuitBreaker {
   private readonly isFailure: (err: unknown) => boolean;
 
   constructor(private readonly o: BreakerOptions) {
+    if (!Number.isInteger(o.failureThreshold) || o.failureThreshold < 1) {
+      throw new RangeError(
+        `CircuitBreaker: failureThreshold must be an integer >= 1, got ${o.failureThreshold}`,
+      );
+    }
+    if (!Number.isFinite(o.resetTimeoutMs) || o.resetTimeoutMs < 0) {
+      throw new RangeError(
+        `CircuitBreaker: resetTimeoutMs must be a finite number >= 0, got ${o.resetTimeoutMs}`,
+      );
+    }
     this.now = o.now ?? Date.now;
     this.isFailure = o.isFailure ?? (() => true);
   }
@@ -45,16 +55,24 @@ export class CircuitBreaker {
       this.onSuccess();
       return result;
     } catch (error) {
-      if (this.isFailure(error)) this.onFailure(state === 'half_open');
+      let failed = true;
+      try {
+        failed = this.isFailure(error);
+      } catch {
+        // A throwing predicate is treated as a failure; the original error is still rethrown.
+      }
+      if (failed) this.onFailure(state === 'half_open');
       else this.onSuccess();
       throw error;
+    } finally {
+      // Every path releases the probe slot so a half-open probe can never lock the breaker.
+      if (state === 'half_open') this.probing = false;
     }
   }
 
   private onSuccess(): void {
     this.failures = 0;
     this.opened = false;
-    this.probing = false;
   }
 
   private onFailure(wasProbe: boolean): void {
@@ -62,7 +80,6 @@ export class CircuitBreaker {
     if (wasProbe || this.failures >= this.o.failureThreshold) {
       this.opened = true;
       this.openedAt = this.now();
-      this.probing = false;
     }
   }
 }

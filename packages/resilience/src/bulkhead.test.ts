@@ -68,3 +68,12 @@ describe('Bulkhead', () => {
     await expect(bulkhead.execute(async () => 'after')).resolves.toBe('after');
   });
 });
+
+describe('Bulkhead input guards', () => {
+  it.each([0, 1.5, NaN, -1])('rejects maxConcurrent %s', (maxConcurrent) => {
+    expect(() => new Bulkhead({ maxConcurrent, maxQueue: 0 })).toThrow(RangeError);
+  });
+  it.each([-1, 1.5, NaN, Infinity])('rejects maxQueue %s', (maxQueue) => {
+    expect(() => new Bulkhead({ maxConcurrent: 1, maxQueue })).toThrow(RangeError);
+  });
+});

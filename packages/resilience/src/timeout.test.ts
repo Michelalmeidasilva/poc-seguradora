@@ -36,3 +36,9 @@ describe('withTimeout', () => {
     await expect(withTimeout(fn, 100)).rejects.toThrow('sync boom');
   });
 });
+
+describe('withTimeout input guards', () => {
+  it.each([0, -5, NaN, Infinity])('rejects ms %s', async (ms) => {
+    await expect(withTimeout(async () => 1, ms)).rejects.toThrow(RangeError);
+  });
+});

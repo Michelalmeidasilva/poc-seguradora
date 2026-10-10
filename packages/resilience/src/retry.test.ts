@@ -146,3 +146,17 @@ describe('retry', () => {
     expect(calls).toBe(2);
   });
 });
+
+describe('retry input guards', () => {
+  const base = { retries: 1, baseDelayMs: 1, maxDelayMs: 1, sleep: noSleep };
+  const run = (o: Partial<typeof base>) => retry(async () => 1, { ...base, ...o });
+  it.each([NaN, Infinity, -1, 1.5])('rejects retries %s', async (retries) => {
+    await expect(run({ retries })).rejects.toThrow(RangeError);
+  });
+  it.each([NaN, Infinity, -1])('rejects baseDelayMs %s', async (baseDelayMs) => {
+    await expect(run({ baseDelayMs })).rejects.toThrow(RangeError);
+  });
+  it.each([NaN, Infinity, -1])('rejects maxDelayMs %s', async (maxDelayMs) => {
+    await expect(run({ maxDelayMs })).rejects.toThrow(RangeError);
+  });
+});

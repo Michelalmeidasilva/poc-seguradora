@@ -106,3 +106,60 @@ describe('CircuitBreaker', () => {
     expect(breaker.state).toBe('closed');
   });
 });
+
+describe('CircuitBreaker isFailure robustness', () => {
+  const trip = async (breaker: CircuitBreaker) => {
+    await expect(breaker.execute(fail)).rejects.toThrow('down');
+    await expect(breaker.execute(fail)).rejects.toThrow('down');
+  };
+
+  it('rethrows the original error, reopens and allows a new probe when isFailure throws during a probe', async () => {
+    let throwing = false;
+    const { breaker, clock } = make({
+      isFailure: () => {
+        if (throwing) throw new Error('predicate bug');
+        return true;
+      },
+    });
+    await trip(breaker);
+    clock.t = 1000;
+    throwing = true;
+    await expect(breaker.execute(fail)).rejects.toThrow('down');
+    expect(breaker.state).toBe('open');
+    clock.t = 2000;
+    expect(breaker.state).toBe('half_open');
+    throwing = false;
+    await expect(breaker.execute(succeed)).resolves.toBe('ok');
+    expect(breaker.state).toBe('closed');
+  });
+
+  it('closes when isFailure returns false during a half-open probe', async () => {
+    let ignore = false;
+    const { breaker, clock } = make({ isFailure: () => !ignore });
+    await trip(breaker);
+    clock.t = 1000;
+    ignore = true;
+    await expect(breaker.execute(fail)).rejects.toThrow('down');
+    expect(breaker.state).toBe('closed');
+  });
+
+  it('still rejects a second probe while one is in flight', async () => {
+    const { breaker, clock } = make();
+    await trip(breaker);
+    clock.t = 1000;
+    let release: (v: string) => void = () => {};
+    const probe = breaker.execute(() => new Promise<string>((r) => (release = r)));
+    await expect(breaker.execute(succeed)).rejects.toBeInstanceOf(CircuitOpenError);
+    release('x');
+    await probe;
+  });
+});
+
+describe('CircuitBreaker input guards', () => {
+  it.each([0, 1.5, NaN])('rejects failureThreshold %s', (failureThreshold) => {
+    expect(() => new CircuitBreaker({ failureThreshold, resetTimeoutMs: 10 })).toThrow(RangeError);
+  });
+  it.each([-1, Infinity, NaN])('rejects resetTimeoutMs %s', (resetTimeoutMs) => {
+    expect(() => new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs })).toThrow(RangeError);
+  });
+});

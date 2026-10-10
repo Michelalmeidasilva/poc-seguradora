@@ -1,19 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { Bulkhead } from './bulkhead';
+import { Bulkhead, BulkheadFullError } from './bulkhead';
 import { CircuitBreaker, CircuitOpenError } from './circuit-breaker';
 import { createPolicy } from './policy';
 
-const make = (failureThreshold = 2) => {
+const make = (failureThreshold = 2, bulkheadOpts = { maxConcurrent: 4, maxQueue: 4 }) => {
   const clock = { t: 0 };
   const breaker = new CircuitBreaker({
     failureThreshold,
     resetTimeoutMs: 1000,
     now: () => clock.t,
   });
-  const bulkhead = new Bulkhead({ maxConcurrent: 4, maxQueue: 4 });
+  const bulkhead = new Bulkhead(bulkheadOpts);
   const policy = createPolicy({
     timeoutMs: 50,
-    retry: { retries: 2, baseDelayMs: 1, maxDelayMs: 1, sleep: async () => {} },
+    retry: {
+      retries: 2,
+      baseDelayMs: 1,
+      maxDelayMs: 1,
+      sleep: async () => {},
+      shouldRetry: (e) => !(e instanceof CircuitOpenError) && !(e instanceof RangeError),
+    },
     breaker,
     bulkhead,
   });
@@ -56,5 +62,26 @@ describe('createPolicy', () => {
       }),
     ).rejects.toBeInstanceOf(CircuitOpenError);
     expect(calls).toBe(0);
+  });
+
+  it('calls a non-retryable error exactly once', async () => {
+    const { policy } = make(5);
+    let calls = 0;
+    await expect(
+      policy(async () => {
+        calls++;
+        throw new RangeError('bad input');
+      }),
+    ).rejects.toBeInstanceOf(RangeError);
+    expect(calls).toBe(1);
+  });
+
+  it('propagates BulkheadFullError when the bulkhead is full', async () => {
+    const { policy } = make(2, { maxConcurrent: 1, maxQueue: 0 });
+    let release: () => void = () => {};
+    const busy = policy(() => new Promise<void>((r) => (release = r)));
+    await expect(policy(async () => 'x')).rejects.toBeInstanceOf(BulkheadFullError);
+    release();
+    await busy;
   });
 });
