@@ -27,13 +27,13 @@ import {
 const common = {
   v: z.literal(1),
   id: z.string().uuid(),
-  sessionId: z.string().min(1),
-  correlationId: z.string().min(1),
+  sessionId: z.string().min(1).max(128),
+  correlationId: z.string().min(1).max(128),
   ts: z.string().datetime(),
 };
 
 const serverBase = z.object({ ...common, seq: z.number().int().nonnegative() });
-const clientBase = z.object(common);
+const clientBase = z.object(common).strict();
 
 const server = <T extends string, P extends z.ZodTypeAny>(type: T, payload: P) =>
   serverBase.extend({ type: z.literal(type), payload });

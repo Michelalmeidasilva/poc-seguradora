@@ -114,3 +114,60 @@ describe('parseServerEvent', () => {
     expect(!r.ok && r.error.issues.length > 0).toBe(true);
   });
 });
+
+describe('protocol hardening (server events)', () => {
+  const badUrls = ['javascript:alert(1)', 'data:text/html;base64,AAAA', 'vbscript:x'];
+  const card = (mediaUrl: string) => ({ mediaUrl, mediaType: 'image', title: 'T', buttons: [] });
+  const urlButton = (url: string) => ({ type: 'url', title: 'Abrir', url });
+
+  it.each(badUrls)('rejects %s as voice mediaUrl', (u) => {
+    expect(parseServerEvent(event('message.voice', { mediaUrl: u, durationMs: 1 })).ok).toBe(false);
+  });
+  it.each(badUrls)('rejects %s as carousel card mediaUrl', (u) => {
+    const cards = [card(u), card('https://exemplo.invalid/2.jpg')];
+    expect(parseServerEvent(event('message.carousel', { cards })).ok).toBe(false);
+  });
+  it.each(badUrls)('rejects %s as url button', (u) => {
+    const payload = { body: 'x', buttons: [urlButton(u)] };
+    expect(parseServerEvent(event('message.template', payload)).ok).toBe(false);
+  });
+  it.each(['https://exemplo.invalid/a', 'http://exemplo.invalid/a'])('accepts %s', (u) => {
+    expect(parseServerEvent(event('message.voice', { mediaUrl: u, durationMs: 1 })).ok).toBe(true);
+    const payload = { body: 'x', buttons: [urlButton(u)] };
+    expect(parseServerEvent(event('message.template', payload)).ok).toBe(true);
+  });
+
+  it('accepts an error with and without messageId and retryAfterMs', () => {
+    const p = { code: 'rate_limited', message: 'x' };
+    expect(parseServerEvent(event('error', p)).ok).toBe(true);
+    expect(parseServerEvent(event('error', { ...p, messageId: 'm1', retryAfterMs: 1500 })).ok).toBe(
+      true,
+    );
+  });
+  it.each([-1, 1.5])('rejects error retryAfterMs %s', (retryAfterMs) => {
+    const p = { code: 'rate_limited', message: 'x', retryAfterMs };
+    expect(parseServerEvent(event('error', p)).ok).toBe(false);
+  });
+  it('rejects an empty error messageId', () => {
+    const p = { code: 'rate_limited', message: 'x', messageId: '' };
+    expect(parseServerEvent(event('error', p)).ok).toBe(false);
+  });
+
+  it('exposes LIMITS.maxEventBytes as a positive integer', () => {
+    expect(Number.isInteger(LIMITS.maxEventBytes) && LIMITS.maxEventBytes > 0).toBe(true);
+  });
+
+  it('accepts a 128 char sessionId and rejects 129 (server)', () => {
+    const p = { text: 'oi' };
+    expect(parseServerEvent(event('message.text', p, { sessionId: 's'.repeat(128) })).ok).toBe(
+      true,
+    );
+    expect(parseServerEvent(event('message.text', p, { sessionId: 's'.repeat(129) })).ok).toBe(
+      false,
+    );
+  });
+  it('rejects a 129 char correlationId (server)', () => {
+    const e = event('message.text', { text: 'oi' }, { correlationId: 'c'.repeat(129) });
+    expect(parseServerEvent(e).ok).toBe(false);
+  });
+});

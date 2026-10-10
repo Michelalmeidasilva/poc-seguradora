@@ -1,18 +1,28 @@
 import { z } from 'zod';
 import { ERROR_CODES, LIMITS } from './limits';
 
+/** Only http(s) URLs: blocks javascript:, data:, vbscript: and similar schemes. Never throws. */
+export const httpUrl = z.string().refine((value) => {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}, 'must be an http(s) URL');
+
 const buttonTitle = z.string().min(1).max(LIMITS.maxQuickReplyTitle);
 
 export const ButtonSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('quick_reply'), id: z.string().min(1), title: buttonTitle }),
-  z.object({ type: z.literal('url'), title: buttonTitle, url: z.string().url() }),
+  z.object({ type: z.literal('url'), title: buttonTitle, url: httpUrl }),
   z.object({ type: z.literal('phone'), title: buttonTitle, phone: z.string().min(3) }),
 ]);
 
 export const TextPayload = z.object({ text: z.string().min(1).max(LIMITS.maxTextLength) });
 
 export const VoicePayload = z.object({
-  mediaUrl: z.string().url(),
+  mediaUrl: httpUrl,
   durationMs: z.number().int().positive(),
   transcript: z.string().optional(),
 });
@@ -37,7 +47,7 @@ export const TemplatePayload = z.object({
 });
 
 export const CarouselCardSchema = z.object({
-  mediaUrl: z.string().url(),
+  mediaUrl: httpUrl,
   mediaType: z.enum(['image', 'video']),
   title: z.string().min(1).max(60),
   body: z.string().max(160).optional(),
@@ -72,4 +82,7 @@ export const ReadPayload = z.object({ messageId: z.string().min(1) });
 export const ErrorPayload = z.object({
   code: z.enum(ERROR_CODES),
   message: z.string().min(1),
+  /** The client message (id) that failed, when the error relates to one. */
+  messageId: z.string().min(1).optional(),
+  retryAfterMs: z.number().int().nonnegative().optional(),
 });

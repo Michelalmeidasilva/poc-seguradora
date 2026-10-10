@@ -7,6 +7,8 @@ export const LIMITS = {
   maxButtonsPerCard: 2,
   minCarouselCards: 2,
   maxCarouselCards: 10,
+  /** Max serialized size of a client event; the gateway enforces it as `payload_too_large`. */
+  maxEventBytes: 65536,
 } as const;
 
 export const ERROR_CODES = [

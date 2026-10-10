@@ -60,3 +60,21 @@ describe('parseClientEvent', () => {
     expect(parseClientEvent(event('message.text', { text: 'oi' })).ok).toBe(false);
   });
 });
+
+describe('protocol hardening (client events)', () => {
+  it('rejects a client-sent seq', () => {
+    expect(parseClientEvent({ ...event('user.text', { text: 'oi' }), seq: 1 }).ok).toBe(false);
+  });
+  it('rejects unknown top-level fields', () => {
+    expect(parseClientEvent({ ...event('user.text', { text: 'oi' }), extra: 1 }).ok).toBe(false);
+  });
+  it('accepts a 128 char sessionId and rejects 129', () => {
+    const e = event('user.text', { text: 'oi' });
+    expect(parseClientEvent({ ...e, sessionId: 's'.repeat(128) }).ok).toBe(true);
+    expect(parseClientEvent({ ...e, sessionId: 's'.repeat(129) }).ok).toBe(false);
+  });
+  it('rejects a 129 char correlationId', () => {
+    const e = { ...event('user.text', { text: 'oi' }), correlationId: 'c'.repeat(129) };
+    expect(parseClientEvent(e).ok).toBe(false);
+  });
+});
