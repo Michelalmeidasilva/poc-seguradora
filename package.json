@@ -11,11 +11,14 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "pnpm -r test && node --test scripts/workboard-check.test.mjs",
+    "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "build": "pnpm -r --if-present build",
     "check:workboard": "node scripts/workboard-check.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/node": "^20.0.0",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^9.0.0",
     "prettier": "^3.3.0",
     "typescript": "^5.5.0",

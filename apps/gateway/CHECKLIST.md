@@ -6,7 +6,7 @@
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
 - [x] Configuração por variáveis de ambiente validada na subida
 - [ ] Dockerfile e execução local
-- [ ] Regras de dependência verificadas (dependency-cruiser)
+- [x] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades
 - [x] Buffer de eventos com seq e retomada (Last-Event-ID)
@@ -22,9 +22,9 @@
 - [x] Encerramento gracioso
 
 ## Qualidade
-- [ ] Testes unitários (domain e application)
+- [x] Testes unitários (domain e application)
 - [x] Testes de integração e E2E com chatbot fake
-- [ ] Lint, formatação e tsconfig estrito sem erros
+- [x] Lint, formatação e tsconfig estrito sem erros
 
 ## Pendências e decisões
 - Cookie entre origens: SameSite=None; Secure exige HTTPS e depende de o navegador aceitar cookies de terceiros; se bloquear, servir web e gateway sob o mesmo site (decidir no deploy).
@@ -32,3 +32,4 @@
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
 - A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.
 - No encerramento (SIGTERM/SIGINT) turnos do chatbot ainda em andamento são interrompidos; o estado vive em memória e o cliente reenvia com o mesmo id (idempotência).
+- Dockerfile escrito mas não verificado (sem Docker no ambiente de desenvolvimento: o daemon não estava em execução).
