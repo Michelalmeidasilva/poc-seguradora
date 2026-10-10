@@ -28,6 +28,7 @@
 - [x] Schema cliente→servidor: user.typing
 - [x] Schema cliente→servidor: user.ack
 - [x] parseServerEvent e parseClientEvent
+- [x] ChatbotRequest e eventos do chatbot sem seq (parseChatbotLine, serializeChatbotLine)
 - [ ] Campo flowJson refinado pelo schema de Flow JSON (Plano 5)
 
 ## Qualidade
