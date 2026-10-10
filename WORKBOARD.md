@@ -7,7 +7,7 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
 |---|---|---|---|---|---|---|---|
 | protocol | packages/protocol | done | claude | feat/foundation-protocol-resilience | 2026-10-10 | 2026-10-10 | flowJson refinado no Plano 5 |
-| resilience | packages/resilience | not_started | - | - | - | - | |
+| resilience | packages/resilience | in_progress | claude | feat/foundation-protocol-resilience | 2026-10-10 | 2026-10-10 | |
 | svc-cotacao | apps/svc-cotacao | not_started | - | - | - | - | Outro agente; contrato em docs/superpowers/specs/2026-10-10-internal-services-contracts.md |
 | svc-apolice | apps/svc-apolice | not_started | - | - | - | - | Outro agente; mesmo contrato |
 | svc-sinistro | apps/svc-sinistro | not_started | - | - | - | - | Outro agente; mesmo contrato |
