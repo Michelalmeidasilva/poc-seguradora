@@ -350,7 +350,20 @@ Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem tra
 - Quando uma ferramenta nova passar a trabalhar no repositório, adiciona-se o apontador dela e atualiza-se esta lista, sem copiar as regras.
 - O `scripts/workboard-check.mjs` também verifica que cada apontador existe e menciona `AGENTS.md`.
 
-**Skill do repositório:** `.claude/skills/workboard-protocol/SKILL.md` empacota esta seção (protocolo do `WORKBOARD.md`, `CHECKLIST.md` e as regras de código da seção 14) como uma skill para o Claude. Ela é invocada antes de iniciar, continuar ou concluir qualquer tarefa no repositório. Os outros agentes seguem as mesmas regras pelo `AGENTS.md`. Em caso de divergência, o spec prevalece e a skill é corrigida.
+**Skill do repositório:** `workboard-protocol` empacota esta seção (protocolo do `WORKBOARD.md`, `CHECKLIST.md` e as regras de código da seção 14) como uma skill, invocada antes de iniciar, continuar ou concluir qualquer tarefa no repositório. Em caso de divergência, o spec prevalece e a skill é corrigida.
+
+Há **uma única cópia**, em `.agents/skills/workboard-protocol/SKILL.md`, e as demais ferramentas a enxergam por symlink:
+
+| Ferramenta | Caminho no repositório | Origem |
+|---|---|---|
+| Codex | `.agents/skills/workboard-protocol/` (cópia real) | Documentação do Codex: skills de repositório em `.agents/skills`, com symlinks suportados |
+| Claude | `.claude/skills/workboard-protocol` → `../../.agents/skills/workboard-protocol` | Convenção do Claude Code |
+| Antigravity | `.agent/skills/workboard-protocol` → `../../.agents/skills/workboard-protocol` | Codelab oficial do Google: skills de workspace em `.agent/skills` |
+
+- Para o Claude e o Antigravity, os symlinks precisam ser preservados pelo git (Linux e macOS; no Windows exigem `core.symlinks=true` e permissão de criação).
+- O `scripts/workboard-check.mjs` também verifica que os dois symlinks existem e resolvem para a cópia real.
+- Cursor, Copilot e demais agentes seguem as regras pelo `AGENTS.md` e pelos apontadores (acima), não por skill.
+- O frontmatter (`name` e `description`) é o formato comum às três ferramentas. Um `agents/openai.yaml` opcional do Codex não é usado.
 
 **Validação:** `scripts/workboard-check.mjs` (Node, sem dependências) falha com código ≠ 0 se:
 - o cabeçalho ou uma linha da tabela estiver mal formado;
