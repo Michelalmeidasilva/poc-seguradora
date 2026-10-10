@@ -21,7 +21,10 @@ export const POINTERS = [
   '.github/copilot-instructions.md',
 ];
 export const SKILL_REAL = '.agents/skills/workboard-protocol';
-export const SKILL_LINKS = ['.claude/skills/workboard-protocol', '.agent/skills/workboard-protocol'];
+export const SKILL_LINKS = [
+  '.claude/skills/workboard-protocol',
+  '.agent/skills/workboard-protocol',
+];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -125,10 +128,7 @@ export function checkRepo(root) {
   if (!existsSync(wbFile)) return ['WORKBOARD.md not found'];
 
   const { rows, errors: parseErrors } = parseWorkboard(readFileSync(wbFile, 'utf8'));
-  const errors = [
-    ...parseErrors,
-    ...validateRows(rows, (p) => existsSync(join(root, p))),
-  ];
+  const errors = [...parseErrors, ...validateRows(rows, (p) => existsSync(join(root, p)))];
 
   if (!existsSync(join(root, 'AGENTS.md'))) errors.push('AGENTS.md not found');
   for (const p of POINTERS) {

@@ -2,7 +2,9 @@
   "name": "seguradora-services",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",

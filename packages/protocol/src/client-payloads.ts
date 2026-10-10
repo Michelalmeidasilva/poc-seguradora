@@ -29,6 +29,4 @@ export const UserFlowDataExchangePayload = z
 
 export const UserTypingPayload = z.object({ state: z.enum(['start', 'stop']) }).strict();
 
-export const UserAckPayload = z
-  .object({ lastSeq: z.number().int().nonnegative() })
-  .strict();
+export const UserAckPayload = z.object({ lastSeq: z.number().int().nonnegative() }).strict();

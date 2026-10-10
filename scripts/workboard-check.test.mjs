@@ -45,7 +45,9 @@ test('parseWorkboard accepts CRLF line endings', () => {
 });
 
 test('parseWorkboard splits comma separated paths and strips backticks', () => {
-  const { rows } = parseWorkboard(board(row({ path: '`apps/web/src/chat`, `apps/web/src/transport`' })));
+  const { rows } = parseWorkboard(
+    board(row({ path: '`apps/web/src/chat`, `apps/web/src/transport`' })),
+  );
   assert.deepEqual(rows[0].paths, ['apps/web/src/chat', 'apps/web/src/transport']);
 });
 
@@ -100,9 +102,18 @@ test('validateRows accepts a human owner', () => {
 test('validateRows requires owner, branch and start date for in_progress and blocked', () => {
   for (const status of ['in_progress', 'blocked']) {
     const errors = validateRows(parse(row({ status })));
-    assert.ok(errors.some((e) => /requires an owner/.test(e)), status);
-    assert.ok(errors.some((e) => /requires a branch/.test(e)), status);
-    assert.ok(errors.some((e) => /requires a start date/.test(e)), status);
+    assert.ok(
+      errors.some((e) => /requires an owner/.test(e)),
+      status,
+    );
+    assert.ok(
+      errors.some((e) => /requires a branch/.test(e)),
+      status,
+    );
+    assert.ok(
+      errors.some((e) => /requires a start date/.test(e)),
+      status,
+    );
   }
 });
 
