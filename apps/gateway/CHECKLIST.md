@@ -12,7 +12,7 @@
 - [x] Buffer de eventos com seq e retomada (Last-Event-ID)
 - [x] Idempotência por id
 - [x] Rate limit por sessão e por IP
-- [ ] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões
+- [x] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões (token e registro; cookie na Tarefa 7)
 - [ ] POST /v1/session
 - [ ] POST /v1/events (validação, limites, 202/200/4xx)
 - [ ] GET /v1/stream (SSE, heartbeat, Last-Event-ID, substituição de stream)
@@ -31,3 +31,4 @@
 - IDs de eventos criados pelo gateway usam UUID v4 (o schema aceita qualquer versão).
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
 - A retomada por Last-Event-ID só fica completa com a rota SSE (Tarefa 8).
+- O cookie e a rota POST /v1/session fecham na Tarefa 7.
