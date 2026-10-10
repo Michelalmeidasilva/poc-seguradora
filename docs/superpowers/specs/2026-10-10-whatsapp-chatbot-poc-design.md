@@ -266,7 +266,7 @@ O projeto é um **monorepo pnpm com um único repositório git**, na raiz `segur
 1. Executar `git init` na raiz (já feito) e confirmar que `git status` funciona. Não criar repositórios aninhados dentro de `apps/*` ou `packages/*`.
 2. Criar a estrutura de pastas da seção 2 (`apps/web`, `apps/gateway`, `apps/chatbot`, `apps/svc-cotacao`, `apps/svc-apolice`, `apps/svc-sinistro`, `packages/protocol`, `packages/resilience`), cada uma com seu `package.json`.
 3. Criar na raiz `.gitignore`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.base.json` e a configuração de lint e formatação.
-4. Criar na raiz o `WORKBOARD.md` (seção 15.3), o `AGENTS.md` e o `CLAUDE.md` que apontam para ele, e o script `scripts/workboard-check.mjs`. **O controle de trabalho nasce antes de qualquer implementação.**
+4. Criar na raiz o `WORKBOARD.md` (seção 15.3), o `AGENTS.md` com as regras e os apontadores para ele (`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/workboard.mdc`, `.github/copilot-instructions.md`), e o script `scripts/workboard-check.mjs`. **O controle de trabalho nasce antes de qualquer implementação.**
 5. Fazer o commit inicial dessa estrutura. A partir daí, commits convencionais e pequenos.
 
 ### 15.2 `CHECKLIST.md` por serviço
@@ -338,8 +338,17 @@ Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem tra
 6. **Ao terminar**, só marque `done` com o `CHECKLIST.md` do serviço 100% marcado e os testes passando. Mantenha `Dono` para a rastreabilidade.
 7. **Reivindicação obsoleta:** uma linha `in_progress` sem atualização há mais de 24 h pode ser retomada por outro. Quem retoma registra em `Notas` de quem era e o motivo.
 
+**Regra obrigatória para todo agente.** O protocolo acima vale para **qualquer chatbot, agente de código ou assistente de IA que execute uma tarefa neste repositório**, listado ou não (claude, codex, cursor, antigravity, copilot, gemini e outros), e para pessoas. Nenhum agente edita código, cria arquivos ou faz commits fora do próprio caminho sem antes ter reivindicado uma linha no `WORKBOARD.md`. Um agente que não consiga ler os arquivos de instrução abaixo deve receber essa regra no prompt da tarefa.
+
 **Apontadores para os agentes:**
-- `AGENTS.md` (lido por codex, cursor e antigravity) e `CLAUDE.md` (lido pelo Claude) contêm as mesmas regras curtas: leia o `WORKBOARD.md` antes de tocar no código, reivindique uma linha, respeite o caminho dos outros e atualize o `CHECKLIST.md`.
+- **`AGENTS.md`** na raiz é a **fonte única** das regras: leia o `WORKBOARD.md` antes de tocar no código, reivindique uma linha, respeite o caminho dos outros, trabalhe em branch ou worktree próprio e atualize o `CHECKLIST.md`. É o arquivo padrão lido por codex, cursor e antigravity.
+- Os demais arquivos só apontam para ele, em uma ou duas linhas, para não divergirem:
+  - `CLAUDE.md` (Claude);
+  - `GEMINI.md` (Gemini e antigravity);
+  - `.cursor/rules/workboard.mdc` (Cursor, regra sempre aplicada);
+  - `.github/copilot-instructions.md` (GitHub Copilot).
+- Quando uma ferramenta nova passar a trabalhar no repositório, adiciona-se o apontador dela e atualiza-se esta lista, sem copiar as regras.
+- O `scripts/workboard-check.mjs` também verifica que cada apontador existe e menciona `AGENTS.md`.
 
 **Validação:** `scripts/workboard-check.mjs` (Node, sem dependências) falha com código ≠ 0 se:
 - o cabeçalho ou uma linha da tabela estiver mal formado;
