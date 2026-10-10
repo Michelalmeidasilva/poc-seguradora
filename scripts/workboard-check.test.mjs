@@ -232,7 +232,6 @@ test('checkRepo reports a skill symlink that points to the wrong place', () => {
 });
 
 // ---- fix wave: stricter validation ----
-const SEP = '|---|---|---|---|---|---|---|---|\n';
 const HDR_ONLY = HEADER.split('\n')[0] + '\n';
 const active = (o = {}) =>
   row({
