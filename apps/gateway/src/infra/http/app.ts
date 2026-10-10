@@ -76,6 +76,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     loggerInstance: logger as FastifyBaseLogger,
     trustProxy: config.TRUST_PROXY,
     bodyLimit: LIMITS.maxEventBytes,
+    // Node's closeIdleConnections() skips sockets that never carried a request
+    // (pre-connected by browsers, proxies, undici), so close() would wait for the
+    // peer. SSE streams are ended in preClose first; then every socket is destroyed.
+    forceCloseConnections: true,
   });
 
   await app.register(cors, {

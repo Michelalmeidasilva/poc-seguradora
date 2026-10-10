@@ -30,6 +30,19 @@ const postEvent = (baseUrl: string, cookie: string, body: unknown) =>
   });
 
 describe('GET /v1/stream', () => {
+  it('closes the app quickly after a client aborted a stream', async () => {
+    h = await makeHarness();
+    const url = await h.listen();
+    const { cookie } = await h.login();
+    await (await fetch(`${url}/health`)).text(); // keeps a pooled connection around, like a real client
+    const conn = await open(`${url}/v1/stream`, { cookie });
+    conn.close();
+    await sleep(50); // lets undici open its spare, never-used connection
+    const t = Date.now();
+    await h.app.close();
+    expect(Date.now() - t).toBeLessThan(500);
+  });
+
   it('answers 401 without a valid session', async () => {
     h = await makeHarness();
     const url = await h.listen();

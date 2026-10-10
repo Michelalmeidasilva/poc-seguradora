@@ -16,8 +16,11 @@ const sweeper = setInterval(() => {
 }, 60_000);
 sweeper.unref();
 
+let stopping = false;
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
+    if (stopping) return;
+    stopping = true;
     app.log.info({ signal }, 'shutting down');
     clearInterval(sweeper);
     app.close().then(
