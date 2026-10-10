@@ -24,11 +24,14 @@ import {
   UserVoicePayload,
 } from './client-payloads';
 
+/** Printable ASCII without spaces, 1..128: safe to forward as an HTTP header value. */
+export const correlationIdSchema = z.string().regex(/^[\x21-\x7e]{1,128}$/);
+
 const common = {
   v: z.literal(1),
   id: z.string().uuid(),
   sessionId: z.string().min(1).max(128),
-  correlationId: z.string().min(1).max(128),
+  correlationId: correlationIdSchema,
   ts: z.string().datetime(),
 };
 

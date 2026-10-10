@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   ChatbotRequestSchema,
   parseChatbotLine,
+  parseClientEvent,
+  parseServerEvent,
   serializeChatbotLine,
+  ServerEventSchema,
   UnsequencedServerEventSchema,
 } from './index';
 
@@ -70,6 +73,7 @@ describe('parseChatbotLine', () => {
     const r = parseChatbotLine(
       JSON.stringify({ ...base, seq: 9, type: 'message.text', payload: { text: 'oi' } }),
     );
+    expect(r.ok).toBe(true);
     expect(r.ok && 'seq' in r.value).toBe(false);
   });
 
@@ -97,5 +101,67 @@ describe('serializeChatbotLine', () => {
     expect(line.indexOf('\n')).toBe(line.length - 1);
     const back = parseChatbotLine(line.trim());
     expect(back.ok && back.value).toEqual(event);
+  });
+});
+
+describe('UnsequencedServerEventSchema drift guard', () => {
+  it('covers every server event type', () => {
+    const names = (options: ReadonlyArray<{ shape: { type: { value: string } } }>) =>
+      options.map((o) => o.shape.type.value).sort();
+    expect(UnsequencedServerEventSchema.options.length).toBe(ServerEventSchema.options.length);
+    expect(names(UnsequencedServerEventSchema.options)).toEqual(names(ServerEventSchema.options));
+  });
+});
+
+describe('correlationId is header-safe', () => {
+  const bad: Array<[string, string]> = [
+    ['a newline', 'bad\nid'],
+    ['a space', 'bad id'],
+    ['non-ASCII', 'idé中'],
+    ['empty', ''],
+    ['129 chars', 'c'.repeat(129)],
+  ];
+  const good = ['corr-1', '0192f4c8-7b1a-7c3e-9a55-3f2d1e0b8a41', 'c'.repeat(128)];
+
+  it.each(bad)('rejects %s in server events, client events and chatbot requests', (_n, id) => {
+    expect(
+      parseServerEvent({
+        ...base,
+        seq: 1,
+        correlationId: id,
+        type: 'message.text',
+        payload: { text: 'oi' },
+      }).ok,
+    ).toBe(false);
+    expect(parseClientEvent({ ...clientEvent, correlationId: id }).ok).toBe(false);
+    expect(
+      ChatbotRequestSchema.safeParse({
+        v: 1,
+        sessionId: 's',
+        correlationId: id,
+        event: clientEvent,
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(good)('accepts %s everywhere', (id) => {
+    expect(
+      parseServerEvent({
+        ...base,
+        seq: 1,
+        correlationId: id,
+        type: 'message.text',
+        payload: { text: 'oi' },
+      }).ok,
+    ).toBe(true);
+    expect(parseClientEvent({ ...clientEvent, correlationId: id }).ok).toBe(true);
+    expect(
+      ChatbotRequestSchema.safeParse({
+        v: 1,
+        sessionId: 's',
+        correlationId: id,
+        event: { ...clientEvent, correlationId: id },
+      }).success,
+    ).toBe(true);
   });
 });

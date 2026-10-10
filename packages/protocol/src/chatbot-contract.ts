@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { ClientEventSchema, ServerEventSchema } from './events';
+import { ClientEventSchema, correlationIdSchema, ServerEventSchema } from './events';
 import { err, ok, type Result } from './result';
 
 /** Gateway → chatbot: body of `POST /v1/chat/events`. */
 export const ChatbotRequestSchema = z.object({
   v: z.literal(1),
   sessionId: z.string().min(1).max(128),
-  correlationId: z.string().min(1).max(128),
+  correlationId: correlationIdSchema,
   event: ClientEventSchema,
 });
 export type ChatbotRequest = z.infer<typeof ChatbotRequestSchema>;

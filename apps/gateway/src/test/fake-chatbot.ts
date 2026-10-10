@@ -32,7 +32,10 @@ export const textEvent = (request: ChatbotRequest, text: string): UnsequencedSer
   v: 1,
   id: randomUUID(),
   sessionId: request.sessionId,
-  correlationId: request.correlationId,
+  // Replies are strictly validated by the gateway: never echo a non header-safe id.
+  correlationId: /^[\x21-\x7e]{1,128}$/.test(request.correlationId)
+    ? request.correlationId
+    : 'fake-corr',
   ts: new Date().toISOString(),
   type: 'message.text',
   payload: { text },
@@ -77,15 +80,28 @@ export async function startFakeChatbot(initial: Behavior = replyText('ok')): Pro
   const server: Server = createServer((req, res) => {
     fake.hits++;
     void readBody(req).then(async (raw) => {
-      const parsed = ChatbotRequestSchema.safeParse(JSON.parse(raw));
-      if (!parsed.success) {
+      let json: unknown;
+      try {
+        json = JSON.parse(raw);
+      } catch {
         res.writeHead(400);
         res.end();
         return;
       }
-      fake.requests.push(parsed.data);
+      // Strict validation rejects non-header-safe correlation ids, which the gateway must still
+      // be able to send (second guard); in that case record the raw parsed body instead of a 400.
+      const strict = ChatbotRequestSchema.safeParse(json);
+      const looksLikeRequest =
+        typeof json === 'object' && json !== null && 'event' in json && 'sessionId' in json;
+      if (!strict.success && !looksLikeRequest) {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
+      const request = (strict.success ? strict.data : json) as ChatbotRequest;
+      fake.requests.push(request);
       fake.headers.push(req.headers);
-      await behavior(parsed.data, res);
+      await behavior(request, res);
     });
   });
 
