@@ -205,3 +205,53 @@ Máximo de 50 componentes por tela.
 - Estado em memória no Cloud Run: instâncias recicladas perdem sessões. Mitigação: `max-instances` baixo e afinidade de sessão.
 - URL pública sem login: risco de abuso de custo e de conteúdo. Mitigação: rate limit, limites de tamanho e orçamento com alerta.
 - Fidelidade ao layout da Meta depende de referência visual. Os tokens de design ficam centralizados para ajuste.
+
+## 14. Padrões e estrutura de código
+
+### 14.1 Padrão arquitetural por camada
+
+| Onde | Padrão | Motivo |
+|---|---|---|
+| Gateway, chatbot e os três serviços internos | **Hexagonal (ports & adapters)**, mesma estrutura nos cinco serviços | O núcleo não conhece Fastify, HTTP nem filesystem. Trocar o LLM mock pelo real, o JSON por um banco ou o SSE por WebSocket é só um adaptador novo |
+| Web | **Feature-sliced** (`chat`, `flows`, `transport`) sobre um núcleo de renderização por registry | Cada funcionalidade é isolada, e um tipo de mensagem ou componente novo não altera o resto |
+| Compartilhado | **Contract-first**: `packages/protocol` com Zod como fonte única de verdade | O schema gera os tipos e valida nas duas pontas |
+
+Fora de escopo, por serem excesso para uma POC: DDD completo, CQRS e event sourcing.
+
+### 14.2 Estrutura de um serviço de backend
+
+```
+apps/<servico>/src
+  domain/        regras puras, sem I/O (entidades, máquina de estados, value objects)
+  application/   casos de uso + ports (interfaces), ex.: LlmProvider, PolicyClient, SessionStore
+  infra/         adapters: http (Fastify), clients dos serviços, llm-mock, session-memory, leitura de JSON
+  main.ts        composition root: monta as dependências por injeção manual
+```
+
+- **Regra de dependência:** `infra → application → domain`, nunca o contrário. Verificada com `dependency-cruiser` no CI.
+- **Serviços pequenos** (gateway e serviços internos) mantêm as três camadas, mesmo com `domain` enxuto, para que todos sigam a mesma estrutura.
+
+### 14.3 Padrões de projeto
+
+| Padrão | Onde |
+|---|---|
+| Ports & Adapters | `LlmProvider`, `SessionStore`, clientes dos serviços internos, transporte do gateway |
+| State | Máquina de estados do diálogo (cotação, apólice, sinistro) |
+| Strategy | Seleção de intenção no LLM mock; transporte SSE/WebSocket no gateway |
+| Registry + Factory | Renderers de mensagem e componentes de Flows (web); `catalog` de mensagens (chatbot) |
+| Interpreter | Avaliador das expressões `${...}` e das condições de `If` |
+| Decorator | `packages/resilience` envolve os clientes HTTP com timeout, retry, circuit breaker e bulkhead |
+| Circuit Breaker, Retry com backoff, Bulkhead | Resiliência entre serviços |
+| Idempotent Receiver | Tratamento de `messageId` repetido no gateway e no chatbot |
+| Observer (pub/sub em memória) | O gateway publica eventos para a conexão SSE da sessão |
+| Anti-corruption layer | Cada cliente traduz o formato do serviço para o modelo do chatbot |
+| Result type | Erros esperados são valores; exceções ficam para o inesperado |
+
+### 14.4 Convenções transversais
+
+- **Injeção de dependência manual** no composition root, sem framework.
+- **Validação nas bordas** com Zod. O domínio só recebe dados já válidos.
+- **Configuração** por variáveis de ambiente, validadas na subida (falha rápida).
+- **Erros** com códigos estáveis, mapeados em um único ponto da camada HTTP.
+- **Testes:** `domain` e `application` sem I/O; adapters por teste de contrato; E2E cobrindo o fluxo completo.
+- **Qualidade:** ESLint, Prettier, `tsconfig` estrito e commits convencionais.
