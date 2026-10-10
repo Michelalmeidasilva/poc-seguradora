@@ -266,7 +266,8 @@ O projeto é um **monorepo pnpm com um único repositório git**, na raiz `segur
 1. Executar `git init` na raiz (já feito) e confirmar que `git status` funciona. Não criar repositórios aninhados dentro de `apps/*` ou `packages/*`.
 2. Criar a estrutura de pastas da seção 2 (`apps/web`, `apps/gateway`, `apps/chatbot`, `apps/svc-cotacao`, `apps/svc-apolice`, `apps/svc-sinistro`, `packages/protocol`, `packages/resilience`), cada uma com seu `package.json`.
 3. Criar na raiz `.gitignore`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.base.json` e a configuração de lint e formatação.
-4. Fazer o commit inicial dessa estrutura. A partir daí, commits convencionais e pequenos.
+4. Criar na raiz o `WORKBOARD.md` (seção 15.3), o `AGENTS.md` e o `CLAUDE.md` que apontam para ele, e o script `scripts/workboard-check.mjs`. **O controle de trabalho nasce antes de qualquer implementação.**
+5. Fazer o commit inicial dessa estrutura. A partir daí, commits convencionais e pequenos.
 
 ### 15.2 `CHECKLIST.md` por serviço
 
@@ -303,3 +304,48 @@ O bloco **Funcionalidades** de cada serviço lista:
 - `packages/protocol` e `packages/resilience`: um item por tipo de mensagem/evento e por mecanismo de resiliência.
 
 Um item só é marcado como concluído quando o código existe, os testes dele passam e o commit foi feito.
+
+### 15.3 `WORKBOARD.md`: controle de trabalho entre agentes
+
+Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem trabalhar ao mesmo tempo neste monorepo. O `WORKBOARD.md`, na raiz, é a **fonte única** de quem está desenvolvendo o quê. O `CHECKLIST.md` (seção 15.2) detalha o progresso dentro de um serviço; o `WORKBOARD.md` diz de quem ele é e em que estado está.
+
+**Formato:** uma tabela, uma linha por frente de trabalho (*workstream*).
+
+```markdown
+# Workboard
+
+Última atualização: YYYY-MM-DD
+
+| Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
+|---|---|---|---|---|---|---|---|
+| protocol | packages/protocol | not_started | - | - | - | - | |
+```
+
+**Campos**
+- `Status`: `not_started` | `in_progress` | `blocked` | `done`.
+- `Dono`: `claude` | `codex` | `cursor` | `antigravity` | `human:<nome>` | `-` (sem dono, só com `not_started`).
+- `Branch`: a branch, ou o worktree, em que o dono trabalha.
+- `Iniciado` / `Atualizado`: datas ISO. `Notas`: bloqueio, motivo ou o que falta para o `done`.
+
+**Linhas iniciais** (todas `not_started`, sem dono): `protocol` (`packages/protocol`), `resilience` (`packages/resilience`), `svc-cotacao`, `svc-apolice`, `svc-sinistro`, `chatbot`, `gateway`, `web-chat` (`apps/web/src/chat`, `renderers`, `transport`) e `web-flows` (`apps/web/src/flows`). Quem precisar dividir uma frente adiciona linhas novas, com caminhos que não se sobreponham.
+
+**Protocolo**
+1. **Antes de começar**, leia o `WORKBOARD.md` atualizado (`git pull` se houver remoto). Escolha uma linha `not_started`.
+2. **Reivindique** a linha: `Status` → `in_progress`, `Dono`, `Branch`, `Iniciado` e `Atualizado`. Faça o commit desse arquivo **sozinho** (`chore(workboard): claim <workstream>`) antes de escrever código. Em caso de conflito ao integrar, quem integrou primeiro fica com a linha, e o outro escolhe outra.
+3. **Um dono por caminho.** Só edite arquivos do seu caminho. Para mudar um arquivo de outro workstream (em especial `packages/protocol`), peça ao dono, ou registre a mudança em `Notas` da linha dele. A exceção é o contrato dos serviços internos, que só muda com acordo (documento de contratos, seção 1).
+4. **Isolamento:** cada agente trabalha em sua própria branch, de preferência em um `git worktree` separado, para não pisar na árvore de trabalho dos outros.
+5. **Atualize** `Atualizado` e `Notas` ao concluir um marco, e marque `blocked` com o motivo quando travar.
+6. **Ao terminar**, só marque `done` com o `CHECKLIST.md` do serviço 100% marcado e os testes passando. Mantenha `Dono` para a rastreabilidade.
+7. **Reivindicação obsoleta:** uma linha `in_progress` sem atualização há mais de 24 h pode ser retomada por outro. Quem retoma registra em `Notas` de quem era e o motivo.
+
+**Apontadores para os agentes:**
+- `AGENTS.md` (lido por codex, cursor e antigravity) e `CLAUDE.md` (lido pelo Claude) contêm as mesmas regras curtas: leia o `WORKBOARD.md` antes de tocar no código, reivindique uma linha, respeite o caminho dos outros e atualize o `CHECKLIST.md`.
+
+**Validação:** `scripts/workboard-check.mjs` (Node, sem dependências) falha com código ≠ 0 se:
+- o cabeçalho ou uma linha da tabela estiver mal formado;
+- `Status` ou `Dono` tiver valor fora dos permitidos;
+- `in_progress` ou `blocked` não tiver `Dono`, `Branch` e `Iniciado`;
+- dois workstreams não `done` tiverem caminhos que se sobreponham;
+- um caminho listado não existir no repositório (depois que a estrutura da seção 15.1 for criada).
+
+O script roda no CI e como *pre-commit hook* opcional. Ele só valida o formato e a consistência do arquivo; a honestidade da reivindicação depende do protocolo acima.
