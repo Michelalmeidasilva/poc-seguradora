@@ -4,7 +4,12 @@ import { parseFormatting, type TextNode } from '../../renderers/format-text';
 import { safeHttpUrl } from '../../renderers/safe-urls';
 import { useFlow } from '../FlowContext';
 import { interpolate } from '../expr';
-import type { TextComponent } from '../schema';
+import {
+  RICH_TEXT_MAX_CHARS,
+  RICH_TEXT_MAX_LINE,
+  RICH_TEXT_MAX_LINES,
+  type TextComponent,
+} from '../schema';
 
 /** Bold, italic, strike and links only; code markers and everything else stay plain text. */
 function renderInline(nodes: TextNode[], prefix: string): ReactNode[] {
@@ -37,7 +42,7 @@ function renderInline(nodes: TextNode[], prefix: string): ReactNode[] {
   });
 }
 
-const MD_LINK = /\[([^\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/gu;
+const MD_LINK = /\[([^[\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/gu;
 
 /** Inline markup plus `[label](url)`; an unsafe url leaves just the label. */
 function Inline({ text }: { text: string }) {
@@ -63,11 +68,31 @@ function Inline({ text }: { text: string }) {
   return <>{out}</>;
 }
 
-const useText = (c: TextComponent): string => {
+/** Per-component bound after interpolation: a `${form.*}` echo must not blow up the render. */
+const MAX_RENDERED = 4096;
+
+// never end on half of a surrogate pair
+const clamp = (text: string, max: number): string =>
+  text.length <= max ? text : text.slice(0, max).replace(/[\uD800-\uDBFF]$/, '');
+
+const useRaw = (c: TextComponent): string => {
   const { scope } = useFlow();
   const raw = Array.isArray(c.text) ? c.text.join('\n') : (c.text ?? '');
   return interpolate(raw, scope);
 };
+
+const useText = (c: TextComponent): string => clamp(useRaw(c), MAX_RENDERED);
+
+/** RichText keeps its own (larger) bounds: lines, chars per line and total. */
+const useRichText = (c: TextComponent): string =>
+  clamp(
+    useRaw(c)
+      .split('\n')
+      .slice(0, RICH_TEXT_MAX_LINES)
+      .map((line) => clamp(line, RICH_TEXT_MAX_LINE))
+      .join('\n'),
+    RICH_TEXT_MAX_CHARS,
+  );
 
 export function TextHeading({ c }: { c: TextComponent }) {
   return <h3 className="flow-heading">{useText(c)}</h3>;
@@ -143,7 +168,7 @@ function parseBlocks(text: string): Block[] {
 
 /** Markdown subset: `#` headings, bold, italic, strike, lists, links. Never HTML. */
 export function RichText({ c }: { c: TextComponent }) {
-  const text = useText(c);
+  const text = useRichText(c);
   return (
     <div className="flow-rich">
       {parseBlocks(text).map((block, i) => {

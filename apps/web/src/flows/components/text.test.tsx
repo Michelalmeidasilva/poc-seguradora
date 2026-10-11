@@ -107,3 +107,63 @@ describe('text components', () => {
     err.mockRestore();
   });
 });
+
+describe('text cost bounds', () => {
+  it('a link label never spans "[" (keeps the link regex linear)', () => {
+    renderInFlow(<TextBody c={{ type: 'TextBody', text: '[[[a](https://a.b/x)' }} />, flow);
+    const link = screen.getByRole('link');
+    expect(link).toHaveTextContent(/^a$/);
+    expect(link.parentElement?.textContent).toBe('[[a');
+  });
+
+  it('renders a 4k run of "[" in RichText quickly', () => {
+    const start = performance.now();
+    renderInFlow(<RichText c={{ type: 'RichText', text: '['.repeat(4096) }} />, flow);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  it('clamps interpolated text to 4096 characters per component', () => {
+    const long = { data: { v: 'y'.repeat(50_000) } };
+    const { container } = renderInFlow(
+      <>
+        <TextBody c={{ type: 'TextBody', text: '${data.v}' }} />
+        <TextCaption c={{ type: 'TextCaption', text: '${data.v}' }} />
+        <TextHeading c={{ type: 'TextHeading', text: '${data.v}' }} />
+      </>,
+      flow,
+      long,
+    );
+    for (const el of container.querySelectorAll('p, h3')) {
+      expect(el.textContent?.length).toBe(4096);
+    }
+  });
+
+  it('clamps an interpolated RichText to 4096 characters per line and 100 lines', () => {
+    const many = { data: { v: Array.from({ length: 500 }, () => 'z'.repeat(9000)).join('\n') } };
+    const { container } = renderInFlow(
+      <RichText c={{ type: 'RichText', text: '${data.v}' }} />,
+      flow,
+      many,
+    );
+    const paragraphs = container.querySelectorAll('p');
+    expect(paragraphs.length).toBeLessThanOrEqual(100);
+    for (const p of paragraphs) expect(p.textContent!.length).toBeLessThanOrEqual(4096);
+    expect(container.textContent!.length).toBeLessThanOrEqual(20_000);
+  });
+
+  it.each(['`', '```', 'https://a.b/ ', '*', '[a](https://a.b) '])(
+    'renders a worst-case 4096-char run of %j quickly',
+    (unit) => {
+      const text = unit.repeat(Math.ceil(4096 / unit.length)).slice(0, 4096);
+      const start = performance.now();
+      renderInFlow(
+        <>
+          <TextBody c={{ type: 'TextBody', text }} />
+          <RichText c={{ type: 'RichText', text }} />
+        </>,
+        flow,
+      );
+      expect(performance.now() - start).toBeLessThan(500);
+    },
+  );
+});

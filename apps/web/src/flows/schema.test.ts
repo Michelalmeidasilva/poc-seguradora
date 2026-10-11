@@ -238,6 +238,24 @@ describe('parseFlow', () => {
     expect(codes(mk({ type: 'TextBody', text: 'x'.repeat(4097) }))).toContain('text_too_long');
   });
 
+  it('caps RichText per line, in total and in lines', () => {
+    const mk = (text: unknown): Json =>
+      flow([screen('END', [{ type: 'RichText', text }, footer()], { terminal: true })]);
+    const line = (n: number) => 'x'.repeat(n);
+    expect(codes(mk(line(4096)))).toEqual([]);
+    expect(codes(mk(line(4097)))).toContain('rich_text_too_long');
+    expect(codes(mk([line(10), line(4097)]))).toContain('rich_text_too_long');
+    // 4 x 3999 + 4000 + 4 newlines = 20000 (the total cap); one more char overflows
+    const lines = (last: number) => [...Array.from({ length: 4 }, () => line(3999)), line(last)];
+    expect(codes(mk(lines(4000)))).toEqual([]);
+    expect(codes(mk(lines(4001)))).toContain('rich_text_too_long');
+    expect(codes(mk(Array.from({ length: 100 }, () => 'a')))).toEqual([]);
+    expect(codes(mk(Array.from({ length: 101 }, () => 'a')))).toContain('rich_text_too_many_lines');
+    expect(codes(mk(Array.from({ length: 101 }, () => 'a').join('\n')))).toContain(
+      'rich_text_too_many_lines',
+    );
+  });
+
   it('requires a dynamic value in If conditions', () => {
     const f = flow([
       screen('END', [ifOf(body(1), undefined, '1 == 1'), ifOf([])], { terminal: true }),

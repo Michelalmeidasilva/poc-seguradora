@@ -115,6 +115,14 @@ export const RESERVED_SCREEN_ID = 'SUCCESS';
 const own = <T>(table: Record<string, T>, key: string): T | undefined =>
   Object.hasOwn(table, key) ? table[key] : undefined;
 
+/**
+ * RichText bounds (own decision: Meta documents none). They keep the inline-markdown render
+ * cost bounded; a Flow over them is rejected as a whole.
+ */
+export const RICH_TEXT_MAX_LINE = 4096;
+export const RICH_TEXT_MAX_CHARS = 20_000;
+export const RICH_TEXT_MAX_LINES = 100;
+
 const TEXT_LIMITS: Record<string, number> = {
   TextHeading: 80,
   TextSubheading: 80,
@@ -234,6 +242,25 @@ function collectActions(
   }
 }
 
+function checkRichText(text: unknown, path: string, issues: Issues): void {
+  const joined = Array.isArray(text) ? text.join('\n') : typeof text === 'string' ? text : '';
+  const lines = joined.split('\n');
+  if (lines.length > RICH_TEXT_MAX_LINES) {
+    issues.add(
+      path,
+      'rich_text_too_many_lines',
+      `RichText aceita até ${RICH_TEXT_MAX_LINES} linhas.`,
+    );
+  }
+  if (joined.length > RICH_TEXT_MAX_CHARS || lines.some((l) => l.length > RICH_TEXT_MAX_LINE)) {
+    issues.add(
+      path,
+      'rich_text_too_long',
+      `RichText aceita até ${RICH_TEXT_MAX_LINE} caracteres por linha e ${RICH_TEXT_MAX_CHARS} no total.`,
+    );
+  }
+}
+
 interface ListResult {
   /** Footers on the heaviest path through this list (If/Switch branches are alternatives). */
   footers: number;
@@ -287,6 +314,7 @@ function walkList(
     if (textLimit !== undefined && typeof node.text === 'string' && node.text.length > textLimit) {
       issues.add(`${p}.text`, 'text_too_long', `${type} aceita até ${textLimit} caracteres.`);
     }
+    if (type === 'RichText') checkRichText(node.text, `${p}.text`, issues);
     const limits = own(OPTION_LIMITS, type);
     const source = node['data-source'];
     if (
