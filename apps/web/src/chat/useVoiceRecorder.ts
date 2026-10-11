@@ -13,8 +13,16 @@ export interface VoiceRecorder {
   cancel(): void;
 }
 
-export function useVoiceRecorder(options: { maxMs?: number } = {}): VoiceRecorder {
+export interface VoiceRecorderOptions {
+  maxMs?: number;
+  /** Called with the finished recording when it stopped by itself (maximum duration reached). */
+  onAutoStop?(recording: Recording): void;
+}
+
+export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecorder {
   const maxMs = options.maxMs ?? 120_000;
+  const onAutoStop = useRef(options.onAutoStop);
+  onAutoStop.current = options.onAutoStop;
   const [status, setStatus] = useState<RecorderStatus>('idle');
   const [elapsedMs, setElapsedMs] = useState(0);
   const recorder = useRef<MediaRecorder | undefined>(undefined);
@@ -33,16 +41,23 @@ export function useVoiceRecorder(options: { maxMs?: number } = {}): VoiceRecorde
     recorder.current = undefined;
   }, []);
 
-  const finish = useCallback(() => {
-    const durationMs = Date.now() - startedAt.current;
-    const blob = new Blob(chunks.current, { type: chunks.current[0]?.type || 'audio/webm' });
-    release();
-    setStatus('idle');
-    setElapsedMs(0);
-    const resolve = resolveStop.current;
-    resolveStop.current = undefined;
-    resolve?.(discard.current || blob.size === 0 ? undefined : { blob, durationMs });
-  }, [release]);
+  const finish = useCallback(
+    (rec: MediaRecorder) => {
+      // A late onstop from a cancelled recorder must not touch a newer recording.
+      if (recorder.current !== rec) return;
+      const durationMs = Date.now() - startedAt.current;
+      const blob = new Blob(chunks.current, { type: chunks.current[0]?.type || 'audio/webm' });
+      const recording = discard.current || blob.size === 0 ? undefined : { blob, durationMs };
+      release();
+      setStatus('idle');
+      setElapsedMs(0);
+      const resolve = resolveStop.current;
+      resolveStop.current = undefined;
+      if (resolve) resolve(recording);
+      else if (recording) onAutoStop.current?.(recording);
+    },
+    [release],
+  );
 
   const start = useCallback(async () => {
     if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
@@ -59,7 +74,7 @@ export function useVoiceRecorder(options: { maxMs?: number } = {}): VoiceRecorde
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.current.push(e.data);
       };
-      rec.onstop = finish;
+      rec.onstop = () => finish(rec);
       startedAt.current = Date.now();
       rec.start();
       setStatus('recording');
@@ -90,7 +105,7 @@ export function useVoiceRecorder(options: { maxMs?: number } = {}): VoiceRecorde
     discard.current = true;
     const rec = recorder.current;
     if (rec?.state === 'recording') rec.stop();
-    else release();
+    release();
     setStatus('idle');
     setElapsedMs(0);
   }, [release]);

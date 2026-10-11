@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { botText, quickReplies } from '../test/fixtures';
@@ -41,7 +41,7 @@ describe('ChatScreen', () => {
         chat={api({ state: { ...initialState(), connection: 'online', typing: true } })}
       />,
     );
-    expect(screen.getAllByText(/digitando/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('banner')).getByText(/digitando/i)).toBeInTheDocument();
   });
 
   it('sends the typed text', async () => {

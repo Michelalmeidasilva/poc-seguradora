@@ -100,6 +100,61 @@ describe('useVoiceRecorder', () => {
     expect(FakeRecorder.instances[0]?.state).toBe('inactive');
   });
 
+  it('delivers the recording through onAutoStop when the maximum duration is reached', async () => {
+    const onAutoStop = vi.fn();
+    const { result } = renderHook(() => useVoiceRecorder({ maxMs: 5000, onAutoStop }));
+    await act(async () => {
+      await result.current.start();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5200);
+    });
+    expect(onAutoStop).toHaveBeenCalledTimes(1);
+    const recording = onAutoStop.mock.calls[0]![0] as { blob: Blob; durationMs: number };
+    expect(recording.blob).toBeInstanceOf(Blob);
+    expect(recording.durationMs).toBeGreaterThanOrEqual(5000);
+    expect(result.current.status).toBe('idle');
+  });
+
+  it('does not deliver a cancelled recording nor a manual stop through onAutoStop', async () => {
+    const onAutoStop = vi.fn();
+    const { result } = renderHook(() => useVoiceRecorder({ onAutoStop }));
+    await act(async () => {
+      await result.current.start();
+    });
+    act(() => result.current.cancel());
+    await act(async () => {
+      await result.current.start();
+    });
+    await act(async () => {
+      await result.current.stop();
+    });
+    expect(onAutoStop).not.toHaveBeenCalled();
+  });
+
+  it('keeps a new recording alive when a cancelled recorder stops late', async () => {
+    const { result } = renderHook(() => useVoiceRecorder());
+    await act(async () => {
+      await result.current.start();
+    });
+    const first = FakeRecorder.instances[0]!;
+    first.stop = () => {
+      first.state = 'inactive'; // onstop fires later, like a real MediaRecorder
+    };
+    act(() => result.current.cancel());
+    await act(async () => {
+      await result.current.start();
+    });
+    expect(result.current.status).toBe('recording');
+    track.stop.mockClear();
+    act(() => {
+      first.ondataavailable?.({ data: new Blob(['late']) });
+      first.onstop?.();
+    });
+    expect(result.current.status).toBe('recording');
+    expect(track.stop).not.toHaveBeenCalled();
+  });
+
   it('returns nothing when stop is called without a recording', async () => {
     const { result } = renderHook(() => useVoiceRecorder());
     let out: unknown = 'x';

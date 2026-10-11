@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import '../ui/base.css';
 import { ChatScreen } from '../chat/ChatScreen';
 import { useChat } from '../chat/useChat';
@@ -15,7 +15,7 @@ export function App() {
   const chat = useChat();
   const [flow, setFlow] = useState<OpenFlowRequest | undefined>();
 
-  useEffect(applyThemeFromUrl, []);
+  useLayoutEffect(applyThemeFromUrl, []);
 
   return (
     <>

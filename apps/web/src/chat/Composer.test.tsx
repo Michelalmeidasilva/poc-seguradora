@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Composer } from './Composer';
@@ -88,5 +88,30 @@ describe('Composer', () => {
   it('disables the field when disabled', () => {
     render(<Composer onSendText={noop} onSendVoice={noop} recorder={recorder()} disabled />);
     expect(screen.getByRole('textbox', { name: /mensagem/i })).toBeDisabled();
+  });
+
+  it('does not send on Enter while an IME composition is in progress', async () => {
+    const onSendText = vi.fn();
+    render(<Composer onSendText={onSendText} onSendVoice={noop} recorder={recorder()} />);
+    const input = screen.getByRole('textbox', { name: /mensagem/i });
+    await userEvent.type(input, 'に');
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(onSendText).not.toHaveBeenCalled();
+  });
+
+  it('returns the focus to the field after cancelling a recording', async () => {
+    const r = recorder({ status: 'recording', elapsedMs: 1000 });
+    const { rerender } = render(<Composer onSendText={noop} onSendVoice={noop} recorder={r} />);
+    await userEvent.click(screen.getByRole('button', { name: /cancelar gravação/i }));
+    rerender(<Composer onSendText={noop} onSendVoice={noop} recorder={recorder()} />);
+    expect(screen.getByRole('textbox', { name: /mensagem/i })).toHaveFocus();
+  });
+
+  it('returns the focus to the field after sending the audio', async () => {
+    const r = recorder({ status: 'recording', elapsedMs: 1000 });
+    const { rerender } = render(<Composer onSendText={noop} onSendVoice={noop} recorder={r} />);
+    await userEvent.click(screen.getByRole('button', { name: /enviar áudio/i }));
+    rerender(<Composer onSendText={noop} onSendVoice={noop} recorder={recorder()} />);
+    expect(screen.getByRole('textbox', { name: /mensagem/i })).toHaveFocus();
   });
 });

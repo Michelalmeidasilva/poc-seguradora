@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { LIMITS } from '@seguradora/protocol';
 import { CloseIcon, MicIcon, SendIcon, StopIcon } from '../ui/icons';
 import type { VoiceRecorder } from './useVoiceRecorder';
@@ -19,6 +19,15 @@ export function Composer({ onSendText, onSendVoice, recorder, disabled = false }
   const [text, setText] = useState('');
   const input = useRef<HTMLTextAreaElement>(null);
 
+  const previousStatus = useRef(recorder.status);
+  useEffect(() => {
+    // Focus returns to the field whenever a recording ends (cancelled, sent or auto-stopped).
+    if (previousStatus.current === 'recording' && recorder.status !== 'recording') {
+      input.current?.focus();
+    }
+    previousStatus.current = recorder.status;
+  }, [recorder.status]);
+
   const send = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -28,7 +37,7 @@ export function Composer({ onSendText, onSendVoice, recorder, disabled = false }
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       send();
     }

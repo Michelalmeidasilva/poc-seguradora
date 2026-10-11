@@ -14,7 +14,9 @@ export interface ChatScreenProps {
 const ignoreFlow: OpenFlow = () => undefined;
 
 export function ChatScreen({ chat, openFlow = ignoreFlow }: ChatScreenProps) {
-  const recorder = useVoiceRecorder();
+  const recorder = useVoiceRecorder({
+    onAutoStop: (r) => chat.sendVoice(r.blob, r.durationMs),
+  });
   const { state } = chat;
 
   return (
