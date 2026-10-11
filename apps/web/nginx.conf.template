@@ -1,25 +1,61 @@
+# Rendered at container start by the nginx image's envsubst step (NGINX_ENVSUBST_FILTER in the
+# Dockerfile limits it to PORT, GATEWAY_URL, GATEWAY_HOST, GATEWAY_HOSTNAME and NAMESERVER, which
+# 15-resolver.envsh derives and validates). Every other $name below is an nginx variable.
+
+# Cloud Run terminates TLS in front of nginx, so $scheme is always http here: keep the
+# X-Forwarded-Proto of the hop in front of us and fall back to $scheme when there is none.
+map $http_x_forwarded_proto $web_forwarded_proto {
+  default $http_x_forwarded_proto;
+  ''      $scheme;
+}
+
 server {
   listen ${PORT};
   server_name _;
   root /usr/share/nginx/html;
   index index.html;
 
+  # Resolve the gateway host per request (answers cached 10s) instead of once at start, so a
+  # changed upstream IP (Cloud Run, a recreated container) does not leave a stale address.
+  resolver ${NAMESERVER} valid=10s ipv6=off;
+
+  # add_header is not inherited by a location that has its own add_header: the security headers
+  # are repeated in every location below.
   add_header X-Content-Type-Options "nosniff" always;
   add_header Referrer-Policy "no-referrer" always;
   add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: data: blob:; media-src 'self' https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" always;
 
+  location = /healthz {
+    access_log off;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' https: data: blob:; media-src 'self' https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'" always;
+    add_header Cache-Control "no-store" always;
+    default_type text/plain;
+    return 200 'ok';
+  }
+
   # Same-origin API: the browser talks to this server, which forwards /v1 to the gateway.
   location /v1/ {
-    proxy_pass ${GATEWAY_URL};
+    # A variable in proxy_pass makes nginx resolve at request time; it then forwards no URI on
+    # its own, so the original path and query are appended untouched with $request_uri.
+    set $gateway_upstream "${GATEWAY_URL}";
+    proxy_pass $gateway_upstream$request_uri;
     proxy_http_version 1.1;
+    # Cloud Run routes by Host (and SNI): send the gateway's own host, not the web's.
+    proxy_set_header Host "${GATEWAY_HOST}";
     proxy_ssl_server_name on;
-    proxy_buffering off;
-    proxy_cache off;
-    proxy_read_timeout 3600s;
-    proxy_send_timeout 3600s;
+    proxy_ssl_name "${GATEWAY_HOSTNAME}";
+    # The browser's Origin is passed through untouched: the gateway checks it (ALLOWED_ORIGIN).
     proxy_set_header Connection "";
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $web_forwarded_proto;
+    # SSE and long-lived requests: no buffering, caching or compression, long timeouts.
+    proxy_buffering off;
+    proxy_cache off;
+    gzip off;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
   }
 
   location /assets/ {

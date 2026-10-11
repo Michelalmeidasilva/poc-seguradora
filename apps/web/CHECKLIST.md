@@ -6,7 +6,7 @@
 
 - [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows entregues no Plano 5)
 - [x] Configuração de ambiente (proxy do Vite) validada
-- [ ] Build Vite e imagem nginx para Cloud Run (com proxy /v1)
+- [x] Build Vite e imagem nginx para Cloud Run (com proxy /v1)
 - [x] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades (Plano 4: chat)
@@ -80,19 +80,20 @@
 - Voz do usuário fica no navegador (sem upload; ver decisão 5 do Plano 4).
 - A web não envia user.typing.
 - E2E do web roda localmente com `pnpm --filter @seguradora/web e2e`; incluir no CI quando houver cache do Playwright.
-- Build Vite e imagem nginx: `pnpm --filter @seguradora/web build` passa e o bundle não tem URLs de aplicação hardcoded (só namespaces w3.org, react.dev e google.com/maps). O `envsubst` do template funciona, mas o Docker daemon estava parado e o nginx não está instalado: `docker build` e `nginx -t` NÃO foram executados; item mantido desmarcado até validar.
+- Build Vite e imagem nginx (Plano 7, verificado): `docker build` (inclusive `--no-cache`), `nginx -t` com o template renderizado para `GATEWAY_URL` http e https, smoke da pilha no compose e teste de troca de IP do gateway (`pnpm test:infra`, `infra/test-nginx.sh`). O bundle não tem URLs de aplicação hardcoded (só namespaces w3.org, react.dev e google.com/maps).
 - GATEWAY_URL do nginx: o gateway precisa de `ALLOWED_ORIGIN` igual à origem pública da web e `TRUST_PROXY_HOPS` conforme o número de saltos (web -> gateway no Cloud Run); conferir no deploy.
 - Upload de áudio do usuário não existe: o áudio gravado fica no navegador.
-- Fluxo de pilha completa (web + gateway + chatbot + serviços) não tem teste automatizado.
+- Fluxo de pilha completa (web + gateway + chatbot + serviços): coberto pelo smoke do compose (Plano 7, `infra/smoke.mjs`) com o `fake-services` no lugar dos `svc-*`; fora do `pnpm test` porque precisa de Docker.
 - Em http puro (sem contexto seguro) `navigator.locks` não existe: a guarda de aba única (Web Locks) fica inativa e toda aba se diz ativa. Uma aba duplicada (sessionStorage copiado = mesma sessão) pode disputar com a outra o stream único do gateway.
 - A gravação de voz precisa de `navigator.mediaDevices` (HTTPS ou localhost): em `http://<ip>` o Composer mostra "Não foi possível acessar o microfone.". O fix do randomId cobre só os ids, não o microfone.
 - Pendências dos Flows (o que resta depois do Plano 6):
   - Gateway: endpoint `/v1/media` para upload de voz e de mídia de Flows (hoje os ids são `local-*` e nenhum byte sai do navegador).
   - Protocolo: um evento para o servidor decidir a próxima tela depois de `data_exchange` (a web avança de forma otimista e o chatbot não responde nada).
   - Validar os JSON de cotação e demo no Playground da Meta quando houver acesso; NavigationList, ChipsSelector e ImageCarousel seguem como decisões próprias até lá (incluindo o formato de `src` das imagens).
-  - Plano de deploy (Cloud Run, `docker build`/`nginx -t` não verificados, `TRUST_PROXY_HOPS`, Origin/cookies, `resolver` do nginx).
+  - Plano de deploy (Cloud Run, `TRUST_PROXY_HOPS`, Origin/cookies); `docker build`, `nginx -t` e o `resolver` do nginx foram verificados no Plano 7.
   - Teste de integração da pilha completa com os `svc-*` reais.
   - Escape com seletores nativos de data e os seletores nativos em si só foram verificados no Chromium; Firefox e Safari não foram testados.
   - Valores de mídia (PhotoPicker/DocumentPicker) são aceitos em payloads de `navigate`, embora a Meta proíba; a web não rejeita.
   - Erros de `data_exchange` não são visíveis ao servidor (o evento é enviado sem resposta).
-- GATEWAY_URL não pode ter barra final nem path (uma barra final remove o /v1 silenciosamente); o nginx resolve o hostname do upstream uma vez na inicialização (considerar `resolver` + variável no proxy_pass se os IPs do Cloud Run mudarem). Ambos não testados: sem Docker/nginx.
+- [x] nginx resolvido uma vez (feito no Plano 7): o host do gateway é resolvido a cada requisição (`resolver` com o primeiro `nameserver` do `/etc/resolv.conf`, `valid=10s`, e variável no `proxy_pass` com `$request_uri`), então uma troca de IP do upstream não exige reiniciar o nginx (testado recriando o gateway com outro IP). `GATEWAY_URL` precisa ser `http(s)://host[:port]`: a barra final é removida e path, query ou credenciais fazem o contêiner falhar na inicialização com mensagem clara. `Host` e SNI enviados são os do gateway (porta só se não for a padrão), o `Origin` do navegador passa intacto, `X-Forwarded-Proto` vem do salto anterior (ou `$scheme`). `/healthz` responde `ok` sem log de acesso. Script de entrada: `/docker-entrypoint.d/15-resolver.envsh`, embutido no Dockerfile.
+- `/healthz` no Cloud Run: a documentação do Cloud Run reserva caminhos terminados em `z`; conferir no primeiro deploy se `/healthz` chega ao nginx e, se não, usar outro caminho nas sondas (o smoke usa `/`).

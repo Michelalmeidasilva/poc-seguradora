@@ -16,7 +16,8 @@
     "check:workboard": "node scripts/workboard-check.mjs",
     "compose:up": "docker compose -f infra/docker-compose.yml up -d --build --wait",
     "compose:down": "docker compose -f infra/docker-compose.yml down -v",
-    "smoke": "node infra/smoke.mjs"
+    "smoke": "node infra/smoke.mjs",
+    "test:infra": "bash infra/test-nginx.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
