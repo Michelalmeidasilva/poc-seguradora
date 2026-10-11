@@ -12,7 +12,7 @@
 - [x] Tokens de design do WhatsApp (claro/escuro) e bolha com ticks
 - [x] Texto com formatação do WhatsApp e links seguros
 - [x] Parser SSE e SseClient (reconexão, Last-Event-ID, heartbeat)
-- [ ] ChatClient (sessão, fila de saída com reenvio idempotente, user.ack)
+- [x] ChatClient (sessão, fila de saída com reenvio idempotente, user.ack)
 - [x] Estado do chat (reducer)
 - [ ] Persistência do chat em sessionStorage e aba única (Web Locks)
 - [ ] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
