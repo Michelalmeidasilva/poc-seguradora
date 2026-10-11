@@ -1,0 +1,549 @@
+/* global window, document, location, history, navigator, FormData, setTimeout, clearTimeout */
+(() => {
+  const { groups, index, total } = window.EXPERIENCE;
+  const $ = (id) => document.getElementById(id);
+  const escape = (value) =>
+    String(value ?? '').replace(
+      /[&<>"']/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+    );
+  const memory = {
+    name: 'Maria Silva',
+    birth: '12/03/2014',
+    postal: '01000-000',
+    address: 'Rua Exemplo, 100',
+    city: 'São Paulo / SP',
+    funeralCity: 'São Paulo',
+    funeralState: 'SP',
+    eventDate: '09/10/2026',
+    eventPlace: 'São Paulo / SP',
+  };
+  let current = index[location.hash.slice(1)] ? location.hash.slice(1) : 'DEP-01';
+  let stateFilter = 'all';
+  let query = '';
+  let galleryVisible = false;
+  let light = false;
+  let additions = [];
+  let selectedContract = 'Assistência Saúde';
+  let selectedPlan = 'Familiar';
+  let identityReturn = 'CON-02';
+  let toastTimer;
+  const modeLabels = {
+    chat: 'Conversa',
+    form: 'WhatsApp Flow · formulário',
+    list: 'Lista de seleção',
+    review: 'WhatsApp Flow · revisão',
+    document: 'Documentos',
+    audio: 'Áudio + conversa',
+  };
+  const groupFor = (step) => groups.find((group) => group.code === step.journey);
+  const interpolate = (value) => {
+    let text = String(value ?? '').replace(
+      /\{\{(\w+)\}\}/g,
+      (_, key) => memory[key] || 'Não informado',
+    );
+    if (selectedPlan === 'Individual' && ['DES', 'ADE', 'PAG'].includes(index[current]?.journey)) {
+      text = text.replaceAll('Familiar', 'Individual').replaceAll('R$ 39,90', 'R$ 29,90');
+    }
+    return text;
+  };
+  const format = (value) =>
+    escape(interpolate(value)).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  function toast(message) {
+    $('toast').textContent = message;
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      $('toast').hidden = true;
+    }, 2800);
+  }
+  function go(id) {
+    if (!index[id]) {
+      toast('Esta interação depende de definição do produto.');
+      return;
+    }
+    if (id.startsWith('IDE-') && !current.startsWith('IDE-')) {
+      const step = index[current];
+      identityReturn =
+        step.journey === 'DEP' || current === 'ENT-01'
+          ? 'DEP-03'
+          : step.journey === 'ADE'
+            ? 'ADE-03'
+            : step.journey === 'CAN'
+              ? 'CAN-05'
+              : 'CON-02';
+    }
+    if (id === 'IDE-03')
+      index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
+    if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
+    current = id;
+    additions = [];
+    if (location.hash !== `#${id}`) history.replaceState(null, '', `#${id}`);
+    render();
+  }
+  function renderNav() {
+    const active = index[current].journey;
+    let previousStage = '';
+    let html = '';
+    for (const group of groups) {
+      const matches =
+        !query ||
+        `${group.title} ${group.code} ${group.description}`.toLowerCase().includes(query) ||
+        group.steps.some((step) =>
+          `${step.id} ${step.title} ${step.bot}`.toLowerCase().includes(query),
+        );
+      if (!matches) continue;
+      if (group.stage !== previousStage) {
+        html += `<div class="nav-section">${escape(group.stage)}</div>`;
+        previousStage = group.stage;
+      }
+      html += `<button class="journey-link ${active === group.code ? 'active' : ''}" data-go="${group.steps[0].id}" ${active === group.code ? 'aria-current="page"' : ''}><span class="nav-code">${group.code}</span><span>${escape(group.title)}</span><span class="count">${group.steps.length}</span></button>`;
+    }
+    $('journeys').innerHTML = html || '<p class="empty-search">Nenhum estado encontrado.</p>';
+    $('catalog-count').textContent = `${groups.length} jornadas · ${total} estados`;
+  }
+  function renderStates(group) {
+    const steps = group.steps.filter(
+      (step) =>
+        (stateFilter === 'all' || step.alternative === (stateFilter === 'alternative')) &&
+        (!query ||
+          `${step.id} ${step.title} ${step.bot} ${group.title}`.toLowerCase().includes(query)),
+    );
+    $('states').innerHTML =
+      `<div class="state-list">${steps.map((step) => `<button class="state-button ${step.id === current ? 'active' : ''}" data-go="${step.id}" ${step.id === current ? 'aria-current="step"' : ''}><span class="state-number">${step.position + 1}</span><span class="state-label">${escape(step.title)}<small>${step.alternative ? '<span class="variant-dot"></span>' : ''}${step.id} · ${modeLabels[step.mode].split(' · ')[0]}</small></span></button>`).join('') || '<p class="no-results">Nenhum estado corresponde ao filtro.</p>'}</div>`;
+    const active = $('states').querySelector('.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+    $('state-count').textContent = `${group.steps.length} estados`;
+  }
+  function actionsMarkup(actions, mini = false) {
+    return actions.length
+      ? `<div class="bubble-actions">${actions.map((item) => `<button class="wa-action" ${mini ? 'disabled' : `data-go="${item.target}"`}>${escape(item.label)}</button>`).join('')}</div>`
+      : '';
+  }
+  function bubble(text, user = false, extra = '') {
+    return `<div class="bubble ${user ? 'user' : ''}"><p>${format(text)}</p>${extra}<div class="timestamp">9:41${user ? '<span class="ticks">✓✓</span>' : ''}</div></div>`;
+  }
+  function audioMarkup() {
+    return `<div class="audio-bubble"><button type="button" data-audio aria-label="Reproduzir transcrição demonstrativa">▶</button><div class="wave" aria-hidden="true">${[8, 13, 20, 10, 24, 17, 9, 15, 21, 12, 8, 20, 17, 9, 23, 14, 9, 17, 22, 12].map((height) => `<i style="height:${height}px"></i>`).join('')}</div><span class="audio-label">0:18</span></div>`;
+  }
+  function documentMarkup(names, mini = false) {
+    return names
+      .map(
+        (name) =>
+          `<div class="document-card"><span class="doc-icon">PDF</span><div><strong>${escape(name)}.pdf</strong><small>Documento demonstrativo · PDF</small></div></div>${mini ? '' : `<button class="wa-action" data-document="${escape(name)}">Abrir documento</button>`}`,
+      )
+      .join('');
+  }
+  function screenBot(step) {
+    if (step.journey === 'SOL' && selectedContract !== 'Assistência Saúde') {
+      if (step.id === 'SOL-02')
+        return `Estas são as solicitações do contrato selecionado: ${selectedContract}.`;
+    }
+    if (step.id === 'DES-08' && selectedPlan === 'Individual')
+      return '**Assistência Saúde Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
+    return step.bot;
+  }
+  function renderChat(step) {
+    let html =
+      '<div class="chat-day">Hoje</div><p class="secure-notice">Conversa de demonstração · use apenas dados fictícios</p>';
+    if (step.user)
+      html += step.mode === 'audio' ? bubble('', true, audioMarkup()) : bubble(step.user, true);
+    let extras = step.mode === 'document' ? documentMarkup(step.documents) : '';
+    extras += actionsMarkup(step.actions);
+    if (step.flow)
+      extras += `<div class="bubble-actions"><button class="wa-action" data-open-flow>${step.mode === 'list' ? 'Selecionar uma opção' : step.mode === 'review' ? 'Abrir revisão' : 'Abrir formulário'}</button></div>`;
+    html += bubble(screenBot(step), false, extras);
+    for (const item of additions) html += bubble(item.text, item.user);
+    $('chat').innerHTML = html;
+    $('chat').scrollTop = $('chat').scrollHeight;
+  }
+  function rowsMarkup(sections) {
+    return sections
+      .map(
+        (section) =>
+          `<section class="review-section"><h4>${escape(section.title)}</h4>${section.rows.map(([label, value]) => `<div class="review-line"><span>${escape(label)}</span><strong>${format(value)}</strong></div>`).join('')}</section>`,
+      )
+      .join('');
+  }
+  function fieldsMarkup(fields) {
+    return fields
+      .map((field) => {
+        const value = memory[field.name] ?? field.value ?? '';
+        const attrs = `${field.required ? 'required' : ''} ${field.pattern ? `pattern="${field.pattern}"` : ''}`;
+        if (field.type === 'checkbox')
+          return `<label class="consent"><input type="checkbox" name="${field.name}" ${(memory[field.name] ?? field.checked) ? 'checked' : ''} /><span>${escape(field.label)}</span></label>`;
+        if (field.type === 'select')
+          return `<label>${escape(field.label)}<select name="${field.name}" ${attrs}>${field.choices.map((choice, i) => `<option value="${i === 0 ? '' : escape(choice)}" ${value === choice ? 'selected' : ''}>${escape(choice)}</option>`).join('')}</select></label>`;
+        if (field.type === 'textarea')
+          return `<label>${escape(field.label)}<textarea name="${field.name}" ${attrs}>${escape(value)}</textarea></label>`;
+        const inputValue =
+          field.type === 'date' && /^\d{2}\/\d{2}\/\d{4}$/.test(String(value))
+            ? String(value).split('/').reverse().join('-')
+            : value;
+        return `<label>${escape(field.label)}<input name="${field.name}" type="${field.type || 'text'}" ${field.type === 'file' ? 'accept=".pdf,.jpg,.jpeg,.png"' : `value="${escape(inputValue)}"`} placeholder="${escape(field.placeholder || '')}" ${attrs} /></label>`;
+      })
+      .join('');
+  }
+  function listChoices(step) {
+    if (step.id === 'SOL-02' && selectedContract.startsWith('Seguro Celular'))
+      return [
+        { label: 'Comunicação de sinistro', detail: 'Aguardando documentos', target: 'SIN-09' },
+        { label: 'Sinistro', detail: 'Em análise', target: 'SIN-08' },
+      ];
+    return step.flow.choices;
+  }
+  function renderFlow(step) {
+    const flow = step.flow;
+    if (!flow) {
+      $('overlay').hidden = true;
+      return;
+    }
+    let content = '';
+    if (step.mode === 'form') content = fieldsMarkup(flow.fields);
+    if (step.mode === 'list')
+      content = listChoices(step)
+        .map(
+          (choice, i) =>
+            `<label class="flow-option"><input type="radio" name="choice" value="${i}" required ${choice.disabled ? 'disabled' : ''} /><span><strong>${escape(choice.label)}</strong>${choice.detail ? `<small>${escape(choice.detail)}</small>` : ''}</span></label>`,
+        )
+        .join('');
+    if (step.mode === 'review') content = rowsMarkup(flow.sections);
+    if (flow.documents)
+      content += flow.documents
+        .map(
+          (name) =>
+            `<button type="button" class="flow-document" data-document="${escape(name)}">▤ ${escape(name)}</button>`,
+        )
+        .join('');
+    if (flow.consent)
+      content += `<label class="consent"><input type="checkbox" name="consent" required /><span>${escape(flow.consent)}</span></label>`;
+    if (flow.note) content += `<div class="flow-alert">${escape(flow.note)}</div>`;
+    content += '<p id="flow-error" class="flow-error" role="alert" hidden></p>';
+    $('overlay').innerHTML =
+      `<form id="flow-form" class="sheet" aria-label="${escape(flow.title)}"><div class="sheet-handle"></div><header class="sheet-header"><div><h3>${escape(flow.title)}</h3><p>${step.mode === 'list' ? 'Selecione uma opção para continuar' : step.mode === 'review' ? 'Confira as informações antes de confirmar' : 'Preencha os dados solicitados'}</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${escape(flow.submit)}</button>${flow.correction ? `<button type="button" class="sheet-secondary" data-go="${flow.correction}">${escape(flow.secondaryLabel || 'Corrigir pela conversa')}</button>` : ''}<p class="flow-note">Digio · experiência estruturada no WhatsApp</p></footer></form>`;
+    $('overlay').hidden = false;
+    $('flow-form').addEventListener('input', (event) => {
+      if (step.mode !== 'form') return;
+      const field = flow.fields.find((item) => item.name === event.target.name);
+      if (!field || field.type === 'file') return;
+      memory[field.name] = field.type === 'checkbox' ? event.target.checked : event.target.value;
+    });
+    $('flow-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      let target = flow.target;
+      if (step.mode === 'list') {
+        const choice = listChoices(step)[Number(data.get('choice'))];
+        if (!choice || choice.disabled) return;
+        target = choice.target;
+        if (step.id === 'CON-01' || step.id === 'SOL-01') selectedContract = choice.label;
+        if (step.id === 'DES-05') selectedPlan = choice.label;
+      }
+      if (step.mode === 'form') {
+        for (const field of flow.fields) {
+          const raw = data.get(field.name);
+          if (field.type === 'file') {
+            if (raw && raw.size > 10 * 1024 * 1024) {
+              $('flow-error').textContent = 'Use um arquivo de até 10 MB nesta demonstração.';
+              $('flow-error').hidden = false;
+              return;
+            }
+            if (raw && raw.size && !/\.(pdf|jpe?g|png)$/i.test(raw.name)) {
+              $('flow-error').textContent = 'Use um PDF ou imagem JPG/PNG.';
+              $('flow-error').hidden = false;
+              return;
+            }
+            memory[field.name] = raw?.name || '';
+          } else if (field.type === 'checkbox') memory[field.name] = data.has(field.name);
+          else if (field.type === 'date')
+            memory[field.name] = String(raw).split('-').reverse().join('/');
+          else memory[field.name] = String(raw ?? '').trim();
+        }
+      }
+      if (target) go(target);
+    });
+  }
+  function renderInspector(step, group) {
+    $('screen-title').textContent = step.title;
+    $('screen-status').innerHTML =
+      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : group.code === 'LEG' ? 'Referência documental' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
+    $('screen-intent').textContent = interpolate(step.intent);
+    $('screen-behavior').textContent = interpolate(step.behavior).replace(/\*\*/g, '');
+    $('screen-component').textContent = modeLabels[step.mode];
+    $('screen-rule').textContent = step.rule;
+    $('journey-decision').textContent = group.decision;
+    const links = [
+      ...step.actions,
+      ...(step.flow?.target ? [{ label: step.flow.submit, target: step.flow.target }] : []),
+      ...(step.flow?.choices
+        ? step.flow.choices
+            .filter((c) => c.target)
+            .map((c) => ({ label: c.label, target: c.target }))
+        : []),
+    ];
+    $('transitions').innerHTML = links.length
+      ? `<h4>Destinos da interação</h4>${links.map((link) => `<button data-go="${link.target}">${escape(link.label)} · ${link.target}</button>`).join('')}`
+      : '';
+  }
+  function render() {
+    const scroll = window.scrollY;
+    const step = index[current];
+    const group = groupFor(step);
+    $('breadcrumb-title').textContent = group.title;
+    $('journey-code').textContent = group.code;
+    $('journey-stage').textContent = group.stage;
+    $('journey-title').textContent = group.title;
+    $('journey-description').textContent = group.description;
+    $('screen-id').textContent = step.id;
+    $('screen-type').textContent = modeLabels[step.mode];
+    $('position').textContent = `${step.position + 1} / ${group.steps.length}`;
+    $('previous').disabled = step.position === 0;
+    $('phone-back').disabled = step.position === 0;
+    $('next').disabled = step.position === group.steps.length - 1;
+    $('next').textContent =
+      step.position === group.steps.length - 1 ? 'Fim da jornada' : 'Próxima tela →';
+    $('phone').classList.toggle('light-wa', light);
+    renderNav();
+    renderStates(group);
+    renderChat(step);
+    renderFlow(step);
+    renderInspector(step, group);
+    $('lifecycle').innerHTML = ['DES', 'ADE', 'CON', 'UTI', 'DEP', 'COB', 'SIN', 'REN', 'CAN']
+      .map(
+        (code) =>
+          `<button class="${code === group.code ? 'active' : ''}" data-go="${groups.find((g) => g.code === code).steps[0].id}">${escape(groups.find((g) => g.code === code).title)}</button>`,
+      )
+      .join('');
+    window.scrollTo({ top: scroll });
+  }
+  function galleryFlow(step) {
+    if (!step.flow) return '';
+    let content = '';
+    if (step.flow.sections) content = rowsMarkup(step.flow.sections);
+    if (step.flow.fields)
+      content = step.flow.fields
+        .map(
+          (field) =>
+            `<div class="mini-field">${escape(field.label)}<br><strong>${escape(field.type === 'file' ? 'Selecionar arquivo' : interpolate(memory[field.name] ?? field.value ?? field.placeholder ?? 'Preencher'))}</strong></div>`,
+        )
+        .join('');
+    if (step.flow.choices)
+      content = step.flow.choices
+        .map(
+          (choice) =>
+            `<div class="mini-field">○ ${escape(choice.label)}${choice.detail ? `<br>${escape(choice.detail)}` : ''}</div>`,
+        )
+        .join('');
+    if (step.flow.documents)
+      content += step.flow.documents
+        .map((name) => `<div class="mini-field">▤ ${escape(name)}</div>`)
+        .join('');
+    if (step.flow.consent)
+      content += `<div class="mini-field">□ ${escape(step.flow.consent)}</div>`;
+    return `<div class="mini-sheet"><h5>${escape(step.flow.title)}</h5>${content}<button class="sheet-primary" disabled>${escape(step.flow.submit)}</button></div>`;
+  }
+  function renderGallery() {
+    $('gallery').innerHTML = groups
+      .map(
+        (group) =>
+          `<header class="gallery-heading"><div><h3>${group.code} · ${escape(group.title)}</h3><p>${group.steps.length} estados · ${escape(group.decision)}</p></div></header><div class="gallery-grid">${group.steps.map((step) => `<article class="gallery-card"><header><span>${step.id}</span><span>${step.alternative ? 'Variação' : modeLabels[step.mode].split(' · ')[0]}</span></header><h4>${escape(step.title)}</h4><div class="mini-phone ${light ? 'light-wa' : ''}"><div class="mini-header"><span class="wa-avatar">d</span><span>Digio Seguros ✓</span></div><div class="mini-chat">${step.user ? bubble(step.user, true, '', true) : ''}${bubble(step.bot, false, step.documents ? documentMarkup(step.documents, true) : actionsMarkup(step.actions, true), true)}</div>${galleryFlow(step)}</div><button class="gallery-open" data-gallery-go="${step.id}">Abrir interação · ${step.id}</button></article>`).join('')}</div>`,
+      )
+      .join('');
+  }
+  function toggleGallery(force) {
+    galleryVisible = force ?? !galleryVisible;
+    $('gallery').hidden = !galleryVisible;
+    $('explorer').hidden = galleryVisible;
+    $('gallery-toggle').setAttribute('aria-pressed', String(galleryVisible));
+    $('gallery-toggle').textContent = galleryVisible ? 'Voltar à interação' : 'Todas as telas';
+    if (galleryVisible) renderGallery();
+  }
+  function showDocument(title) {
+    $('document-title').textContent = title;
+    $('document-content').innerHTML =
+      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
+    $('document-dialog').showModal();
+  }
+  document.addEventListener('click', (event) => {
+    const destination = event.target.closest('[data-go]');
+    if (destination) {
+      go(destination.dataset.go);
+      return;
+    }
+    const galleryDestination = event.target.closest('[data-gallery-go]');
+    if (galleryDestination) {
+      toggleGallery(false);
+      go(galleryDestination.dataset.galleryGo);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
+    if (event.target.closest('[data-open-flow]')) renderFlow(index[current]);
+    if (event.target.closest('[data-close-flow]')) {
+      $('overlay').hidden = true;
+      toast('Formulário fechado. Os dados já enviados estão preservados.');
+    }
+    const documentButton = event.target.closest('[data-document]');
+    if (documentButton) showDocument(documentButton.dataset.document);
+    if (event.target.closest('[data-audio]'))
+      toast('Transcrição demonstrativa: quero incluir minha filha na assistência.');
+  });
+  const move = (delta) => {
+    const step = index[current];
+    const next = groupFor(step).steps[step.position + delta];
+    if (next) go(next.id);
+  };
+  $('previous').addEventListener('click', () => move(-1));
+  $('phone-back').addEventListener('click', () => move(-1));
+  $('next').addEventListener('click', () => move(1));
+  $('phone-help').addEventListener('click', () => go('HUM-01'));
+  $('theme').addEventListener('click', () => {
+    light = !light;
+    $('theme').textContent = light ? 'Tema escuro' : 'Tema claro';
+    render();
+    if (galleryVisible) renderGallery();
+  });
+  $('gallery-toggle').addEventListener('click', () => toggleGallery());
+  $('search').addEventListener('input', (event) => {
+    query = event.target.value.trim().toLowerCase();
+    renderNav();
+    renderStates(groupFor(index[current]));
+  });
+  document.querySelectorAll('[data-filter]').forEach((button) =>
+    button.addEventListener('click', () => {
+      stateFilter = button.dataset.filter;
+      document.querySelectorAll('[data-filter]').forEach((item) => {
+        item.classList.toggle('selected', item === button);
+        item.setAttribute('aria-pressed', String(item === button));
+      });
+      renderStates(groupFor(index[current]));
+    }),
+  );
+  $('print').addEventListener('click', () => {
+    renderGallery();
+    window.print();
+  });
+  $('copy-link').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      toast('Link desta tela copiado.');
+    } catch {
+      toast(`Identificador desta tela: ${current}`);
+    }
+  });
+  $('close-document').addEventListener('click', () => $('document-dialog').close());
+  $('attach').addEventListener('click', () => {
+    go('SIN-14');
+    toast('Demonstração de envio documental. Nenhum arquivo será enviado.');
+  });
+  $('composer').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const input = $('message-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    const clean = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const step = index[current];
+    if (/\b(menu|opcoes)\b/.test(clean)) {
+      go('NAV-01');
+      return;
+    }
+    if (/atendente|pessoa|humano/.test(clean)) {
+      go('HUM-01');
+      return;
+    }
+    if (/solicitac|protocolo|meus pedidos/.test(clean)) {
+      go('SOL-01');
+      return;
+    }
+    if (['DEP-14', 'DEP-19', 'DEP-27'].includes(current)) {
+      const date = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+      if (date) {
+        memory.birth = date[1];
+        go(current === 'DEP-19' ? 'DEP-20' : 'DEP-16');
+        return;
+      }
+      const name = text.match(/(?:nome (?:correto )?(?:e|é)|chama(?:-se)?)\s+(.+)/i);
+      if (name) {
+        memory.name = name[1];
+        go(current === 'DEP-19' ? 'DEP-20' : 'DEP-16');
+        return;
+      }
+      additions.push(
+        { user: true, text },
+        {
+          user: false,
+          text: 'Recebi a correção. Nesta demonstração, você pode escrever “a data correta é 12/03/2014” ou “o nome é Maria Silva”. Outros dados precisam ser verificados pelo produto.',
+        },
+      );
+    } else if (/cancel/.test(clean)) {
+      go(clean.includes('oferta') ? 'CAN-04' : 'CAN-01');
+      return;
+    } else if (/exclu|remover/.test(clean)) {
+      go('EXC-01');
+      return;
+    } else if (/incluir|adicionar/.test(clean)) {
+      go('DEP-01');
+      return;
+    } else if (/pagar|pagamento|cobranca|mensalidade/.test(clean)) {
+      go('COB-01');
+      return;
+    } else if (/sinistro|roub|furto/.test(clean)) {
+      go('SIN-01');
+      return;
+    } else if (/telemedicina|consulta para/.test(clean)) {
+      go('UTI-02');
+      return;
+    } else if (/funeral/.test(clean)) {
+      go('FUN-01');
+      return;
+    } else if (/trocar.*plano|mudar.*plano/.test(clean)) {
+      go('PLA-01');
+      return;
+    } else if (/contratar/.test(clean)) {
+      go('ADE-01');
+      return;
+    } else if (/document/.test(clean)) {
+      go('CON-07');
+      return;
+    } else if (/voltar/.test(clean)) {
+      move(-1);
+      return;
+    } else if (step.journey === 'DEP' && ['DEP-03', 'DEP-04'].includes(current)) {
+      const date = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+      if (date) memory.birth = date[1];
+      const name = text.match(/(?:nome (?:e|é)|chama(?:-se)?)\s+([^,.\n]+)/i);
+      if (name) memory.name = name[1];
+      additions.push(
+        { user: true, text },
+        {
+          user: false,
+          text: 'Dados recebidos na demonstração. Você pode abrir a revisão para conferir, ou continuar preenchendo pelo formulário.',
+        },
+      );
+    } else
+      additions.push(
+        { user: true, text },
+        {
+          user: false,
+          text: 'Esta é uma conversa demonstrativa. Use os botões desta tela ou escreva uma necessidade, como “incluir dependente”, “ver documentos” ou “resolver pagamento”.',
+        },
+      );
+    renderChat(step);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+      event.preventDefault();
+      $('search').focus();
+    }
+    if (event.key === 'Escape' && !$('overlay').hidden) $('overlay').hidden = true;
+  });
+  window.addEventListener('hashchange', () => {
+    if (index[location.hash.slice(1)]) go(location.hash.slice(1));
+  });
+  window.addEventListener('beforeprint', renderGallery);
+  window.PROTOTYPE = { go, getCurrent: () => current, renderGallery, total, groups: groups.length };
+  go(current);
+})();
