@@ -255,6 +255,93 @@ describe('HttpServices failure mapping', () => {
   });
 });
 
+describe('HttpServices anticorruption checks', () => {
+  /** Services whose every response is the given JSON with status 200. */
+  const answering = (body: unknown) => {
+    const client = () =>
+      new HttpJsonClient({
+        baseUrl: 'http://services.invalid',
+        policy: createServicePolicy(policyOptions),
+        logger: silent,
+        fetchImpl: async () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+      });
+    return new HttpServices({ cotacao: client(), apolice: client(), sinistro: client() });
+  };
+  const unavailable = { ok: false, error: 'unavailable' };
+  const secondCopy = {
+    numero: 'AP-1001',
+    documentoUrl: 'https://exemplo.invalid/docs/AP-1001.pdf',
+    geradoEm: '2026-10-10T12:00:00Z',
+    expiraEm: '2026-10-10T13:00:00Z',
+  };
+  const policy = {
+    numero: 'AP-1001',
+    produto: 'AUTO',
+    status: 'ATIVA',
+    vigencia: { inicio: '2026-01-01', fim: '2026-12-31' },
+    segurado: { nome: 'Maria Souza' },
+    coberturas: [],
+    premio: { valorCentavos: 100, moeda: 'BRL', periodicidade: 'MENSAL' },
+    proximoVencimento: null,
+  };
+  const claim = {
+    protocolo: 'SN-2001',
+    apoliceNumero: 'AP-1001',
+    tipo: 'COLISAO',
+    status: 'ABERTO',
+    dataOcorrencia: '2026-09-30',
+    timeline: [],
+  };
+  const claimRequest = {
+    apoliceNumero: 'AP-1001',
+    tipo: 'COLISAO' as const,
+    dataOcorrencia: '2026-10-10',
+    descricao: 'Bati',
+  };
+
+  it('accepts the well-formed responses', async () => {
+    expect((await answering(secondCopy).secondCopy('AP-1001', ctx)).ok).toBe(true);
+    expect((await answering(policy).getPolicy('AP-1001', ctx)).ok).toBe(true);
+    expect((await answering(claim).getClaim('SN-2001', ctx)).ok).toBe(true);
+  });
+
+  it.each(['javascript:alert(1)', 'data:text/html,x', 'ftp://exemplo.invalid/x'])(
+    'maps a second copy whose documentoUrl is %j to unavailable',
+    async (documentoUrl) => {
+      const r = await answering({ ...secondCopy, documentoUrl }).secondCopy('AP-1001', ctx);
+      expect(r).toEqual(unavailable);
+    },
+  );
+
+  it.each(['', 'AP-1', 'XX-1001', 'AP-1001/../x'])(
+    'maps a policy number %j to unavailable',
+    async (numero) => {
+      const s = answering({ ...policy, numero });
+      expect(await s.getPolicy('AP-1001', ctx)).toEqual(unavailable);
+      expect(await answering({ ...secondCopy, numero }).secondCopy('AP-1001', ctx)).toEqual(
+        unavailable,
+      );
+      const list = { apolices: [{ ...policy, numero }] };
+      expect(await answering(list).listPolicies('12345678901', ctx)).toEqual(unavailable);
+    },
+  );
+
+  it.each(['', 'SN-1', 'sn-2001x', 'SN-2001\n'])(
+    'maps a claim protocol %j to unavailable',
+    async (protocolo) => {
+      expect(await answering({ ...claim, protocolo }).getClaim('SN-2001', ctx)).toEqual(
+        unavailable,
+      );
+      const opened = { protocolo, status: 'ABERTO', previsaoRetorno: '2026-10-15' };
+      expect(await answering(opened).openClaim(claimRequest, ctx)).toEqual(unavailable);
+    },
+  );
+});
+
 describe('retry and failure predicates', () => {
   it('retries timeouts, network errors and 502/503/504 only', () => {
     expect(isSafeToRetry(new TypeError('fetch failed'))).toBe(true);

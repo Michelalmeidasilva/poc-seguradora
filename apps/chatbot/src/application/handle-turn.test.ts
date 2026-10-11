@@ -9,7 +9,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { IDLE, type DialogState, type Intent } from '../domain/dialog';
 import { TurnLog } from '../domain/turn-log';
-import { aClaimOpened, aPolicy, aPolicySummary, aQuote } from '../test/fixtures';
+import { aClaimOpened, aPolicy, aPolicySummary, aQuote, aSecondCopy } from '../test/fixtures';
 import { HandleTurn } from './handle-turn';
 import { idempotencyKeyFor } from './idempotency';
 import type { CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
@@ -307,6 +307,91 @@ describe('HandleTurn', () => {
       expect.objectContaining({ dataOcorrencia: '2026-10-10', descricao: 'bati no portão' }),
       expect.anything(),
     );
+  });
+
+  it('still emits internal_error when the logger throws while reporting the failure', async () => {
+    const handler = new HandleTurn({
+      llm: {
+        classify: async () => {
+          throw new Error('boom');
+        },
+      },
+      services: okServices(),
+      dialogs: memoryStore(),
+      turns: new TurnLog(5),
+      newId: () => uuid(7500 + ++counter),
+      now: () => 0,
+      logger: {
+        ...silent,
+        error: () => {
+          throw new Error('logger down');
+        },
+      },
+    });
+    const events = await collect(handler.run(text('oi')));
+    const last = events.at(-1);
+    expect(last?.type === 'error' && last.payload.code).toBe('internal_error');
+  });
+
+  it('never leaks an unhandled rejection when the error path itself throws, and still finishes', async () => {
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => void rejections.push(reason);
+    process.on('unhandledRejection', onRejection);
+    try {
+      let ids = 0;
+      const handler = new HandleTurn({
+        llm: {
+          classify: async () => {
+            throw new Error('boom');
+          },
+        },
+        services: okServices(),
+        dialogs: memoryStore(),
+        turns: new TurnLog(5),
+        // The typing event gets an id; the error event's id generation throws.
+        newId: () => {
+          if (++ids > 1) throw new Error('no more ids');
+          return uuid(7600 + ids);
+        },
+        now: () => 0,
+        logger: {
+          ...silent,
+          error: () => {
+            throw new Error('logger down');
+          },
+        },
+      });
+      const events = await collect(handler.run(text('oi')));
+      expect(types(events)).toEqual(['status.typing']);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+  });
+
+  it('turns an event that breaks the protocol into internal_error instead of sending it', async () => {
+    const services = okServices();
+    services.secondCopy = vi.fn(async () =>
+      ok(aSecondCopy({ documentoUrl: 'javascript:alert(1)' })),
+    );
+    const lines: string[] = [];
+    const logger: Logger = { ...silent, error: (o, m) => void lines.push(JSON.stringify([o, m])) };
+    const handler = new HandleTurn({
+      llm: { classify: async () => intent('unknown') },
+      services,
+      dialogs: memoryStore(),
+      turns: new TurnLog(5),
+      newId: () => uuid(7700 + ++counter),
+      now: () => 0,
+      logger,
+    });
+    const events = await collect(handler.run(quickReply('policy.second_copy:AP-1001')));
+    expect(types(events)).not.toContain('message.template');
+    const last = events.at(-1);
+    expect(last?.type === 'error' && last.payload.code).toBe('internal_error');
+    for (const e of events) expect(parseChatbotLine(JSON.stringify(e)).ok).toBe(true);
+    expect(lines.join('\n')).not.toContain('javascript:');
   });
 
   describe('drain', () => {

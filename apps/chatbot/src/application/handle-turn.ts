@@ -1,4 +1,8 @@
-import type { ChatbotRequest, UnsequencedServerEvent } from '@seguradora/protocol';
+import {
+  UnsequencedServerEventSchema,
+  type ChatbotRequest,
+  type UnsequencedServerEvent,
+} from '@seguradora/protocol';
 import { next, type Input, type ServiceCall, type Step } from '../domain/dialog';
 import type { ReplyBody } from '../domain/reply';
 import type { TurnLog, TurnRecord } from '../domain/turn-log';
@@ -27,10 +31,19 @@ export interface HandleTurnDeps {
 const MAX_CALLS_PER_TURN = 5;
 const INTERNAL_ERROR_MESSAGE = 'Não foi possível processar sua mensagem. Tente novamente.';
 
+/** An outgoing event that does not match the protocol (carries the issue paths, never values). */
+export class InvalidOutgoingEventError extends Error {
+  override readonly name = 'InvalidOutgoingEventError';
+  constructor(readonly paths: string[]) {
+    super('outgoing event does not match the protocol');
+  }
+}
+
 /** Never log anything the user typed or received from a service: only the error type. */
-const describeError = (error: unknown): { name: string } => ({
-  name: error instanceof Error ? error.name : 'UnknownError',
-});
+const describeError = (error: unknown): { name: string; paths?: string[] } => {
+  if (error instanceof InvalidOutgoingEventError) return { name: error.name, paths: error.paths };
+  return { name: error instanceof Error ? error.name : 'UnknownError' };
+};
 
 /**
  * One turn = one user event. The first call for a (session, `event.id`) pair runs the turn in
@@ -90,11 +103,20 @@ export class HandleTurn implements TurnRunner {
         }
       }
     } catch (error) {
-      this.d.logger.error({ ...log, err: describeError(error) }, 'turn failed');
-      emit({
-        type: 'error',
-        payload: { code: 'internal_error', message: INTERNAL_ERROR_MESSAGE },
-      });
+      // The error path must not throw either: a failing logger or id generator is swallowed.
+      try {
+        this.d.logger.error({ ...log, err: describeError(error) }, 'turn failed');
+      } catch {
+        // nothing left to report to
+      }
+      try {
+        emit({
+          type: 'error',
+          payload: { code: 'internal_error', message: INTERNAL_ERROR_MESSAGE },
+        });
+      } catch {
+        // the consumer still gets the end of the stream below
+      }
     } finally {
       record.finish();
     }
@@ -156,14 +178,22 @@ export class HandleTurn implements TurnRunner {
     }
   }
 
+  /** Builds the event and checks it against the protocol, so no invalid line reaches the gateway. */
   private envelope(request: ChatbotRequest, body: ReplyBody): UnsequencedServerEvent {
-    return {
+    const event = {
       v: 1,
       id: this.d.newId(),
       sessionId: request.sessionId,
       correlationId: request.correlationId,
       ts: new Date(this.d.now()).toISOString(),
       ...body,
-    } as UnsequencedServerEvent;
+    };
+    const checked = UnsequencedServerEventSchema.safeParse(event);
+    if (!checked.success) {
+      throw new InvalidOutgoingEventError(
+        checked.error.issues.slice(0, 5).map((i) => i.path.join('.')),
+      );
+    }
+    return event as UnsequencedServerEvent;
   }
 }

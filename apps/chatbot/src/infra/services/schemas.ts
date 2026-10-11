@@ -1,4 +1,9 @@
+import { httpUrl } from '@seguradora/protocol';
 import { z } from 'zod';
+
+/** Identifiers echoed back to the user (and into button ids) must have the documented format. */
+const policyNumber = z.string().regex(/^AP-\d{3,6}$/);
+const claimProtocol = z.string().regex(/^SN-\d{3,6}$/);
 
 const product = z.enum(['AUTO', 'RESIDENCIAL', 'VIDA']);
 const money = z.object({ valorCentavos: z.number().int(), moeda: z.literal('BRL') });
@@ -13,7 +18,7 @@ const claimStatus = z.enum(['ABERTO', 'EM_ANALISE', 'APROVADO', 'NEGADO', 'ENCER
 export const PolicyListSchema = z.object({
   apolices: z.array(
     z.object({
-      numero: z.string(),
+      numero: policyNumber,
       produto: product,
       status: policyStatus,
       vigencia: z.object({ inicio: z.string(), fim: z.string() }),
@@ -22,7 +27,7 @@ export const PolicyListSchema = z.object({
 });
 
 export const PolicySchema = z.object({
-  numero: z.string(),
+  numero: policyNumber,
   produto: product,
   status: policyStatus,
   vigencia: z.object({ inicio: z.string(), fim: z.string() }),
@@ -33,8 +38,9 @@ export const PolicySchema = z.object({
 });
 
 export const SecondCopySchema = z.object({
-  numero: z.string(),
-  documentoUrl: z.string().url(),
+  numero: policyNumber,
+  // http(s) only: the URL becomes a button the user opens.
+  documentoUrl: httpUrl,
   geradoEm: z.string(),
   expiraEm: z.string(),
 });
@@ -48,14 +54,14 @@ export const QuoteSchema = z.object({
 });
 
 export const ClaimOpenedSchema = z.object({
-  protocolo: z.string(),
+  protocolo: claimProtocol,
   status: claimStatus,
   previsaoRetorno: z.string(),
 });
 
 export const ClaimSchema = z.object({
-  protocolo: z.string(),
-  apoliceNumero: z.string(),
+  protocolo: claimProtocol,
+  apoliceNumero: policyNumber,
   tipo: z.enum(['COLISAO', 'ROUBO', 'FURTO', 'INCENDIO', 'DANOS_ELETRICOS', 'OUTROS']),
   status: claimStatus,
   dataOcorrencia: z.string(),
