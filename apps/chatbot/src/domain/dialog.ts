@@ -16,7 +16,7 @@ import type {
 } from './models';
 import { parseQuoteSubmit } from './quote-submit';
 import type { ReplyBody } from './reply';
-import { claimTypeFromText, isExactCancel } from './typed-text';
+import { claimTypeFromText, isDemoRequest, isExactCancel } from './typed-text';
 
 export type IntentName =
   | 'greeting'
@@ -95,13 +95,18 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
       return fromChoice(state, input.optionId);
     case 'flow_submit':
       // A completed quote Flow is honoured from any state (the user may have moved on meanwhile).
-      return input.flowId === 'cotacao' ? submitQuote(input.data) : undefined;
+      if (input.flowId === 'cotacao') return submitQuote(input.data);
+      // The demo Flow is only acknowledged: its data is neither used nor echoed.
+      if (input.flowId === 'demo') return reply(state, catalog.demoFlowReceived());
+      return undefined;
     case 'text': {
       const { intent } = input;
       // A free-text description is never classified: only the bare word "cancelar" interrupts.
       if (state.name === 'claim.awaiting_description') {
         return isExactCancel(input.text) ? reply(IDLE, catalog.menu()) : undefined;
       }
+      // Checked on the raw text, before the classifier's intent, so it is deterministic.
+      if (isDemoRequest(input.text)) return reply(state, catalog.demoFlow());
       // A typed number from the offered list answers the prompt (see apoliceFrom).
       if (state.name === 'policies.awaiting_choice' || state.name === 'claim.awaiting_policy') {
         const typed = intent.entities.apolice?.toUpperCase();

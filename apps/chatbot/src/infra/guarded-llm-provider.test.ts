@@ -3,7 +3,12 @@ import type { Intent } from '../domain/dialog';
 import type { LlmProvider, Logger } from '../application/ports';
 import { GuardedLlmProvider } from './guarded-llm-provider';
 
-const silent: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
+const silent: Logger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 const greeting: Intent = { name: 'greeting', entities: {} };
 const fallback: Intent = { name: 'unknown', entities: {} };
 

@@ -15,6 +15,8 @@
 - [x] Catálogo de mensagens (texto, quick-reply, template, carousel, código, location) e Flow de cotação
 - [x] Flow de cotação declara `sensitive: ["cpf", "nascimento"]` na tela `DADOS` (a web mascara esses campos no resumo)
 - [x] Fonte única dos Flows: `src/domain/flows/` (cotação e `demo-componentes.flow.json`) é a cópia canônica; `src/domain/flows-sync.test.ts` falha se as cópias de teste da web (`apps/web/src/flows/fixtures/`) divergirem, e o gateway simulado do E2E da web lê daqui
+- [x] Flow de demonstração (`flowId: "demo"`, JSON `demo-componentes.flow.json`): digitar exatamente "demo" ou "demo flow" (sem diferenciar maiúsculas, acentos e espaços) envia o Flow a partir de qualquer estado sem mudá-lo, exceto na descrição do sinistro (texto livre); o envio do Flow `demo` é respondido com "Recebi o formulário de demonstração. Nenhum dado foi guardado." e o menu, sem mudar o estado nem repetir os valores enviados
+- [x] `user.flow_data_exchange`: ramo explícito no HandleTurn que responde com um turno vazio (sem typing, sem entrada no diálogo, sem resposta; replay idempotente) e registra em nível debug só `sessionId`, `correlationId`, `flowId`, `screen`, `action` e a quantidade de chaves de `data`, nunca os valores
 - [x] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro); a descrição do sinistro só é interrompida pela palavra exata "cancelar"; número de apólice, tipo de sinistro, CPF e protocolo digitados respondem a etapa atual; o Flow de cotação é aceito em qualquer estado
 - [x] TurnLog: replay idempotente por sessão + event.id (inclusive turno em andamento); Idempotency-Key dos serviços = sha256(sessão + event.id)
 - [x] HandleTurn (laço do diálogo, typing, tratamento de falhas, validação de cada evento enviado contra o protocolo, data de hoje no fuso de São Paulo)
@@ -38,7 +40,7 @@
 - Serviços internos: os testes usam um servidor fake que implementa o contrato; rodar contra os serviços reais quando existirem.
 - Autenticação chatbot → serviços (Cloud Run IAM, ID token) não implementada; ingress interno e IAM ficam para o plano de deploy.
 - A validação de CPF verifica só o formato (11 dígitos), porque os fixtures dos serviços usam CPFs fictícios sem dígito verificador válido.
-- O JSON do Flow de cotação é uma proposta; o schema de Flow JSON do Plano 5 deve validá-lo.
+- Validar os JSONs dos Flows (cotação e demonstração) no Playground da Meta; hoje só são verificados pelos testes deste repositório.
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
 - Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
 - Dockerfile não verificado com Docker real (daemon indisponível). Verificado sem Docker: build tsup (bundle ESM com @seguradora/* e Flow JSON embutidos), smoke test do `dist/main.js` (/health ok, SIGTERM com exit 0) e o layout de `pnpm deploy --legacy --prod` montado como na imagem. Rodar `docker build -f apps/chatbot/Dockerfile .` quando houver Docker.

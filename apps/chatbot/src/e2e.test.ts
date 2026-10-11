@@ -263,7 +263,12 @@ describe('chatbot end to end (fake internal services)', () => {
 
   it('falls back to the unknown reply when the LLM is too slow', async () => {
     const slow = { classify: () => new Promise<Intent>(() => undefined) };
-    const silent = { info: () => undefined, warn: () => undefined, error: () => undefined };
+    const silent = {
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+    };
     const guarded = new GuardedLlmProvider(slow, {
       timeoutMs: 50,
       maxInputChars: 1000,
@@ -300,6 +305,58 @@ describe('chatbot end to end (fake internal services)', () => {
       body: '{}',
     });
     expect(bad.status).toBe(400);
+  });
+
+  it('opens the demo Flow by typing and answers a demo data exchange with an empty NDJSON body', async () => {
+    bot = await startChatbot();
+    const demo = await turn(bot.url, textReq('demo flow', { session: 'demo-s' }));
+    expect(findEvent(demo.events, 'message.flow').payload.flowId).toBe('demo');
+
+    const canary = 'CANARIO-E2E-5b10';
+    const request = {
+      v: 1,
+      sessionId: 'demo-s',
+      correlationId: 'corr-exchange',
+      event: {
+        v: 1,
+        id: '00000000-0000-4000-8000-0000000ee002',
+        sessionId: 'demo-s',
+        correlationId: 'corr-exchange',
+        ts: '2026-10-10T12:00:00.000Z',
+        type: 'user.flow_data_exchange',
+        payload: {
+          flowId: 'demo',
+          screen: 'DADOS',
+          action: 'data_exchange',
+          data: { nome: canary },
+        },
+      },
+    } as const;
+    const res = await fetch(`${bot.url}/v1/chat/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/x-ndjson' },
+      body: JSON.stringify(request),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('application/x-ndjson');
+    const body = await res.text();
+    expect(body.trim()).toBe('');
+    expect(body).not.toContain(canary);
+
+    // The exchange did not disturb the dialog: a demo submission is acknowledged.
+    const submitted = await turn(bot.url, {
+      ...request,
+      correlationId: 'corr-submit',
+      event: {
+        ...request.event,
+        id: '00000000-0000-4000-8000-0000000ee003',
+        correlationId: 'corr-submit',
+        type: 'user.flow_submit',
+        payload: { flowId: 'demo', data: { nome: canary } },
+      },
+    } as unknown as Parameters<typeof turn>[1]);
+    expect(textsOf(submitted.events)).toContain('Nenhum dado foi guardado');
+    expect(JSON.stringify(submitted.events)).not.toContain(canary);
   });
 
   it('never calls a service with a hostile identifier', async () => {

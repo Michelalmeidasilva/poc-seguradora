@@ -1,4 +1,5 @@
 import quoteFlowJson from './flows/cotacao.flow.json';
+import demoFlowJson from './flows/demo-componentes.flow.json';
 import { CLAIM_TYPES } from './identifiers';
 import type {
   Claim,
@@ -186,6 +187,26 @@ export const quoteFlow = (): ReplyBody[] => [
       flowJson: structuredClone(quoteFlowJson),
     },
   },
+];
+
+/** A fictitious Flow that walks through every component; nothing it collects is stored. */
+export const demoFlow = (): ReplyBody[] => [
+  {
+    type: 'message.flow',
+    payload: {
+      flowId: 'demo',
+      header: 'Demonstração',
+      body: 'Este é um formulário de demonstração, com dados fictícios, que mostra os componentes de um Flow. Toque no botão para abrir. Nenhum dado preenchido será guardado.',
+      ctaLabel: 'Abrir demonstração',
+      flowJson: structuredClone(demoFlowJson),
+    },
+  },
+];
+
+/** Takes no argument on purpose: the submitted values are never echoed back. */
+export const demoFlowReceived = (): ReplyBody[] => [
+  text('Recebi o formulário de demonstração. Nenhum dado foi guardado.'),
+  quick('Posso ajudar com outra coisa?', [MENU_OPTION]),
 ];
 
 export const quoteInvalid = (): ReplyBody[] => [

@@ -1,4 +1,4 @@
-import { parseChatbotLine } from '@seguradora/protocol';
+import { FlowPayload, LIMITS, parseChatbotLine } from '@seguradora/protocol';
 import { describe, expect, it } from 'vitest';
 import {
   aClaim,
@@ -9,6 +9,7 @@ import {
   aSecondCopy,
 } from '../test/fixtures';
 import * as catalog from './catalog';
+import demoFlowJson from './flows/demo-componentes.flow.json';
 import type { ReplyBody } from './reply';
 
 /** Wraps a reply in the event envelope and runs it through the real protocol schema. */
@@ -65,6 +66,8 @@ const everyReply: Array<[string, ReplyBody[]]> = [
   ['claimRejected', catalog.claimRejected()],
   ['descriptionTooLong', catalog.descriptionTooLong()],
   ['pickAnOption', catalog.pickAnOption()],
+  ['demoFlow', catalog.demoFlow()],
+  ['demoFlowReceived', catalog.demoFlowReceived()],
 ];
 
 describe('catalog', () => {
@@ -230,6 +233,60 @@ describe('quote flow limits', () => {
     (first.payload.flowJson as { version: string }).version = 'mutated';
     const second = catalog.quoteFlow().find((r) => r.type === 'message.flow');
     expect(second?.type === 'message.flow' && second.payload.flowJson.version).toBe('6.2');
+  });
+});
+
+describe('demo flow', () => {
+  const demo = () => {
+    const replies = catalog.demoFlow();
+    expect(replies).toHaveLength(1);
+    const [flow] = replies;
+    if (flow?.type !== 'message.flow') throw new Error('no flow');
+    return flow;
+  };
+
+  it('sends the demo Flow JSON with the fixed header and call to action', () => {
+    const { payload } = demo();
+    expect(payload.flowId).toBe('demo');
+    expect(payload.header).toBe('Demonstração');
+    expect(payload.ctaLabel).toBe('Abrir demonstração');
+    expect(payload.flowJson).toEqual(demoFlowJson);
+    expect(payload.body).toMatch(/demonstração/i);
+    expect(payload.body).toMatch(/nenhum dado/i);
+  });
+
+  it('satisfies the protocol FlowPayload schema and stays well below the event size limit', () => {
+    const flow = demo();
+    expect(FlowPayload.safeParse(flow.payload).success).toBe(true);
+    const serialized = JSON.stringify({
+      v: 1,
+      id: '00000000-0000-4000-8000-000000000001',
+      sessionId: 's1',
+      correlationId: 'c1',
+      ts: '2026-10-10T12:00:00.000Z',
+      ...flow,
+    });
+    const bytes = Buffer.byteLength(serialized, 'utf8');
+    expect(bytes).toBeLessThan(32768);
+    expect(bytes).toBeLessThan(LIMITS.maxEventBytes);
+  });
+
+  it('returns a fresh copy of the demo Flow JSON on every call', () => {
+    (demo().payload.flowJson as { version: string }).version = 'mutated';
+    expect(demo().payload.flowJson.version).toBe(demoFlowJson.version);
+  });
+
+  it('acknowledges a demo submission with a fixed text and the menu option only', () => {
+    expect(catalog.demoFlowReceived.length).toBe(0);
+    const replies = catalog.demoFlowReceived();
+    expect(replies.map((r) => r.type)).toEqual(['message.text', 'message.quick_replies']);
+    const [first, second] = replies;
+    expect(first?.type === 'message.text' && first.payload.text).toBe(
+      'Recebi o formulário de demonstração. Nenhum dado foi guardado.',
+    );
+    expect(second?.type === 'message.quick_replies' && second.payload.options).toEqual([
+      { id: 'menu', title: 'Menu principal' },
+    ]);
   });
 });
 

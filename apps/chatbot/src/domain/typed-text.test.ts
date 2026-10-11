@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimTypeFromText, foldText, isExactCancel } from './typed-text';
+import { claimTypeFromText, foldText, isDemoRequest, isExactCancel } from './typed-text';
 
 describe('foldText', () => {
   it('lower-cases and removes accents', () => {
@@ -38,4 +38,20 @@ describe('claimTypeFromText', () => {
   it.each(['banana', '', 'colisaoo', 'bateria', 'bati e roubaram'])('%j → undefined', (text) => {
     expect(claimTypeFromText(text)).toBeUndefined();
   });
+});
+
+describe('isDemoRequest', () => {
+  it.each(['demo', ' DEMO ', 'Démo', 'demo flow', 'Demo  Flow', '\tdemo\nflow '])(
+    '%j asks for the demo',
+    (t) => {
+      expect(isDemoRequest(t)).toBe(true);
+    },
+  );
+
+  it.each(['demonstração', 'quero a demo', 'demo flow agora', 'flow', 'demoflow', ''])(
+    '%j is not',
+    (t) => {
+      expect(isDemoRequest(t)).toBe(false);
+    },
+  );
 });

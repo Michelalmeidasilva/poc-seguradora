@@ -295,7 +295,12 @@ const slowTurns = (ms: number) => {
     turns: new TurnLog(10),
     newId: randomUUID,
     now: Date.now,
-    logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logger: {
+      debug: () => undefined,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+    },
   });
   return {
     handler,

@@ -12,6 +12,12 @@ const CANCEL_WORDS = new Set(['cancelar', 'cancela']);
 /** True only when the whole message is the word "cancelar" (free-text steps use this). */
 export const isExactCancel = (text: string): boolean => CANCEL_WORDS.has(foldText(text).trim());
 
+const DEMO_PHRASES = new Set(['demo', 'demo flow']);
+
+/** True only when the whole message is "demo" or "demo flow" (case, accents and spacing aside). */
+export const isDemoRequest = (text: string): boolean =>
+  DEMO_PHRASES.has(foldText(text).trim().replace(/\s+/g, ' '));
+
 const CLAIM_TYPE_WORDS: ReadonlyArray<[ClaimType, ReadonlySet<string>]> = [
   ['COLISAO', new Set(['colisao', 'colidi', 'bati', 'batida', 'acidente'])],
   ['ROUBO', new Set(['roubo', 'roubaram', 'roubado', 'furto', 'furtaram', 'assalto'])],

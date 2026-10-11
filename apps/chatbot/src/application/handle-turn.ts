@@ -94,17 +94,26 @@ export class HandleTurn implements TurnRunner {
     const emit = (body: ReplyBody) => record.push(this.envelope(request, body));
     const log = { sessionId: request.sessionId, correlationId: request.correlationId };
     try {
-      if (request.event.type !== 'user.flow_data_exchange') {
-        emit({ type: 'status.typing', payload: { state: 'start' } });
-        const input = await this.toInput(request);
-        if (input) {
-          const step = await this.decide(request, input);
-          this.d.dialogs.set(request.sessionId, step.state);
-          emit({ type: 'status.typing', payload: { state: 'stop' } });
-          for (const body of step.replies) emit(body);
-        } else {
-          emit({ type: 'status.typing', payload: { state: 'stop' } });
-        }
+      const event = request.event;
+      if (event.type === 'user.flow_data_exchange') {
+        // No Flow uses a data endpoint yet: the exchange is acknowledged with an empty turn
+        // (no typing, no dialog input, no reply). Only the shape is logged, never the values.
+        const { flowId, screen, action, data } = event.payload;
+        this.d.logger.debug(
+          { ...log, flowId, screen, action, dataKeys: Object.keys(data).length },
+          'flow data exchange ignored',
+        );
+        return;
+      }
+      emit({ type: 'status.typing', payload: { state: 'start' } });
+      const input = await this.toInput(request);
+      if (input) {
+        const step = await this.decide(request, input);
+        this.d.dialogs.set(request.sessionId, step.state);
+        emit({ type: 'status.typing', payload: { state: 'stop' } });
+        for (const body of step.replies) emit(body);
+      } else {
+        emit({ type: 'status.typing', payload: { state: 'stop' } });
       }
     } catch (error) {
       // The error path must not throw either: a failing logger or id generator is swallowed.

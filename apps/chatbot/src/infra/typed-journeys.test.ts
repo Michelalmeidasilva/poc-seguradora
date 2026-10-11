@@ -266,3 +266,28 @@ describe('typed journeys (real classifier)', () => {
     }
   });
 });
+
+describe('demo flow with the real classifier', () => {
+  const flowIds = (state: DialogState, text: string) =>
+    typed(state, text).then(({ final, calls }) => {
+      expect(calls).toHaveLength(0);
+      return {
+        state: final.state,
+        ids: final.replies.flatMap((r) => (r.type === 'message.flow' ? [r.payload.flowId] : [])),
+      };
+    });
+
+  it.each(['demo flow', 'Demo', ' DEMO FLOW '])('%j reaches the demo Flow', async (text) => {
+    expect(await flowIds(IDLE, text)).toEqual({ state: IDLE, ids: ['demo'] });
+  });
+
+  it('keeps the pending quote state when the demo is asked for', async () => {
+    const pending: DialogState = { name: 'quote.awaiting_flow' };
+    expect(await flowIds(pending, 'demo flow')).toEqual({ state: pending, ids: ['demo'] });
+  });
+
+  it('"demo flow" is a description inside the claim description step', async () => {
+    const { calls } = await typed(describing, 'demo flow', { openClaim: ok(aClaimOpened()) });
+    expect(calls[0]?.op === 'openClaim' && calls[0].request.descricao).toBe('demo flow');
+  });
+});

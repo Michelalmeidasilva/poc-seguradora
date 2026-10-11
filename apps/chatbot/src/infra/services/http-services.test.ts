@@ -13,7 +13,12 @@ import {
   ServiceHttpError,
 } from './services-policy';
 
-const silent: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
+const silent: Logger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 const ctx: CallContext = {
   correlationId: 'corr-1',
   idempotencyKey: '00000000-0000-4000-8000-000000000001',

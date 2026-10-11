@@ -653,3 +653,80 @@ describe('list choices are constrained', () => {
     expect(final.state).toEqual({ name: 'claim.awaiting_type', apolice: 'AP-1001' });
   });
 });
+
+describe('demo flow', () => {
+  const flowIds = (replies: ReplyBody[]) =>
+    replies.flatMap((r) => (r.type === 'message.flow' ? [r.payload.flowId] : []));
+  const describing: DialogState = {
+    name: 'claim.awaiting_description',
+    apolice: 'AP-1001',
+    tipo: 'COLISAO',
+  };
+  const states: DialogState[] = [
+    IDLE,
+    { name: 'quote.awaiting_flow' },
+    { name: 'policies.awaiting_cpf' },
+    { name: 'policies.awaiting_choice', numeros: ['AP-1001'] },
+    { name: 'claim.awaiting_type', apolice: 'AP-1001' },
+    { name: 'claim_status.awaiting_protocol' },
+  ];
+
+  it.each(['demo', 'DEMO', '  Demo  ', 'démo', 'demo flow', 'Demo Flow', ' DEMO   FLOW '])(
+    'typing %j sends the demo Flow',
+    (t) => {
+      const { final, calls } = run(IDLE, say(t));
+      expect(calls).toHaveLength(0);
+      expect(flowIds(final.replies)).toEqual(['demo']);
+      expect(final.state).toEqual(IDLE);
+    },
+  );
+
+  it.each(['demonstração', 'quero ver a demo', 'demo flow agora', 'flow'])(
+    '%j is not the demo trigger',
+    (t) => {
+      expect(flowIds(run(IDLE, say(t)).final.replies)).toEqual([]);
+    },
+  );
+
+  it.each(states)('sends the demo Flow from $name and keeps the state', (state) => {
+    const { final, calls } = run(state, say('demo'));
+    expect(calls).toHaveLength(0);
+    expect(flowIds(final.replies)).toEqual(['demo']);
+    expect(final.state).toEqual(state);
+  });
+
+  it('treats "demo" as the claim description, where only "cancelar" interrupts', () => {
+    const { calls, final } = run(describing, say('demo'), { openClaim: ok(aClaimOpened()) });
+    expect(calls[0]?.op === 'openClaim' && calls[0].request.descricao).toBe('demo');
+    expect(flowIds(final.replies)).toEqual([]);
+    const cancelled = run(describing, say('cancelar', intent('cancel')));
+    expect(cancelled.final.state).toEqual(IDLE);
+  });
+
+  describe('a submitted demo Flow', () => {
+    const canary = 'CANARIO-DEMO-7f3a';
+    const data = { nome: canary, nested: { valor: canary }, lista: [canary] };
+
+    it.each([...states, describing])(
+      'is acknowledged from $name without changing the state or echoing values',
+      (state) => {
+        const { final, calls } = run(state, { kind: 'flow_submit', flowId: 'demo', data });
+        expect(calls).toHaveLength(0);
+        expect(final.state).toEqual(state);
+        expect(textOf(final.replies)).toBe(
+          'Recebi o formulário de demonstração. Nenhum dado foi guardado.',
+        );
+        expect(quickIds(final.replies)).toEqual(['menu']);
+        expect(JSON.stringify(final.replies)).not.toContain(canary);
+      },
+    );
+
+    it('a Flow with an unknown id is still ignored (the current step reprompts)', () => {
+      const state: DialogState = { name: 'claim_status.awaiting_protocol' };
+      const { final } = run(state, { kind: 'flow_submit', flowId: 'desconhecido', data });
+      expect(final.state).toEqual(state);
+      expect(textOf(final.replies)).toContain('protocolo');
+      expect(JSON.stringify(final.replies)).not.toContain(canary);
+    });
+  });
+});

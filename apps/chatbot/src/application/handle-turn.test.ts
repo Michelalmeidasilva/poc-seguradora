@@ -14,7 +14,12 @@ import { HandleTurn } from './handle-turn';
 import { idempotencyKeyFor } from './idempotency';
 import type { CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
 
-const silent: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
+const silent: Logger = {
+  debug: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+  error: () => undefined,
+};
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const intent = (name: Intent['name'], entities: Intent['entities'] = {}): Intent => ({
@@ -466,6 +471,7 @@ describe('HandleTurn', () => {
   it('does not log the text the user typed', async () => {
     const lines: string[] = [];
     const logger: Logger = {
+      debug: (o, m) => void lines.push(JSON.stringify([o, m])),
       info: (o, m) => void lines.push(JSON.stringify([o, m])),
       warn: (o, m) => void lines.push(JSON.stringify([o, m])),
       error: (o, m) => void lines.push(JSON.stringify([o, m])),
@@ -487,5 +493,97 @@ describe('HandleTurn', () => {
     await collect(handler.run(text('MEU-SEGREDO-123 e o cpf 12345678901')));
     expect(lines.join('\n')).not.toContain('MEU-SEGREDO-123');
     expect(lines.join('\n')).not.toContain('12345678901');
+  });
+
+  describe('flow data exchange', () => {
+    const canary = 'CANARIO-EXCHANGE-91c2';
+    const exchange = (id: number) =>
+      request(
+        {
+          type: 'user.flow_data_exchange',
+          payload: {
+            flowId: 'demo',
+            screen: 'DADOS',
+            action: 'data_exchange',
+            data: { nome: canary, cpf: '12345678901', nested: { segredo: canary } },
+          },
+        },
+        id,
+      );
+    const recording = () => {
+      const calls: Array<{ level: string; obj: object; msg: string }> = [];
+      const at =
+        (level: string) =>
+        (obj: object, msg: string): void =>
+          void calls.push({ level, obj, msg });
+      const logger: Logger = {
+        debug: at('debug'),
+        info: at('info'),
+        warn: at('warn'),
+        error: at('error'),
+      };
+      return { calls, logger };
+    };
+    const build = (logger: Logger, dialogs: DialogStore, llm: LlmProvider) =>
+      new HandleTurn({
+        llm,
+        services: okServices(),
+        dialogs,
+        turns: new TurnLog(5),
+        newId: () => uuid(7800 + ++counter),
+        now: () => 0,
+        logger,
+      });
+
+    it('emits no event, never classifies and leaves the dialog state untouched', async () => {
+      const dialogs = memoryStore();
+      const state: DialogState = { name: 'policies.awaiting_cpf' };
+      dialogs.set('s1', state);
+      const set = vi.spyOn(dialogs, 'set');
+      const classify = vi.fn(async () => intent('greeting'));
+      const handler = build(recording().logger, dialogs, { classify });
+      const events = await collect(handler.run(exchange(31)));
+      expect(events).toEqual([]);
+      expect(classify).not.toHaveBeenCalled();
+      expect(set).not.toHaveBeenCalled();
+      expect(dialogs.get('s1')).toEqual(state);
+    });
+
+    it('logs only the ids, screen, action and the number of data keys at debug level', async () => {
+      const { calls, logger } = recording();
+      const handler = build(logger, memoryStore(), { classify: async () => intent('greeting') });
+      await collect(handler.run(exchange(32)));
+      expect(calls).toEqual([
+        {
+          level: 'debug',
+          obj: {
+            sessionId: 's1',
+            correlationId: 'corr-32',
+            flowId: 'demo',
+            screen: 'DADOS',
+            action: 'data_exchange',
+            dataKeys: 3,
+          },
+          msg: expect.any(String),
+        },
+      ]);
+      const all = JSON.stringify(calls);
+      expect(all).not.toContain(canary);
+      expect(all).not.toContain('12345678901');
+    });
+
+    it('replays the same empty turn for a repeated event id and executes it once', async () => {
+      const { calls, logger } = recording();
+      const handler = build(logger, memoryStore(), { classify: async () => intent('greeting') });
+      const req = exchange(33);
+      const first = await collect(handler.run(req));
+      const second = await Promise.race([
+        collect(handler.run(req)),
+        new Promise<'hung'>((r) => setTimeout(() => r('hung'), 500)),
+      ]);
+      expect(first).toEqual([]);
+      expect(second).toEqual([]);
+      expect(calls.filter((c) => c.level === 'debug')).toHaveLength(1);
+    });
   });
 });
