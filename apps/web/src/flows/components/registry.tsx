@@ -5,6 +5,7 @@ import { ChipsSelector } from './ChipsSelector';
 import { DatePicker } from './DatePicker';
 import { EmbeddedLink, Image, ImageCarousel } from './display';
 import { Footer } from './Footer';
+import { DocumentPicker, PhotoPicker } from './MediaPickers';
 import { NavigationList } from './NavigationList';
 import { If, Switch } from './structural';
 import { CheckboxGroup, Dropdown, OptIn, RadioButtonsGroup, TextArea, TextInput } from './inputs';
@@ -28,6 +29,8 @@ const COMPONENTS: Record<string, Renderer> = {
   DatePicker,
   CalendarPicker,
   ChipsSelector,
+  PhotoPicker,
+  DocumentPicker,
   Image,
   EmbeddedLink,
   ImageCarousel,
