@@ -15,7 +15,7 @@
 - [x] Catálogo de mensagens (texto, quick-reply, template, carousel, código, location) e Flow de cotação
 - [x] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro)
 - [x] TurnLog: replay idempotente por event.id (inclusive turno em andamento)
-- [ ] HandleTurn (laço do diálogo, typing, tratamento de falhas)
+- [x] HandleTurn (laço do diálogo, typing, tratamento de falhas)
 - [ ] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
 - [ ] Armazenamento de estado do diálogo em memória (TTL e capacidade)
 - [ ] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
