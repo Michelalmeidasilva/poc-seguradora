@@ -75,6 +75,7 @@ export class SseClient {
           signal: controller.signal,
         });
 
+        if (!alive()) return;
         if (res.status === 401) {
           this.running = false;
           this.o.onUnauthorized?.();
@@ -95,9 +96,11 @@ export class SseClient {
           const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
           // A real fetch body errors on abort; make that explicit so any stream implementation unblocks the read.
           const onAbort = () => void reader.cancel().catch(() => undefined);
-          controller.signal.addEventListener('abort', onAbort, { once: true });
+          if (controller.signal.aborted) onAbort();
+          else controller.signal.addEventListener('abort', onAbort, { once: true });
           for (;;) {
             const { done, value } = await reader.read();
+            if (!alive()) return;
             if (done) {
               if (!controller.signal.aborted) reason = 'ended';
               break;
@@ -110,6 +113,8 @@ export class SseClient {
         // aborted by stop() or by the heartbeat watchdog, or a network failure: `reason` says which
       } finally {
         clearTimeout(timer);
+        // Idempotent: releases the HTTP body (via the abort listener) when we leave because of an error.
+        controller.abort();
       }
 
       if (!alive()) return;

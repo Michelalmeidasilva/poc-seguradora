@@ -223,12 +223,36 @@ describe('SseClient', () => {
   it('can be started again after a stop', async () => {
     const api = fakeStream();
     api.respondWithStream();
-    const { client } = make(api);
+    const { client, messages, events } = make(api);
     client.start();
     await flush();
     client.stop();
     api.respondWithStream();
     client.start();
+    await flush();
+    expect(api.calls).toHaveLength(2);
+    api.push('id: 9\ndata: new\n\n');
+    await flush();
+    expect(messages).toEqual(['new']);
+    expect(events).toEqual(['open', 'open']);
+    client.stop();
+  });
+
+  it('aborts the body and reconnects once when the consumer throws', async () => {
+    const api = fakeStream();
+    api.respondWithStream();
+    const { client, events } = make(api, {
+      onMessage: () => {
+        throw new Error('bad payload');
+      },
+    });
+    client.start();
+    await flush();
+    api.push('id: 1\ndata: boom\n\n');
+    await flush();
+    expect(api.calls[0]?.signal?.aborted).toBe(true);
+    expect(events).toEqual(['open', 'disconnect:network']);
+    await vi.advanceTimersByTimeAsync(1000);
     await flush();
     expect(api.calls).toHaveLength(2);
     client.stop();
@@ -243,6 +267,10 @@ describe('SseClient', () => {
     api.fail();
     await flush();
     expect(events).toEqual(['open', 'disconnect:network']);
+    api.respondWithStream();
+    await vi.advanceTimersByTimeAsync(1000);
+    await flush();
+    expect(api.calls).toHaveLength(2);
     client.stop();
   });
 });
