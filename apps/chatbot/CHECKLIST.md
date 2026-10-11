@@ -19,8 +19,8 @@
 - [x] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
 - [x] Armazenamento de estado do diálogo em memória (TTL e capacidade)
 - [x] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
-- [ ] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
-- [ ] /health e /ready
+- [x] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
+- [x] /health e /ready
 - [ ] Encerramento gracioso
 
 ## Qualidade
