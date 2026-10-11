@@ -33,6 +33,8 @@
 - [x] Componentes de Flows: upload de mídia (PhotoPicker, DocumentPicker)
 - [x] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
 - [x] FlowSheet (bottom sheet) e integração
+- [x] Flow de demonstração (`fixtures/demo-componentes.flow.json`, versão 7.1) com todos os componentes e ações; teste garante que os tipos do demo são exatamente os do registry
+- [x] E2E de Flows: cotação ponta a ponta, demo percorrido só por teclado (com `data_exchange` e `complete`), Voltar/Fechar com confirmação e retorno do foco
 
 ### Decisões próprias (Plano 5)
 
@@ -47,6 +49,10 @@
 - Resumo do envio (`buildSummary`): uma linha `rótulo: valor` por campo enviado (rótulo do componente com o mesmo `name`, senão a chave), Sim/Não, ids de opção trocados pelo título, arquivos pelo nome, até 500 caracteres. Campos `sensitive` (da tela, lista ou `true`, ou do componente) aparecem como `••••`, e qualquer valor que contenha o valor de um campo sensível também é mascarado (pode mascarar a mais). Payload vazio vira "Formulário enviado".
 - `update_data` com `on-unselect-action` (ChipsSelector): o select guarda, por `name` do componente, os valores de `data` que o patch substituiu (o primeiro registro vale até o unselect); o unselect os restaura e depois aplica o próprio patch. O registro some ao navegar ou voltar. Semântica a validar (só documentada no changelog).
 - `open_url` com URL que não é http(s) é descartada com um `console.warn` sem a URL.
+- Resumo: datas aparecem em ISO (`2027-01-15`) e um CalendarPicker `range` como `início a fim` (antes o intervalo sumia do resumo; achado pelo E2E).
+- Image/ImageCarousel/NavigationList aceitam `src` http(s) ou data URL raster (`data:image/png;base64,...`). A Meta documenta `src` como base64 puro (sem prefixo `data:`): esse formato hoje não é exibido (a imagem some). O demo usa data URL.
+- Escape com DatePicker/CalendarPicker (Chromium, verificado no E2E): com o seletor nativo fechado, Escape é da folha (pede confirmação se houver edição); com o seletor aberto (Space), o primeiro Escape só fecha o seletor e o segundo chega à folha.
+- E2E: o gateway simulado serve os Flows lidos das fixtures na inicialização (`cotacao flow`, `demo flow`), não responde a `user.flow_data_exchange` (como o chatbot hoje) e expõe só tipo e payload dos eventos de Flow em `GET /__events` (gancho de teste). A ordem dos campos do `<input type="date">` segue o idioma do sistema, então o teste a descobre num campo descartável antes de digitar.
 - FlowSheet substitui o placeholder do Plano 4: Fechar/Escape só pedem confirmação (diálogo dentro da folha, não `window.confirm`) quando o usuário editou ou tocou algum campo (o preenchimento por `init-value` não conta; editar e voltar ao valor padrão conta); após `complete` fecha direto. Flow inválido mostra "Não foi possível abrir este formulário." e loga só caminho e código dos problemas. Se a aba fica passiva com a folha aberta, o App a fecha sem enviar; reabrir o mesmo Flow começa do zero (chave por abertura).
 
 ## Qualidade
@@ -64,4 +70,11 @@
 - GATEWAY_URL do nginx: o gateway precisa de `ALLOWED_ORIGIN` igual à origem pública da web e `TRUST_PROXY_HOPS` conforme o número de saltos (web -> gateway no Cloud Run); conferir no deploy.
 - Upload de áudio do usuário não existe: o áudio gravado fica no navegador.
 - Fluxo de pilha completa (web + gateway + chatbot + serviços) não tem teste automatizado.
+- Plano 5 (Flows), fora deste plano:
+  - Chatbot: tratar `user.flow_data_exchange` (responder com os dados da próxima tela) e ter o Flow `demo-componentes` no catálogo (a linha do chatbot está `done`; reabrir por acordo). Até lá, o `data_exchange` da web é otimista.
+  - Gateway: endpoint `/v1/media` para upload de voz e de mídia de Flows (hoje os ids são `local-*` e nenhum byte sai do navegador).
+  - Validar os Flows de cotação e demo no Playground da Meta quando houver acesso; NavigationList, ChipsSelector e ImageCarousel seguem como decisões próprias até lá (incluindo o formato de `src` das imagens).
+  - Plano de deploy (Cloud Run, `TRUST_PROXY_HOPS`, `resolver` do nginx, `docker build`/`nginx -t`) e teste de integração da pilha completa.
+  - `crypto.randomUUID` em `transport/chat-client.ts` e `chat/useChat.ts` (código do Plano 4) só existe em contexto seguro: funciona em https e em localhost/127.0.0.1, quebra em http puro por IP/hostname (o `newMediaId` dos Flows já tem fallback).
+  - Escape com seletores nativos de data só foi verificado no Chromium; Firefox e Safari não foram testados.
 - GATEWAY_URL não pode ter barra final nem path (uma barra final remove o /v1 silenciosamente); o nginx resolve o hostname do upstream uma vez na inicialização (considerar `resolver` + variável no proxy_pass se os IPs do Cloud Run mudarem). Ambos não testados: sem Docker/nginx.
