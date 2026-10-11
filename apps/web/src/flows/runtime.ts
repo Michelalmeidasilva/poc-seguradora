@@ -1,0 +1,266 @@
+import { evalCondition, hasDynamicValue, interpolate, resolveValue, type Scope } from './expr';
+import {
+  entryScreen,
+  type FlowComponent,
+  type FlowJson,
+  type FlowScreen,
+  MAX_NESTING,
+  screenById,
+} from './schema';
+import { validateField } from './validation';
+
+export interface RuntimeState {
+  /** Last frame is the current screen; `data` is the payload of the last navigation into it. */
+  stack: { screenId: string; data: Record<string, unknown> }[];
+  /** Every field by name, across screens; kept on Back. */
+  form: Record<string, unknown>;
+  touched: Record<string, true>;
+  /** `exchange` while a data_exchange is in flight. */
+  pending: 'idle' | 'exchange';
+  outcome?: { kind: 'complete'; payload: Record<string, unknown> };
+}
+
+/** Payloads and patches are the raw action values: the reducer resolves them once. */
+export type RuntimeEvent =
+  | { type: 'set'; name: string; value: unknown }
+  | { type: 'touch'; name: string }
+  | { type: 'back' }
+  | { type: 'navigate'; screenId: string; payload: Record<string, unknown> }
+  | { type: 'complete'; payload: Record<string, unknown> }
+  | { type: 'exchange_start' }
+  | { type: 'exchange_done' }
+  | { type: 'update_data'; patch: Record<string, unknown> };
+
+const FIELD_TYPES = new Set([
+  'TextInput',
+  'TextArea',
+  'DatePicker',
+  'CalendarPicker',
+  'CheckboxGroup',
+  'RadioButtonsGroup',
+  'Dropdown',
+  'ChipsSelector',
+  'OptIn',
+  'PhotoPicker',
+  'DocumentPicker',
+]);
+
+const EXACT_FORM_REF = /^\$\{form\.([A-Za-z_]\w*)(?:\.[A-Za-z_]\w*)*\}$/;
+const FORM_REF = /\$\{form\.([A-Za-z_]\w*)/g;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const own = (table: Record<string, unknown>, key: string): unknown =>
+  Object.hasOwn(table, key) ? table[key] : undefined;
+
+const fieldName = (c: FlowComponent): string | undefined => {
+  const name = own(c as Record<string, unknown>, 'name');
+  return FIELD_TYPES.has(c.type) && typeof name === 'string' ? name : undefined;
+};
+
+const children = (screen: FlowScreen): unknown =>
+  isRecord(screen) && isRecord(screen.layout) ? screen.layout.children : undefined;
+
+export function initRuntime(flow: FlowJson, data: Record<string, unknown> = {}): RuntimeState {
+  return {
+    stack: [{ screenId: entryScreen(flow).id, data: isRecord(data) ? { ...data } : {} }],
+    form: {},
+    touched: {},
+    pending: 'idle',
+  };
+}
+
+export function currentScreen(flow: FlowJson, s: RuntimeState): FlowScreen {
+  const top = s.stack[s.stack.length - 1];
+  return (top && screenById(flow, top.screenId)) ?? entryScreen(flow);
+}
+
+export function scopeOf(s: RuntimeState): Scope {
+  return { data: s.stack[s.stack.length - 1]?.data ?? {}, form: s.form };
+}
+
+const isVisible = (c: FlowComponent, scope: Scope): boolean => {
+  const v = own(c as Record<string, unknown>, 'visible');
+  if (typeof v !== 'string') return v !== false;
+  // A bound `visible` shows the component only when it resolves truthy.
+  const r = resolveValue(v, scope);
+  return Boolean(r) && r !== 'false';
+};
+
+function walkVisible(list: unknown, scope: Scope, depth: number, out: FlowComponent[]): void {
+  if (!Array.isArray(list) || depth > MAX_NESTING) return;
+  for (const c of list as unknown[]) {
+    if (!isRecord(c) || typeof c.type !== 'string') continue;
+    if (c.type === 'If') {
+      const r = evalCondition(c.condition as string, scope);
+      walkVisible(r.ok && r.value ? c.then : c.else, scope, depth + 1, out);
+    } else if (c.type === 'Switch') {
+      const key = interpolate(c.value as string, scope);
+      if (isRecord(c.cases) && Object.hasOwn(c.cases, key)) {
+        walkVisible(c.cases[key], scope, depth + 1, out);
+      }
+    } else if (isVisible(c as FlowComponent, scope)) {
+      out.push(c as FlowComponent);
+    }
+  }
+}
+
+/** Leaves of the screen as shown now: If/Switch flattened, `visible: false` dropped. */
+export function visibleComponents(screen: FlowScreen, scope: Scope): FlowComponent[] {
+  const out: FlowComponent[] = [];
+  walkVisible(children(screen), scope, 0, out);
+  return out;
+}
+
+/** Field names on every branch, visible or not. */
+function walkDeclared(list: unknown, depth: number, into: Set<string>): void {
+  if (!Array.isArray(list) || depth > MAX_NESTING) return;
+  for (const c of list as unknown[]) {
+    if (!isRecord(c) || typeof c.type !== 'string') continue;
+    if (c.type === 'If') {
+      walkDeclared(c.then, depth + 1, into);
+      walkDeclared(c.else, depth + 1, into);
+    } else if (c.type === 'Switch') {
+      if (isRecord(c.cases))
+        for (const l of Object.values(c.cases)) walkDeclared(l, depth + 1, into);
+    } else {
+      const name = fieldName(c as FlowComponent);
+      if (name !== undefined) into.add(name);
+    }
+  }
+}
+
+const visibleFieldNames = (screen: FlowScreen, scope: Scope): Set<string> => {
+  const names = new Set<string>();
+  for (const c of visibleComponents(screen, scope)) {
+    const name = fieldName(c);
+    if (name !== undefined) names.add(name);
+  }
+  return names;
+};
+
+/** Fields of the current screen that are declared but hidden right now. */
+const hiddenFieldNames = (screen: FlowScreen, scope: Scope): Set<string> => {
+  const declared = new Set<string>();
+  walkDeclared(children(screen), 0, declared);
+  const visible = visibleFieldNames(screen, scope);
+  return new Set([...declared].filter((n) => !visible.has(n)));
+};
+
+/**
+ * Resolves an action payload against the current screen. Hidden fields of this screen are not
+ * submitted: a key that is exactly `${form.hidden}` is dropped, other references see null.
+ */
+export function resolvePayload(
+  flow: FlowJson,
+  s: RuntimeState,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!isRecord(payload)) return {};
+  const scope = scopeOf(s);
+  const hidden = hiddenFieldNames(currentScreen(flow, s), scope);
+  const form = Object.fromEntries(Object.entries(s.form).filter(([k]) => !hidden.has(k)));
+  const kept = Object.fromEntries(
+    Object.entries(payload).filter(([, raw]) => {
+      const m = typeof raw === 'string' ? EXACT_FORM_REF.exec(raw) : null;
+      return !(m && hidden.has(m[1] as string));
+    }),
+  );
+  const resolved = resolveValue(kept, { data: scope.data, form });
+  return isRecord(resolved) ? resolved : {};
+}
+
+function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
+  if (s.outcome || !isRecord(e)) return s;
+  switch (e.type) {
+    case 'set':
+    case 'touch': {
+      if (typeof e.name !== 'string') return s;
+      if (!visibleFieldNames(currentScreen(flow, s), scopeOf(s)).has(e.name)) return s;
+      if (e.type === 'set') return { ...s, form: { ...s.form, [e.name]: e.value } };
+      if (Object.hasOwn(s.touched, e.name)) return s;
+      return { ...s, touched: { ...s.touched, [e.name]: true } };
+    }
+    case 'back':
+      if (s.pending === 'exchange' || s.stack.length <= 1) return s;
+      return { ...s, stack: s.stack.slice(0, -1) };
+    case 'navigate': {
+      if (typeof e.screenId !== 'string' || !screenById(flow, e.screenId)) return s;
+      if (s.stack[s.stack.length - 1]?.screenId === e.screenId) return s;
+      const data = resolvePayload(flow, s, e.payload);
+      return { ...s, stack: [...s.stack, { screenId: e.screenId, data }] };
+    }
+    case 'complete':
+      return {
+        ...s,
+        pending: 'idle',
+        outcome: { kind: 'complete', payload: resolvePayload(flow, s, e.payload) },
+      };
+    case 'exchange_start':
+      return s.pending === 'exchange' ? s : { ...s, pending: 'exchange' };
+    case 'exchange_done':
+      return s.pending === 'idle' ? s : { ...s, pending: 'idle' };
+    case 'update_data': {
+      const top = s.stack[s.stack.length - 1];
+      if (!top || !isRecord(e.patch)) return s;
+      const data = { ...top.data, ...resolvePayload(flow, s, e.patch) };
+      return { ...s, stack: [...s.stack.slice(0, -1), { ...top, data }] };
+    }
+    default:
+      return s;
+  }
+}
+
+/** Pure and total: an event that does not apply returns the same state object. */
+export function reduce(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
+  try {
+    return step(flow, s, e);
+  } catch {
+    return s;
+  }
+}
+
+/** Errors of the visible fields of the current screen, by field name. */
+export function screenErrors(flow: FlowJson, s: RuntimeState): Record<string, string> {
+  const scope = scopeOf(s);
+  const errors = new Map<string, string>();
+  for (const c of visibleComponents(currentScreen(flow, s), scope)) {
+    const name = fieldName(c);
+    if (name === undefined || errors.has(name)) continue;
+    const msg = own(c as Record<string, unknown>, 'error-message');
+    const resolved =
+      typeof msg === 'string' && hasDynamicValue(msg) ? interpolate(msg, scope) : msg;
+    const override = { 'error-message': resolved };
+    const comp: FlowComponent = resolved === msg ? c : { ...c, ...override };
+    const error = validateField(comp, own(s.form, name));
+    if (error !== undefined) errors.set(name, error);
+  }
+  return Object.fromEntries(errors);
+}
+
+export function footerDisabled(flow: FlowJson, s: RuntimeState): boolean {
+  if (s.outcome || s.pending === 'exchange') return true;
+  const scope = scopeOf(s);
+  const footer = visibleComponents(currentScreen(flow, s), scope).find((c) => c.type === 'Footer');
+  const enabled = footer ? own(footer as Record<string, unknown>, 'enabled') : undefined;
+  if (resolveValue(enabled, scope) === false) return true;
+  return Object.keys(screenErrors(flow, s)).length > 0;
+}
+
+/** `${form.x}` names that no screen declares as a field (would always resolve to null). */
+export function unknownFormRefs(flow: FlowJson): string[] {
+  const declared = new Set<string>();
+  const refs = new Set<string>();
+  for (const screen of flow.screens) {
+    walkDeclared(children(screen), 0, declared);
+    let text: string;
+    try {
+      text = JSON.stringify(screen);
+    } catch {
+      continue;
+    }
+    for (const m of text.matchAll(FORM_REF)) refs.add(m[1] as string);
+  }
+  return [...refs].filter((n) => !declared.has(n));
+}
