@@ -73,6 +73,7 @@ export interface DialogContext {
 }
 
 const MAX_DESCRIPTION = 1000;
+const AWAITING_FLOW: DialogState = { name: 'quote.awaiting_flow' };
 const reply = (state: DialogState, replies: ReplyBody[]): Step => ({
   kind: 'reply',
   state,
@@ -93,7 +94,8 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
     case 'choice':
       return fromChoice(state, input.optionId);
     case 'flow_submit':
-      return undefined;
+      // A completed quote Flow is honoured from any state (the user may have moved on meanwhile).
+      return input.flowId === 'cotacao' ? submitQuote(input.data) : undefined;
     case 'text': {
       const { intent } = input;
       // A free-text description is never classified: only the bare word "cancelar" interrupts.
@@ -176,21 +178,6 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
       return reply(IDLE, catalog.unknown());
 
     case 'quote.awaiting_flow':
-      if (input.kind === 'flow_submit' && input.flowId === 'cotacao') {
-        const parsed = parseQuoteSubmit(input.data);
-        if (!parsed.ok) return reply(state, catalog.quoteInvalid());
-        return call({
-          op: 'createQuote',
-          request: parsed.value,
-          then: (r) => {
-            if (r.ok) return reply(IDLE, catalog.quoteResult(r.value));
-            if (r.error === 'unavailable') {
-              return reply(state, [...catalog.serviceUnavailable(), ...catalog.quoteFlow()]);
-            }
-            return failure(r.error, state, catalog.invalidData());
-          },
-        });
-      }
       return reply(state, catalog.quoteFlow());
 
     case 'policies.awaiting_cpf': {
@@ -259,7 +246,25 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
 }
 
 function startQuote(): Step {
-  return reply({ name: 'quote.awaiting_flow' }, catalog.quoteFlow());
+  return reply(AWAITING_FLOW, catalog.quoteFlow());
+}
+
+function submitQuote(data: unknown): Step {
+  const parsed = parseQuoteSubmit(data);
+  if (!parsed.ok) return reply(AWAITING_FLOW, catalog.quoteInvalid());
+  return call({
+    op: 'createQuote',
+    request: parsed.value,
+    then: (r) => {
+      if (r.ok) return reply(IDLE, catalog.quoteResult(r.value));
+      if (r.error === 'unavailable') {
+        return reply(AWAITING_FLOW, [...catalog.serviceUnavailable(), ...catalog.quoteFlow()]);
+      }
+      // The service rejected the data: let the user fill the Flow again.
+      if (r.error === 'invalid') return reply(AWAITING_FLOW, catalog.quoteInvalid());
+      return failure(r.error, AWAITING_FLOW, catalog.invalidData());
+    },
+  });
 }
 
 function startPolicies(rawCpf?: string): Step {

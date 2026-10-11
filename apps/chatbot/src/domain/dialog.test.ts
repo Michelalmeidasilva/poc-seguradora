@@ -144,6 +144,78 @@ describe('quote journey', () => {
     expect(types(final.replies)).toEqual(['message.text', 'message.flow']);
     expect(final.state).toEqual({ name: 'quote.awaiting_flow' });
   });
+
+  it('keeps waiting for the Flow and re-sends it when the quote service rejects the data', () => {
+    const data = {
+      produto: 'VIDA',
+      nome: 'Maria Souza',
+      cpf: '12345678901',
+      nascimento: '1990-05-20',
+      capital: '1000',
+    };
+    const { final } = run(
+      { name: 'quote.awaiting_flow' },
+      { kind: 'flow_submit', flowId: 'cotacao', data },
+      { createQuote: err('invalid') },
+    );
+    expect(types(final.replies)).toEqual(['message.text', 'message.flow']);
+    expect(final.state).toEqual({ name: 'quote.awaiting_flow' });
+  });
+
+  describe('a Flow submitted outside quote.awaiting_flow', () => {
+    const data = {
+      produto: 'VIDA',
+      nome: 'Maria Souza',
+      cpf: '12345678901',
+      nascimento: '1990-05-20',
+      capital: '1000',
+    };
+    const elsewhere: DialogState[] = [
+      IDLE,
+      { name: 'policies.awaiting_cpf' },
+      { name: 'claim.awaiting_description', apolice: 'AP-1001', tipo: 'COLISAO' },
+    ];
+
+    it.each(elsewhere)('builds the quote call from $name', (state) => {
+      const { final, calls } = run(
+        state,
+        { kind: 'flow_submit', flowId: 'cotacao', data },
+        { createQuote: ok(aQuote({ produto: 'VIDA' })) },
+      );
+      expect(calls.map((c) => c.op)).toEqual(['createQuote']);
+      expect(types(final.replies)).toEqual(['message.template', 'message.carousel']);
+      expect(final.state).toEqual(IDLE);
+    });
+
+    it('asks for the Flow again when the data is invalid', () => {
+      const { final, calls } = run(IDLE, {
+        kind: 'flow_submit',
+        flowId: 'cotacao',
+        data: { produto: 'VIDA' },
+      });
+      expect(calls).toHaveLength(0);
+      expect(types(final.replies)).toEqual(['message.text', 'message.flow']);
+      expect(final.state).toEqual({ name: 'quote.awaiting_flow' });
+    });
+
+    it('enters quote.awaiting_flow and re-sends the Flow when the service is unavailable', () => {
+      const { final } = run(
+        { name: 'policies.awaiting_cpf' },
+        { kind: 'flow_submit', flowId: 'cotacao', data },
+        { createQuote: err('unavailable') },
+      );
+      expect(types(final.replies)).toEqual(['message.text', 'message.flow']);
+      expect(final.state).toEqual({ name: 'quote.awaiting_flow' });
+    });
+
+    it('a Flow with another id still reprompts for the current state', () => {
+      const state: DialogState = { name: 'policies.awaiting_cpf' };
+      const { final, calls } = run(state, { kind: 'flow_submit', flowId: 'outro', data });
+      expect(calls).toHaveLength(0);
+      expect(final.state).toEqual(state);
+      expect(textOf(final.replies)).toContain('CPF');
+    });
+  });
 });
 
 describe('policies journey', () => {
