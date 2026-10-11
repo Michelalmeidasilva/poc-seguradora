@@ -1,0 +1,53 @@
+.bubble {
+  position: relative;
+  max-width: min(85%, 520px);
+  padding: 6px 7px 8px 9px;
+  border-radius: var(--wa-radius);
+  box-shadow: var(--wa-shadow);
+  font-size: 0.94rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.bubble--in {
+  align-self: flex-start;
+  background: var(--wa-bubble-in);
+  border-top-left-radius: 0;
+}
+
+.bubble--out {
+  align-self: flex-end;
+  background: var(--wa-bubble-out);
+  border-top-right-radius: 0;
+}
+
+.bubble:not(.bubble--tail) {
+  border-radius: var(--wa-radius);
+}
+
+.bubble__content {
+  white-space: pre-wrap;
+}
+
+.bubble__meta {
+  float: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 6px 0 -4px 10px;
+  color: var(--wa-meta);
+  font-size: 0.7rem;
+}
+
+.tick {
+  font-size: 1rem;
+  color: var(--wa-meta);
+}
+
+.tick--delivered {
+  color: var(--wa-tick-read);
+}
+
+.tick--failed {
+  color: var(--wa-error);
+}

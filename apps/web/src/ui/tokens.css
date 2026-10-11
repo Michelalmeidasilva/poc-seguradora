@@ -1,0 +1,60 @@
+:root {
+  --wa-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --wa-bg: #efeae2;
+  --wa-header: #008069;
+  --wa-header-text: #ffffff;
+  --wa-bubble-out: #d9fdd3;
+  --wa-bubble-in: #ffffff;
+  --wa-text: #111b21;
+  --wa-meta: #667781;
+  --wa-tick-read: #53bdeb;
+  --wa-accent: #00a884;
+  --wa-composer-bg: #f0f2f5;
+  --wa-input-bg: #ffffff;
+  --wa-link: #027eb5;
+  --wa-error: #c4002f;
+  --wa-notice-bg: #fff3c5;
+  --wa-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+  --wa-radius: 8px;
+  --wa-card-bg: #ffffff;
+  --wa-button-text: #027eb5;
+  --wa-divider: rgba(11, 20, 26, 0.1);
+}
+
+:root[data-theme='dark'] {
+  --wa-bg: #0b141a;
+  --wa-header: #202c33;
+  --wa-header-text: #e9edef;
+  --wa-bubble-out: #005c4b;
+  --wa-bubble-in: #202c33;
+  --wa-text: #e9edef;
+  --wa-meta: #8696a0;
+  --wa-composer-bg: #202c33;
+  --wa-input-bg: #2a3942;
+  --wa-link: #53bdeb;
+  --wa-error: #ff8fa3;
+  --wa-notice-bg: #3a3320;
+  --wa-card-bg: #202c33;
+  --wa-button-text: #53bdeb;
+  --wa-divider: rgba(233, 237, 239, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --wa-bg: #0b141a;
+    --wa-header: #202c33;
+    --wa-header-text: #e9edef;
+    --wa-bubble-out: #005c4b;
+    --wa-bubble-in: #202c33;
+    --wa-text: #e9edef;
+    --wa-meta: #8696a0;
+    --wa-composer-bg: #202c33;
+    --wa-input-bg: #2a3942;
+    --wa-link: #53bdeb;
+    --wa-error: #ff8fa3;
+    --wa-notice-bg: #3a3320;
+    --wa-card-bg: #202c33;
+    --wa-button-text: #53bdeb;
+    --wa-divider: rgba(233, 237, 239, 0.12);
+  }
+}
