@@ -136,4 +136,22 @@ describe('renderBotMessage', () => {
     expect(screen.getByRole('region', { name: /carrossel/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Começar' })).toBeInTheDocument();
   });
+
+  it('never plays a blob: URL coming from the server path', () => {
+    const voice = {
+      kind: 'bot',
+      id: uuid(9),
+      seq: 9,
+      ts: base.ts,
+      event: {
+        ...base,
+        id: uuid(9),
+        seq: 9,
+        type: 'message.voice',
+        payload: { mediaUrl: 'blob:http://localhost/x', durationMs: 4000 },
+      },
+    } as BotItem;
+    const { container } = render(<>{renderBotMessage(voice, ctx())}</>);
+    expect(container.querySelector('audio')).toBeNull();
+  });
 });

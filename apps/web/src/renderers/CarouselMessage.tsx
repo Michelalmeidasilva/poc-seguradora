@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { ButtonList, type MessageButton } from './ButtonList';
 import { ChevronLeftIcon, ChevronRightIcon } from '../ui/icons';
 import './renderers.css';
 import { safeHttpUrl } from './safe-urls';
@@ -8,7 +9,7 @@ export interface CarouselCard {
   mediaType: 'image' | 'video';
   title: string;
   body?: string | undefined;
-  buttons: unknown[];
+  buttons: MessageButton[];
 }
 
 function CardMedia({ card }: { card: CarouselCard }) {
@@ -32,7 +33,13 @@ function CardMedia({ card }: { card: CarouselCard }) {
   );
 }
 
-export function CarouselMessage({ cards }: { cards: CarouselCard[] }) {
+export interface CarouselMessageProps {
+  cards: CarouselCard[];
+  interactive: boolean;
+  onChoice(optionId: string, title: string): void;
+}
+
+export function CarouselMessage({ cards, interactive, onChoice }: CarouselMessageProps) {
   const track = useRef<HTMLDivElement>(null);
   const scrollBy = (direction: -1 | 1) => {
     const el = track.current;
@@ -61,6 +68,7 @@ export function CarouselMessage({ cards }: { cards: CarouselCard[] }) {
             <CardMedia card={card} />
             <strong className="carousel__title">{card.title}</strong>
             {card.body ? <span className="carousel__body">{card.body}</span> : null}
+            <ButtonList buttons={card.buttons} interactive={interactive} onChoice={onChoice} />
           </div>
         ))}
       </div>

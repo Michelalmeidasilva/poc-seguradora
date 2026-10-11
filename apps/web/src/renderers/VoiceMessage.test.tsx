@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { VoiceMessage } from './VoiceMessage';
 
 describe('VoiceMessage', () => {
@@ -61,5 +61,41 @@ describe('VoiceMessage', () => {
     a.unmount();
     const b = render(<VoiceMessage id="same" mediaUrl="https://a.com/x.ogg" durationMs={1000} />);
     expect(b.container.querySelector('.voice__wave')?.innerHTML).toBe(first);
+  });
+
+  it('returns to the play state when play() is rejected, without an unhandled rejection', async () => {
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementationOnce(() =>
+      Promise.reject(new DOMException('', 'NotSupportedError')),
+    );
+    render(<VoiceMessage id="v1" mediaUrl="https://exemplo.invalid/a.ogg" durationMs={3000} />);
+    await userEvent.click(screen.getByRole('button', { name: /reproduzir/i }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /reproduzir/i })).toBeInTheDocument();
+  });
+
+  it('disables the button and resets the label when the audio errors mid-play', async () => {
+    const { container } = render(
+      <VoiceMessage id="v1" mediaUrl="https://exemplo.invalid/a.ogg" durationMs={3000} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /reproduzir/i }));
+    expect(screen.getByRole('button', { name: /pausar/i })).toBeInTheDocument();
+    fireEvent.error(container.querySelector('audio') as HTMLAudioElement);
+    const button = screen.getByRole('button', { name: /reproduzir/i });
+    expect(button).toBeDisabled();
+  });
+
+  it('follows the audio element play and pause events', () => {
+    const { container } = render(
+      <VoiceMessage id="v1" mediaUrl="https://exemplo.invalid/a.ogg" durationMs={3000} />,
+    );
+    const audio = container.querySelector('audio') as HTMLAudioElement;
+    fireEvent.play(audio);
+    expect(screen.getByRole('button', { name: /pausar/i })).toBeInTheDocument();
+    fireEvent.pause(audio);
+    expect(screen.getByRole('button', { name: /reproduzir/i })).toBeInTheDocument();
   });
 });

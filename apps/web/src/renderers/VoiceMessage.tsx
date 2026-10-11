@@ -40,8 +40,8 @@ export function VoiceMessage({ id, mediaUrl, durationMs, transcript }: VoiceMess
       el.pause();
       setPlaying(false);
     } else {
-      void el.play();
       setPlaying(true);
+      void Promise.resolve(el.play()).catch(() => setPlaying(false));
     }
   };
 
@@ -68,8 +68,13 @@ export function VoiceMessage({ id, mediaUrl, durationMs, transcript }: VoiceMess
           ref={audio}
           src={src}
           preload="none"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
-          onError={() => setBroken(true)}
+          onError={() => {
+            setBroken(true);
+            setPlaying(false);
+          }}
         />
       ) : null}
       {transcript ? <p className="voice__transcript">{transcript}</p> : null}

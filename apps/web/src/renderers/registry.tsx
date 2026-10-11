@@ -8,6 +8,7 @@ import type { OpenFlow } from './flow-host';
 import { FlowMessage } from './FlowMessage';
 import { LocationMessage } from './LocationMessage';
 import { QuickReplies } from './QuickReplies';
+import { safeHttpUrl } from './safe-urls';
 import { TemplateMessage } from './TemplateMessage';
 import { FormattedText } from './TextMessage';
 import { VoiceMessage } from './VoiceMessage';
@@ -54,7 +55,7 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
       return bubble(
         <VoiceMessage
           id={item.id}
-          mediaUrl={event.payload.mediaUrl}
+          mediaUrl={safeHttpUrl(event.payload.mediaUrl) ?? ''}
           durationMs={event.payload.durationMs}
           transcript={event.payload.transcript}
         />,
@@ -80,7 +81,11 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
     case 'message.carousel':
       return (
         <div key={item.id} className="carousel-row">
-          <CarouselMessage cards={event.payload.cards} />
+          <CarouselMessage
+            cards={event.payload.cards}
+            interactive={ctx.interactive}
+            onChoice={onChoice}
+          />
         </div>
       );
     case 'message.flow':
