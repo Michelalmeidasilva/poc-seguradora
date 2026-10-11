@@ -195,7 +195,12 @@ function formatItem(v: unknown, titles: Map<string, string> | undefined): string
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   if (isRecord(v)) {
     const file = own(v, 'file_name');
-    return typeof file === 'string' ? oneLine(file) : '';
+    if (typeof file === 'string') return oneLine(file);
+    // CalendarPicker range
+    const ends = [own(v, 'start-date'), own(v, 'end-date')].filter(
+      (d): d is string => typeof d === 'string' && d.trim() !== '',
+    );
+    return oneLine(ends.join(' a '));
   }
   return '';
 }

@@ -283,6 +283,23 @@ describe('buildSummary', () => {
     );
   });
 
+  it('includes a CalendarPicker range as "start a end"', () => {
+    const ranged = {
+      version: '7.0',
+      screens: [
+        screenOf('A', [
+          { type: 'CalendarPicker', name: 'periodo', label: 'Período', mode: 'range' },
+        ]),
+      ],
+    } as unknown as FlowJson;
+    expect(
+      buildSummary(ranged, { periodo: { 'start-date': '2027-02-01', 'end-date': '2027-02-10' } }),
+    ).toBe('Período: 2027-02-01 a 2027-02-10');
+    expect(buildSummary(ranged, { periodo: { 'start-date': '2027-02-01' } })).toBe(
+      'Período: 2027-02-01',
+    );
+  });
+
   it('masks component-level and screen-level sensitive fields', () => {
     const summary = buildSummary(rich, { senha: 's3cr3t', cartao: '4111', nome: 'Ana' });
     expect(summary).toBe('Senha: ••••\nCartão: ••••\nNome: Ana');
