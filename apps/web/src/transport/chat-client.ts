@@ -116,11 +116,24 @@ export class ChatClient {
     return id;
   }
 
-  resend(id: string): void {
-    const entry = this.outbox.get(id);
-    if (!entry) return;
+  /**
+   * Re-delivers a message with the same id. An id unknown to this client (e.g. restored after a
+   * reload) is seeded from `draft`; without a draft it is a no-op returning false.
+   */
+  resend(id: string, draft?: Draft): boolean {
+    let entry = this.outbox.get(id);
+    if (!entry) {
+      if (!draft) return false;
+      entry = { id, draft, ts: new Date((this.o.now ?? Date.now)()).toISOString() };
+      this.outbox.set(id, entry);
+      if (this.outbox.size > OUTBOX_LIMIT) {
+        const oldest = this.outbox.keys().next().value;
+        if (oldest !== undefined) this.outbox.delete(oldest);
+      }
+    }
     this.o.onOutgoing(id, 'sending');
     void this.deliver(entry);
+    return true;
   }
 
   // ---- session ---------------------------------------------------------------------------

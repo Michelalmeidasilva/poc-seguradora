@@ -287,11 +287,27 @@ describe('ChatClient: sending', () => {
     client.stop();
   });
 
+  it('resend() with a draft seeds an unknown id (restored after a reload) and posts the same id', async () => {
+    const { api, client, outgoing } = setup();
+    await client.start();
+    await flush();
+    const id = uuid(9998);
+    expect(client.resend(id, { type: 'user.text', payload: { text: 'oi' } })).toBe(true);
+    await flush();
+    const posted = postedEvent(api);
+    expect(posted).toMatchObject({ id, type: 'user.text', payload: { text: 'oi' } });
+    expect(outgoing.slice(-2)).toEqual([
+      [id, 'sending'],
+      [id, 'sent'],
+    ]);
+    client.stop();
+  });
+
   it('ignores resend() for an unknown id', async () => {
     const { api, client } = setup();
     await client.start();
     await flush();
-    client.resend(uuid(9999));
+    expect(client.resend(uuid(9999))).toBe(false);
     await flush();
     expect(api.eventPosts()).toHaveLength(0);
     client.stop();

@@ -16,6 +16,7 @@ export function createTabGuard(locks: LockManager | undefined, name = 'segurador
   let current: TabStatus = locks ? 'other-tab' : 'active';
   let release: (() => void) | undefined;
   let disposed = false;
+  let requestSeq = 0;
 
   const set = (next: TabStatus) => {
     if (current === next) return;
@@ -26,6 +27,7 @@ export function createTabGuard(locks: LockManager | undefined, name = 'segurador
   const request = (steal: boolean) => {
     if (!locks || disposed) return;
     const options = steal ? { steal: true } : { ifAvailable: true };
+    const mine = ++requestSeq;
     locks
       .request(name, options, async (lock) => {
         if (!lock) {
@@ -40,8 +42,9 @@ export function createTabGuard(locks: LockManager | undefined, name = 'segurador
         });
       })
       .catch(() => {
-        // Stolen by another tab: this one is demoted and does not fight back.
-        set('other-tab');
+        // Stolen by another tab: this one is demoted and does not fight back. A rejection of an
+        // older request, after a newer one was granted, must not demote the tab.
+        if (mine === requestSeq) set('other-tab');
       });
   };
 
@@ -56,7 +59,10 @@ export function createTabGuard(locks: LockManager | undefined, name = 'segurador
         listeners.delete(fn);
       };
     },
-    takeOver: () => request(true),
+    takeOver: () => {
+      if (current === 'active') return;
+      request(true);
+    },
     dispose() {
       disposed = true;
       release?.();

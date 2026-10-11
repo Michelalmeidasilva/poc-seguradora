@@ -10,7 +10,7 @@ export interface ChatClientLike {
   start(initial?: { sessionId: string; lastSeq: number }): Promise<void>;
   stop(): void;
   send(draft: Draft): string;
-  resend(id: string): void;
+  resend(id: string, draft?: Draft): boolean | void;
 }
 
 export interface UseChatOptions {
@@ -32,6 +32,31 @@ export interface ChatApi {
 }
 
 const SAVE_DELAY_MS = 300;
+
+/**
+ * Rebuilds the outgoing draft from a bubble, so a message restored after a reload can be resent
+ * with its original id. Known limit: voice (the blob does not survive a reload) and legacy items
+ * without replyToId/data have no draft, so resending them is a no-op.
+ */
+function draftFor(content: UserContent): Draft | undefined {
+  switch (content.type) {
+    case 'text':
+      return { type: 'user.text', payload: { text: content.text } };
+    case 'quick_reply':
+      return content.replyToId
+        ? {
+            type: 'user.quick_reply',
+            payload: { optionId: content.optionId, replyToId: content.replyToId },
+          }
+        : undefined;
+    case 'flow_submit':
+      return content.data
+        ? { type: 'user.flow_submit', payload: { flowId: content.flowId, data: content.data } }
+        : undefined;
+    case 'voice':
+      return undefined;
+  }
+}
 
 export function useChat(options: UseChatOptions = {}): ChatApi {
   const storage =
@@ -115,7 +140,7 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     sendChoice: (optionId, title, replyToId) =>
       queue(
         { type: 'user.quick_reply', payload: { optionId, replyToId } },
-        { type: 'quick_reply', optionId, title },
+        { type: 'quick_reply', optionId, title, replyToId },
       ),
     sendVoice: (blob, durationMs) => {
       const objectUrl = URL.createObjectURL(blob);
@@ -127,10 +152,12 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     sendFlowSubmit: (flowId, data, summary) =>
       queue(
         { type: 'user.flow_submit', payload: { flowId, data } },
-        { type: 'flow_submit', flowId, summary },
+        { type: 'flow_submit', flowId, summary, data },
       ),
     resend: (id) => {
-      clientRef.current?.resend(id);
+      const item = stateRef.current.items.find((i) => i.kind === 'user' && i.id === id);
+      const draft = item?.kind === 'user' ? draftFor(item.content) : undefined;
+      clientRef.current?.resend(id, draft);
     },
     takeOver: guard.takeOver,
   };

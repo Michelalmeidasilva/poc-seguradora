@@ -112,4 +112,17 @@ describe('createTabGuard', () => {
     guard.dispose();
     expect(seen).toEqual(['active']);
   });
+
+  it('takeOver() while already active is a no-op', async () => {
+    const locks = fakeLocks();
+    const guard = createTabGuard(locks);
+    await tick();
+    const seen: string[] = [];
+    guard.subscribe((s) => seen.push(s));
+    guard.takeOver();
+    await tick();
+    expect(guard.status()).toBe('active');
+    expect(seen).toEqual([]);
+    guard.dispose();
+  });
 });

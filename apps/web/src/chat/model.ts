@@ -8,8 +8,8 @@ export type BotMessageEvent = Extract<ServerEvent, { type: `message.${string}` }
 export type UserContent =
   | { type: 'text'; text: string }
   | { type: 'voice'; durationMs: number; objectUrl?: string }
-  | { type: 'quick_reply'; optionId: string; title: string }
-  | { type: 'flow_submit'; flowId: string; summary: string };
+  | { type: 'quick_reply'; optionId: string; title: string; replyToId?: string }
+  | { type: 'flow_submit'; flowId: string; summary: string; data?: Record<string, unknown> };
 
 export type UserItem = {
   kind: 'user';

@@ -11,12 +11,14 @@ beforeEach(() => sessionStorage.clear());
 function fakeClient() {
   const sent: Draft[] = [];
   const resent: string[] = [];
+  const drafts: (Draft | undefined)[] = [];
   let started: { sessionId: string; lastSeq: number } | undefined | 'fresh';
   let options!: ChatClientOptions;
   let n = 0;
   return {
     sent,
     resent,
+    drafts,
     started: () => started,
     emit: (e: ServerEvent) => options.onServerEvent(e),
     options: () => options,
@@ -32,8 +34,9 @@ function fakeClient() {
           sent.push(draft);
           return uuid(2000 + ++n);
         },
-        resend(id: string) {
+        resend(id: string, draft?: Draft) {
           resent.push(id);
+          drafts.push(draft);
         },
         sessionId: 'sess-new',
       };
@@ -203,5 +206,105 @@ describe('useChat', () => {
     await act(async () => {});
     expect(instances.filter((c) => c.start.mock.calls.length > 0)).toHaveLength(1);
     expect(instances.reduce((n, c) => n + c.start.mock.calls.length, 0)).toBe(1);
+  });
+
+  describe('resend after a reload', () => {
+    const KEY = 'seguradora-chat:v1';
+    const stored = (content: object, id = uuid(50)) =>
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({
+          v: 1,
+          sessionId: 'sess-old',
+          lastSeq: 0,
+          items: [{ kind: 'user', id, ts: '2026-10-10T12:00:00.000Z', status: 'failed', content }],
+        }),
+      );
+
+    it('rebuilds the draft of a restored text message and resends the same id', async () => {
+      stored({ type: 'text', text: 'oi' });
+      const f = fakeClient();
+      const { result } = renderHook(() =>
+        useChat({ createClient: f.create, guard: activeGuard() }),
+      );
+      await act(async () => {});
+      act(() => result.current.resend(uuid(50)));
+      expect(f.resent).toEqual([uuid(50)]);
+      expect(f.drafts[0]).toEqual({ type: 'user.text', payload: { text: 'oi' } });
+    });
+
+    it('rebuilds quick replies and flow submissions that were persisted by useChat', async () => {
+      const f = fakeClient();
+      const a = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+      await act(async () => {});
+      act(() => a.result.current.sendChoice('menu.quote', 'Fazer cotação', uuid(7)));
+      act(() => a.result.current.sendFlowSubmit('cotacao', { nome: 'x' }, 'Enviada'));
+      const ids = a.result.current.state.items.map((i) => i.id);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 400));
+      });
+      a.unmount();
+
+      const g = fakeClient();
+      const b = renderHook(() => useChat({ createClient: g.create, guard: activeGuard() }));
+      await act(async () => {});
+      act(() => b.result.current.resend(ids[0] ?? ''));
+      act(() => b.result.current.resend(ids[1] ?? ''));
+      expect(g.resent).toEqual(ids);
+      expect(g.drafts).toEqual([
+        { type: 'user.quick_reply', payload: { optionId: 'menu.quote', replyToId: uuid(7) } },
+        { type: 'user.flow_submit', payload: { flowId: 'cotacao', data: { nome: 'x' } } },
+      ]);
+    });
+
+    it('has no draft for a voice message after a reload (known limit)', async () => {
+      stored({ type: 'voice', durationMs: 1000 });
+      const f = fakeClient();
+      const { result } = renderHook(() =>
+        useChat({ createClient: f.create, guard: activeGuard() }),
+      );
+      await act(async () => {});
+      act(() => result.current.resend(uuid(50)));
+      expect(f.drafts).toEqual([undefined]);
+    });
+  });
+
+  it('works under StrictMode without an injected guard (real tab lock) and starts once', async () => {
+    const holders = new Set<string>();
+    const locks = {
+      request(
+        name: string,
+        options: { ifAvailable?: boolean },
+        cb: (l: object | null) => Promise<void>,
+      ) {
+        if (holders.has(name) && options.ifAvailable) return cb(null);
+        holders.add(name);
+        return cb({}).finally(() => holders.delete(name));
+      },
+    };
+    vi.stubGlobal('navigator', { ...navigator, locks });
+    try {
+      const f = fakeClient();
+      let starts = 0;
+      const create = (o: ChatClientOptions) => {
+        const c = f.create(o);
+        const start = c.start.bind(c);
+        c.start = async (i) => {
+          starts++;
+          return start(i);
+        };
+        return c;
+      };
+      const { result } = renderHook(() => useChat({ createClient: create }), {
+        wrapper: StrictMode,
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+      expect(result.current.tab).toBe('active');
+      expect(starts).toBe(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
