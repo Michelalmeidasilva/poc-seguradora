@@ -21,7 +21,7 @@
 - [x] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
 - [x] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
 - [x] /health e /ready
-- [x] Encerramento gracioso
+- [x] Encerramento gracioso: no `close` as rotas param de aceitar requisições, os turnos em andamento e suas respostas têm até `SHUTDOWN_GRACE_MS` (padrão 8000, abaixo dos 10 s do Cloud Run) para terminar e só então as conexões são cortadas (testado: turno de ~300 ms entrega o corpo completo; turno de 5 s é cortado após a carência)
 
 ## Qualidade
 

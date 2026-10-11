@@ -309,6 +309,57 @@ describe('HandleTurn', () => {
     );
   });
 
+  describe('drain', () => {
+    const slowLlm = (ms: number): LlmProvider & { cancel(): void } => {
+      let timer: NodeJS.Timeout | undefined;
+      let wake: () => void = () => undefined;
+      return {
+        classify: async () => {
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+            timer = setTimeout(resolve, ms);
+          });
+          return intent('greeting');
+        },
+        cancel: () => {
+          clearTimeout(timer);
+          wake();
+        },
+      };
+    };
+
+    it('resolves at once when nothing is running', async () => {
+      const { handler } = make();
+      const t = Date.now();
+      await handler.drain(5000);
+      expect(Date.now() - t).toBeLessThan(50);
+    });
+
+    it('resolves after a slow running turn finishes', async () => {
+      const { handler } = make({ llm: slowLlm(200) });
+      const events = collect(handler.run(text('oi', 21)));
+      const t = Date.now();
+      await handler.drain(5000);
+      const waited = Date.now() - t;
+      expect(waited).toBeGreaterThanOrEqual(150);
+      expect(waited).toBeLessThan(1000);
+      expect(types(await events)).toContain('message.quick_replies');
+    });
+
+    it('resolves after the timeout when the turn does not finish', async () => {
+      const llm = slowLlm(5000);
+      const { handler } = make({ llm });
+      const events = collect(handler.run(text('oi', 22)));
+      const t = Date.now();
+      await handler.drain(100);
+      const waited = Date.now() - t;
+      expect(waited).toBeGreaterThanOrEqual(90);
+      expect(waited).toBeLessThan(1000);
+      llm.cancel();
+      await events;
+    });
+  });
+
   it('does not log the text the user typed', async () => {
     const lines: string[] = [];
     const logger: Logger = {

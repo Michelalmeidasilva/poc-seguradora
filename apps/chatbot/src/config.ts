@@ -31,6 +31,8 @@ export const ConfigSchema = z
     TURN_LOG_CAPACITY: int(500, 1),
     SESSION_CAPACITY: int(2000, 1),
     SESSION_TTL_SECONDS: int(3600, 60),
+    // Keep below the platform's SIGTERM-to-SIGKILL window (10 s on Cloud Run).
+    SHUTDOWN_GRACE_MS: int(8000, 0),
   })
   .superRefine((c, ctx) => {
     if (c.SERVICE_RETRY_MAX_MS < c.SERVICE_RETRY_BASE_MS) {

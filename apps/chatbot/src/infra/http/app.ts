@@ -16,6 +16,11 @@ import type { TurnRunner } from '../../application/ports';
 export interface AppDeps {
   turns: TurnRunner;
   logger: PinoLogger;
+  /**
+   * On close, how long to wait for in-flight turns and their responses before the connections
+   * are force-closed. Must stay below the platform's SIGTERM-to-SIGKILL window.
+   */
+  shutdownGraceMs: number;
 }
 
 function describeStatus(status: number): { code: ErrorCode; message: string } {
@@ -46,13 +51,40 @@ const drained = (raw: NodeJS.WritableStream & { destroyed?: boolean }) =>
     raw.on('close', done);
   });
 
-export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInstance> {
+/** Resolves when every promise settled or after `ms`, whichever comes first. Never rejects. */
+async function settleWithin(promises: Iterable<Promise<unknown>>, ms: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  try {
+    await Promise.race([Promise.allSettled([...promises]), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function buildApp({
+  turns,
+  logger,
+  shutdownGraceMs,
+}: AppDeps): Promise<FastifyInstance> {
   const app: FastifyInstance = Fastify({
     loggerInstance: logger as FastifyBaseLogger,
     // The request wraps one client event, so allow twice the event limit.
     bodyLimit: LIMITS.maxEventBytes * 2,
-    // Streams are internal and short; do not let idle or pre-opened sockets delay shutdown.
+    // After the preClose drain below, whatever is still open is cut (idle sockets included).
     forceCloseConnections: true,
+  });
+
+  // Responses still being written (a finished turn may have lines left to send).
+  const streaming = new Set<Promise<void>>();
+
+  // Runs after the routes stop accepting requests and before the connections are force-closed.
+  app.addHook('preClose', async () => {
+    const deadline = Date.now() + shutdownGraceMs;
+    await turns.drain?.(shutdownGraceMs);
+    await settleWithin(streaming, Math.max(0, deadline - Date.now()));
   });
 
   // Only JSON is accepted (Fastify also parses text/plain by default).
@@ -95,6 +127,9 @@ export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInsta
     });
 
     let failed = false;
+    let streamed: () => void = () => undefined;
+    const done = new Promise<void>((resolve) => (streamed = resolve));
+    streaming.add(done);
     try {
       for await (const event of turns.run(parsed.data)) {
         if (clientGone) break; // the turn keeps running; only the writing stops
@@ -110,6 +145,8 @@ export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInsta
       // On failure, abort without the terminating chunk so the gateway sees a broken stream.
       if (failed) raw.destroy();
       else if (!raw.writableEnded) raw.end();
+      streaming.delete(done);
+      streamed();
     }
   });
 

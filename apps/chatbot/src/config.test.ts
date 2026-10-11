@@ -21,6 +21,12 @@ describe('loadConfig', () => {
     expect(r.value.TURN_LOG_CAPACITY).toBe(500);
     expect(r.value.SESSION_CAPACITY).toBe(2000);
     expect(r.value.SESSION_TTL_SECONDS).toBe(3600);
+    expect(r.value.SHUTDOWN_GRACE_MS).toBe(8000);
+  });
+
+  it('accepts a zero shutdown grace and rejects a negative one', () => {
+    expect(loadConfig({ ...valid, SHUTDOWN_GRACE_MS: '0' }).ok).toBe(true);
+    expect(loadConfig({ ...valid, SHUTDOWN_GRACE_MS: '-1' }).ok).toBe(false);
   });
 
   it('coerces numbers and treats empty values as missing', () => {

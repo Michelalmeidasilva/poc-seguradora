@@ -19,6 +19,7 @@ export const testConfig = (url: string, overrides: Record<string, string> = {}):
     SERVICE_RETRY_BASE_MS: '1',
     SERVICE_RETRY_MAX_MS: '2',
     LOG_LEVEL: 'silent',
+    SHUTDOWN_GRACE_MS: '200',
     ...overrides,
   });
   if (!r.ok) throw new Error(`invalid test config: ${r.error.join('; ')}`);

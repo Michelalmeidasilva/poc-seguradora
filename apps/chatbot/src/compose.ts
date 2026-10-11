@@ -86,6 +86,6 @@ export async function createChatbot(
     logger,
   });
 
-  const app = await buildApp({ turns, logger });
+  const app = await buildApp({ turns, logger, shutdownGraceMs: config.SHUTDOWN_GRACE_MS });
   return { app, dialogs };
 }

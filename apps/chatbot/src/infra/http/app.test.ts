@@ -3,9 +3,13 @@ import {
   type ChatbotRequest,
   type UnsequencedServerEvent,
 } from '@seguradora/protocol';
+import { randomUUID } from 'node:crypto';
 import pino from 'pino';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { TurnRunner } from '../../application/ports';
+import { HandleTurn } from '../../application/handle-turn';
+import type { ServicesPort, TurnRunner } from '../../application/ports';
+import { IDLE } from '../../domain/dialog';
+import { TurnLog } from '../../domain/turn-log';
 import { buildApp } from './app';
 
 const event = (n: number): UnsequencedServerEvent => ({
@@ -40,8 +44,8 @@ afterEach(async () => {
   await app.close();
 });
 
-const start = async (turns: TurnRunner) => {
-  app = await buildApp({ turns, logger: pino({ level: 'silent' }) });
+const start = async (turns: TurnRunner, shutdownGraceMs = 100) => {
+  app = await buildApp({ turns, logger: pino({ level: 'silent' }), shutdownGraceMs });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const address = app.server.address() as { port: number };
   return `http://127.0.0.1:${address.port}`;
@@ -259,9 +263,86 @@ describe('health and errors', () => {
     await app.close();
     expect(Date.now() - t).toBeLessThan(1000);
     clearTimeout(timer);
-    app = await buildApp({
-      turns: { run: async function* () {} },
-      logger: pino({ level: 'silent' }),
-    });
+    await replaceClosedApp();
+  });
+});
+
+/** The tests below close the app themselves; give afterEach a fresh one to close. */
+const replaceClosedApp = async () => {
+  app = await buildApp({
+    turns: { run: async function* () {} },
+    logger: pino({ level: 'silent' }),
+    shutdownGraceMs: 0,
+  });
+};
+
+/** A real HandleTurn whose classification takes `ms` (a greeting turn: no service calls). */
+const slowTurns = (ms: number) => {
+  let timer: NodeJS.Timeout | undefined;
+  let wake: () => void = () => undefined;
+  const handler = new HandleTurn({
+    llm: {
+      classify: async () => {
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+          timer = setTimeout(resolve, ms);
+        });
+        return { name: 'greeting', entities: {} };
+      },
+    },
+    services: {} as ServicesPort,
+    dialogs: { get: () => IDLE, set: () => undefined },
+    turns: new TurnLog(10),
+    newId: randomUUID,
+    now: Date.now,
+    logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+  });
+  return {
+    handler,
+    cancel: () => {
+      clearTimeout(timer);
+      wake();
+    },
+  };
+};
+
+describe('graceful shutdown', () => {
+  it('lets an in-flight turn finish and deliver its complete body before closing', async () => {
+    const { handler } = slowTurns(300);
+    const url = await start(handler, 2000);
+    const res = await post(url, validRequest());
+    const body = res.text();
+    await sleep(50);
+    const t = Date.now();
+    await app.close();
+    const closedAfter = Date.now() - t;
+    const lines = (await body).split('\n');
+    expect(lines.at(-1)).toBe('');
+    const parsed = lines.slice(0, -1).map((l) => parseChatbotLine(l));
+    expect(parsed.every((p) => p.ok)).toBe(true);
+    expect(parsed.map((p) => p.ok && p.value.type)).toEqual([
+      'status.typing',
+      'status.typing',
+      'message.text',
+      'message.quick_replies',
+    ]);
+    expect(closedAfter).toBeGreaterThanOrEqual(200);
+    expect(closedAfter).toBeLessThan(1500);
+    await replaceClosedApp();
+  });
+
+  it('cuts a turn that outlives the grace period', async () => {
+    const { handler, cancel } = slowTurns(5000);
+    const url = await start(handler, 200);
+    const res = await post(url, validRequest());
+    const body = res.text();
+    body.catch(() => undefined);
+    await sleep(50);
+    const t = Date.now();
+    await app.close();
+    expect(Date.now() - t).toBeLessThan(1000);
+    await expect(body).rejects.toBeDefined();
+    cancel();
+    await replaceClosedApp();
   });
 });

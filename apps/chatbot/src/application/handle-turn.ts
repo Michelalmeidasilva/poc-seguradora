@@ -38,13 +38,38 @@ const describeError = (error: unknown): { name: string } => ({
  * the same id in the same session never executes twice and always yields the same events.
  */
 export class HandleTurn implements TurnRunner {
+  /** Turns executing right now (they keep running even when their client is gone). */
+  private readonly running = new Set<Promise<void>>();
+
   constructor(private readonly d: HandleTurnDeps) {}
 
   run(request: ChatbotRequest): AsyncGenerator<UnsequencedServerEvent> {
     // Event ids come from the client: scope them by session so sessions never share a turn.
     const { record, created } = this.d.turns.begin(`${request.sessionId}\n${request.event.id}`);
-    if (created) void this.execute(request, record);
+    if (created) {
+      const running: Promise<void> = this.execute(request, record)
+        .catch(() => undefined)
+        .finally(() => this.running.delete(running));
+      this.running.add(running);
+    }
     return record.stream();
+  }
+
+  /**
+   * Resolves when every running turn has finished or after `timeoutMs`, whichever comes first.
+   * Never rejects. Used on shutdown so a turn whose service call already succeeded can answer.
+   */
+  async drain(timeoutMs: number): Promise<void> {
+    if (this.running.size === 0) return;
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, timeoutMs);
+    });
+    try {
+      await Promise.race([Promise.all([...this.running]), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /** Never rejects: failures become an `error` event. Always finishes the record. */

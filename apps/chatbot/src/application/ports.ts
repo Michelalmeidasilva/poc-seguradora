@@ -45,6 +45,8 @@ export interface DialogStore {
 /** What the HTTP layer needs from the use case. */
 export interface TurnRunner {
   run(request: ChatbotRequest): AsyncIterable<UnsequencedServerEvent>;
+  /** Waits (at most `timeoutMs`) for the running turns to finish. Never rejects. */
+  drain?(timeoutMs: number): Promise<void>;
 }
 
 export interface Logger {
