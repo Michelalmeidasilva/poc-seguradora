@@ -30,6 +30,10 @@ for (const group of groups) {
   }
 }
 assert.equal(ids.size, total);
+assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escopo');
+assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
+const benefits = index['UTI-01'].flow.choices.map((item) => item.label);
+assert.deepEqual(Array.from(benefits), ['Telemedicina', 'Assistência Farmácia', 'Assistência Funeral']);
 assert.equal(groups.find((group) => group.code === 'LEG').steps.length, 34);
 assert.ok(total >= 220, `expected comprehensive catalog, got ${total}`);
 const html = readFileSync(new URL('index.html', root), 'utf8');

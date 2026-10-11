@@ -15,4 +15,4 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | gateway | apps/gateway | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
 | web-chat | apps/web/src/chat, apps/web/src/renderers, apps/web/src/transport | not_started | - | - | - | - | |
 | web-flows | apps/web/src/flows | not_started | - | - | - | - | |
-| ux-whatsapp-prototype | docs/prototypes/whatsapp-experience | in_progress | codex | feat/whatsapp-experience-prototype | 2026-10-10 | 2026-10-11 | Revisão solicitada: somente telemedicina, assistência funeral e assistência farmácia; documentação técnica compartilhada permanece fora desta frente |
+| ux-whatsapp-prototype | docs/prototypes/whatsapp-experience | done | codex | feat/whatsapp-experience-prototype | 2026-10-10 | 2026-10-11 | 23 jornadas, 267 estados; somente Telemedicina, Assistência Funeral e Assistência Farmácia; catálogo, documentação e navegador validados; especificações técnicas compartilhadas inalteradas |

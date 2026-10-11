@@ -8,3 +8,4 @@
 - [x] IDs, destinos, sintaxe e formatação verificados.
 - [x] Entrega e atualização do WORKBOARD registradas em commit.
 - [x] Tela de inclusão em mensagem única do slide, com continuidade dos dados na revisão.
+- [x] Catálogo e documentação limitados a Telemedicina, Assistência Funeral e Assistência Farmácia; sem Seguro Celular ou jornada de sinistro.

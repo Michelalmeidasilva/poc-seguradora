@@ -188,11 +188,6 @@
       .join('');
   }
   function listChoices(step) {
-    if (step.id === 'SOL-02' && selectedContract.startsWith('Seguro Celular'))
-      return [
-        { label: 'Comunicação de sinistro', detail: 'Aguardando documentos', target: 'SIN-09' },
-        { label: 'Sinistro', detail: 'Em análise', target: 'SIN-08' },
-      ];
     return step.flow.choices;
   }
   function renderFlow(step) {
@@ -311,7 +306,7 @@
     renderChat(step);
     renderFlow(step);
     renderInspector(step, group);
-    $('lifecycle').innerHTML = ['DES', 'ADE', 'CON', 'UTI', 'DEP', 'COB', 'SIN', 'REN', 'CAN']
+    $('lifecycle').innerHTML = ['DES', 'ADE', 'CON', 'UTI', 'DEP', 'COB', 'FUN', 'REN', 'CAN']
       .map(
         (code) =>
           `<button class="${code === group.code ? 'active' : ''}" data-go="${groups.find((g) => g.code === code).steps[0].id}">${escape(groups.find((g) => g.code === code).title)}</button>`,
@@ -349,7 +344,7 @@
     $('gallery').innerHTML = groups
       .map(
         (group) =>
-          `<header class="gallery-heading"><div><h3>${group.code} · ${escape(group.title)}</h3><p>${group.steps.length} estados · ${escape(group.decision)}</p></div></header><div class="gallery-grid">${group.steps.map((step) => `<article class="gallery-card"><header><span>${step.id}</span><span>${step.alternative ? 'Variação' : modeLabels[step.mode].split(' · ')[0]}</span></header><h4>${escape(step.title)}</h4><div class="mini-phone ${light ? 'light-wa' : ''}"><div class="mini-header"><span class="wa-avatar">d</span><span>Digio Seguros ✓</span></div><div class="mini-chat">${step.user ? bubble(step.user, true, '', true) : ''}${bubble(step.bot, false, step.documents ? documentMarkup(step.documents, true) : actionsMarkup(step.actions, true), true)}</div>${galleryFlow(step)}</div><button class="gallery-open" data-gallery-go="${step.id}">Abrir interação · ${step.id}</button></article>`).join('')}</div>`,
+          `<header class="gallery-heading"><div><h3>${group.code} · ${escape(group.title)}</h3><p>${group.steps.length} estados · ${escape(group.decision)}</p></div></header><div class="gallery-grid">${group.steps.map((step) => `<article class="gallery-card"><header><span>${step.id}</span><span>${step.alternative ? 'Variação' : modeLabels[step.mode].split(' · ')[0]}</span></header><h4>${escape(step.title)}</h4><div class="mini-phone ${light ? 'light-wa' : ''}"><div class="mini-header"><span class="wa-avatar">d</span><span>Digio Assistências ✓</span></div><div class="mini-chat">${step.user ? bubble(step.user, true, '', true) : ''}${bubble(step.bot, false, step.documents ? documentMarkup(step.documents, true) : actionsMarkup(step.actions, true), true)}</div>${galleryFlow(step)}</div><button class="gallery-open" data-gallery-go="${step.id}">Abrir interação · ${step.id}</button></article>`).join('')}</div>`,
       )
       .join('');
   }
@@ -435,8 +430,8 @@
   });
   $('close-document').addEventListener('click', () => $('document-dialog').close());
   $('attach').addEventListener('click', () => {
-    go('SIN-14');
-    toast('Demonstração de envio documental. Nenhum arquivo será enviado.');
+    go('HUM-01');
+    toast('Solicite orientação para enviar documentos. Nenhum arquivo será enviado.');
   });
   $('composer').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -494,7 +489,7 @@
       go('COB-01');
       return;
     } else if (/sinistro|roub|furto/.test(clean)) {
-      go('SIN-01');
+      go('DES-03');
       return;
     } else if (/telemedicina|consulta para/.test(clean)) {
       go('UTI-02');

@@ -56,11 +56,11 @@
       target: 'CON-02',
     },
     {
-      label: 'Seguro Celular',
-      detail: 'Smartphone · ativo · contrato final 1092',
+      label: 'Assistência Saúde',
+      detail: 'Individual · ativa · contrato final 1092',
       target: 'CON-02',
     },
-    { label: 'Seguro Celular', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
+    { label: 'Assistência Saúde', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
   ];
   const dependentReview = () => [
     { title: 'Pessoa que será incluída', rows: person },
@@ -98,7 +98,7 @@
         'ENT-02',
         'Boas-vindas',
         'Oi',
-        'Olá! Sou o assistente virtual da Digio para seguros e assistências. Como posso ajudar você hoje?',
+        'Olá! Sou o assistente virtual da Digio para assistências. Como posso ajudar você hoje?',
         {
           actions: [
             action('Conhecer produtos', 'DES-01'),
@@ -134,7 +134,7 @@
       screen(
         'ENT-06',
         'Mais de um contrato',
-        'Quero consultar meu seguro.',
+        'Quero consultar minha assistência.',
         'Você tem mais de um contrato. Qual deseja consultar?',
         list('Escolher contrato', contracts, 'Consultar contrato'),
       ),
@@ -191,8 +191,8 @@
               target: 'DES-01',
             },
             {
-              label: 'Usar benefícios ou acionar seguro',
-              detail: 'Assistências e sinistros',
+              label: 'Usar assistências',
+              detail: 'Telemedicina, funeral e farmácia',
               target: 'UTI-01',
             },
             {
@@ -434,11 +434,6 @@
               detail: 'Serviços e benefícios para o dia a dia',
               target: 'DES-03',
             },
-            {
-              label: 'Seguro Celular',
-              detail: 'Proteção conforme as coberturas contratadas',
-              target: 'DES-02',
-            },
           ],
           'Ver produto',
         ),
@@ -447,11 +442,11 @@
         'DES-02',
         'Entender a necessidade',
         'Quero algo para minha família.',
-        'Você quer conhecer serviços de assistência ou um seguro para proteger um bem?',
+        'Você quer conhecer Telemedicina, Assistência Funeral para titular e dependentes ou Assistência Farmácia com descontos em redes credenciadas?',
         {
           actions: [
             action('Serviços de assistência', 'DES-03'),
-            action('Proteger um bem', 'DES-07'),
+            action('Ver planos', 'DES-05'),
           ],
         },
       ),
@@ -459,7 +454,7 @@
         'DES-03',
         'Apresentação do produto',
         'Quero conhecer a assistência saúde.',
-        'A Assistência Saúde reúne benefícios previstos no plano, como telemedicina, assistência funeral e descontos em farmácias. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
+        'A Assistência Saúde oferece somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver planos', 'DES-05')] },
       ),
       screen(
@@ -936,7 +931,7 @@
       screen(
         'CON-06',
         'Contrato encerrado',
-        'Seguro Celular encerrado',
+        'Assistência Saúde encerrado',
         'Este contrato foi encerrado em 10/09/2026. Você pode consultar documentos e solicitações ainda disponíveis.',
         {
           ...variant(),
@@ -1739,8 +1734,8 @@
               detail: 'Consultar disponibilidade e acessar o prestador',
               target: 'UTI-02',
             },
-            { label: 'Farmácia', detail: 'Orientação para usar o benefício', target: 'UTI-08' },
-            { label: 'Assistência funeral', detail: 'Iniciar uma solicitação', target: 'FUN-01' },
+            { label: 'Assistência Farmácia', detail: 'Descontos em redes credenciadas', target: 'UTI-08' },
+            { label: 'Assistência Funeral', detail: 'Suporte ao titular e aos dependentes', target: 'FUN-01' },
           ],
           'Continuar',
         ),
@@ -1809,7 +1804,7 @@
         'UTI-08',
         'Utilizar farmácia',
         'Como uso o desconto na farmácia?',
-        'A utilização depende das regras e da rede do parceiro. Posso disponibilizar a identificação ou o acesso exigido pelo prestador.',
+        'A Assistência Farmácia oferece descontos em redes credenciadas. Posso orientar sobre a rede e a identificação necessária para utilizar o desconto.',
         { actions: [action('Ver identificação', 'UTI-09'), action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
@@ -2374,218 +2369,6 @@
   );
 
   journey(
-    'SIN',
-    'Comunicar e acompanhar sinistro',
-    'Resolver',
-    'Comunicação com dados mínimos, complementação de documentos e análise acompanhada.',
-    'Registrar antes da documentação completa quando permitido. Comunicação não confirma cobertura ou indenização.',
-    'Eventos, documentos, prazos e etapas dependem da seguradora e do produto.',
-    [
-      screen(
-        'SIN-01',
-        'Entender o ocorrido',
-        'Meu celular foi roubado.',
-        'Posso ajudar a comunicar o ocorrido ao seguro. Vamos identificar o contrato e os dados necessários.',
-        {
-          actions: [
-            action('Comunicar ocorrido', 'SIN-02'),
-            action('Falar com uma pessoa', 'HUM-01'),
-          ],
-        },
-      ),
-      screen(
-        'SIN-02',
-        'Selecionar seguro',
-        'Quero comunicar.',
-        'Qual seguro está relacionado ao ocorrido?',
-        list(
-          'Selecionar seguro',
-          [{ label: 'Seguro Celular', detail: 'Ativo · contrato final 1092', target: 'SIN-03' }],
-          'Continuar',
-        ),
-      ),
-      screen(
-        'SIN-03',
-        'Orientação inicial',
-        'Seguro Celular',
-        'As providências iniciais e documentos exigidos serão os informados pela seguradora para este evento. Podemos registrar a comunicação com o mínimo necessário.',
-        { actions: [action('Registrar dados', 'SIN-04'), action('Pedir orientação', 'HUM-01')] },
-      ),
-      screen(
-        'SIN-04',
-        'Dados do ocorrido',
-        'Quero registrar.',
-        'Informe os dados básicos do ocorrido. Documentos poderão ser complementados quando as regras permitirem.',
-        form(
-          'Comunicar ocorrido',
-          [
-            {
-              name: 'eventDate',
-              label: 'Data do ocorrido',
-              type: 'date',
-              value: '2026-10-09',
-              required: true,
-            },
-            {
-              name: 'eventPlace',
-              label: 'Cidade e estado',
-              value: 'São Paulo / SP',
-              required: true,
-            },
-            {
-              name: 'eventDescription',
-              label: 'Descrição do ocorrido',
-              type: 'textarea',
-              required: true,
-            },
-          ],
-          'Continuar',
-          'SIN-05',
-        ),
-      ),
-      screen(
-        'SIN-05',
-        'Documentos agora ou depois',
-        'Ainda não tenho os documentos.',
-        'Você pode registrar a comunicação e complementar os documentos depois, se permitido. O registro não confirma cobertura.',
-        {
-          actions: [
-            action('Enviar documentos', 'SIN-14'),
-            action('Registrar e enviar depois', 'SIN-06'),
-          ],
-        },
-      ),
-      screen(
-        'SIN-06',
-        'Revisar comunicação',
-        'Quero registrar primeiro.',
-        'Confira os dados da comunicação antes do envio.',
-        review(
-          'Revisar comunicação',
-          [
-            {
-              title: 'Ocorrido',
-              rows: [
-                ['Contrato', 'Seguro Celular •• 1092'],
-                ['Data', '{{eventDate}}'],
-                ['Local', '{{eventPlace}}'],
-                ['Documentos', 'Complementação posterior'],
-              ],
-            },
-          ],
-          'Enviar comunicação',
-          'SIN-07',
-          { correction: 'SIN-04' },
-        ),
-      ),
-      screen(
-        'SIN-07',
-        'Comunicação registrada',
-        'Enviar comunicação',
-        'A seguradora confirmou o recebimento neste cenário.\nProtocolo: SIN-2026-0087.\nSituação: aguardando documentos.\nRegistrar não confirma cobertura ou indenização.',
-        {
-          actions: [
-            action('Enviar documentos', 'SIN-14'),
-            action('Ver pendências', 'SIN-09'),
-            action('Acompanhar', 'SIN-08'),
-          ],
-        },
-      ),
-      screen(
-        'SIN-08',
-        'Em análise',
-        'Como está meu sinistro?',
-        'Sinistro SIN-2026-0087: em análise neste cenário. A previsão será exibida quando fornecida pela seguradora.',
-        { actions: [action('Ver pendências', 'SIN-09'), action('Pedir esclarecimento', 'SIN-12')] },
-      ),
-      screen(
-        'SIN-09',
-        'Pendência documental',
-        'O que falta?',
-        'Neste exemplo, falta o documento do ocorrido solicitado pela seguradora. Envie apenas o item pendente; os demais dados estão preservados.',
-        { actions: [action('Enviar documento', 'SIN-14'), action('Enviar depois', 'RET-01')] },
-      ),
-      screen(
-        'SIN-10',
-        'Decisão da seguradora',
-        'Qual foi o resultado?',
-        'A decisão deve ser apresentada com a justificativa e os próximos passos informados pela seguradora. Neste cenário de aprovação, o pagamento ainda precisa ser acompanhado.',
-        {
-          actions: [
-            action('Acompanhar indenização', 'SIN-11'),
-            action('Pedir esclarecimento', 'SIN-12'),
-          ],
-        },
-      ),
-      screen(
-        'SIN-11',
-        'Indenização em acompanhamento',
-        'Quando recebo?',
-        'A indenização está em acompanhamento. Valor, destino e prazo serão os confirmados pela seguradora. Aprovação da análise não comprova pagamento realizado.',
-        { actions: [action('Ver solicitação', 'SOL-04'), action('Pedir ajuda', 'HUM-01')] },
-      ),
-      screen(
-        'SIN-12',
-        'Esclarecimento ou revisão',
-        'Não entendi a decisão.',
-        'Podemos registrar seu pedido de esclarecimento com o protocolo e a decisão já apresentados. Uma revisão depende do processo da seguradora.',
-        { actions: [action('Solicitar atendimento', 'HUM-08')] },
-      ),
-      screen(
-        'SIN-13',
-        'Rascunho salvo',
-        'Vou continuar depois.',
-        'Seu preenchimento foi salvo como rascunho. Ainda não há confirmação de recebimento pela seguradora.',
-        { ...variant(), actions: [action('Retomar preenchimento', 'SIN-04')] },
-      ),
-      screen(
-        'SIN-14',
-        'Enviar documentos',
-        'Quero enviar o documento.',
-        'Selecione o arquivo solicitado. Este protótipo usa o arquivo apenas na demonstração local e não o envia.',
-        form(
-          'Documentos do sinistro',
-          [{ name: 'claimFile', label: 'Documento solicitado', type: 'file', required: true }],
-          'Adicionar documento',
-          'SIN-15',
-          { note: 'Nenhum arquivo é enviado para servidores neste protótipo.' },
-        ),
-      ),
-      screen(
-        'SIN-15',
-        'Documento adicionado',
-        'Adicionar documento',
-        'Arquivo adicionado à demonstração. No produto real, o recebimento e a validação serão informados separadamente.',
-        { actions: [action('Ver análise', 'SIN-08')] },
-      ),
-      screen(
-        'SIN-16',
-        'Arquivo ilegível ou incorreto',
-        'Recebi uma pendência no arquivo.',
-        'O documento precisa ser substituído por um arquivo legível e correspondente ao item solicitado. Os outros arquivos e dados estão preservados.',
-        { ...variant(), actions: [action('Substituir arquivo', 'SIN-14')] },
-      ),
-      screen(
-        'SIN-17',
-        'Envio pendente',
-        'A seguradora recebeu?',
-        'O envio ainda está pendente. Não há confirmação de recebimento. Vamos consultar esta solicitação antes de reenviar.',
-        {
-          ...variant(),
-          actions: [action('Consultar pedido', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
-        },
-      ),
-      screen(
-        'SIN-18',
-        'Decisão sem aprovação',
-        'O pedido não foi aprovado.',
-        'A justificativa da seguradora e os canais de esclarecimento devem ser apresentados aqui. A decisão não é produzida pelo assistente.',
-        { ...variant(), actions: [action('Solicitar esclarecimento', 'SIN-12')] },
-      ),
-    ],
-  );
-
-  journey(
     'SOL',
     'Minhas solicitações',
     'Acompanhar',
@@ -3088,7 +2871,7 @@
         'LEG-149',
         '149 · Coberturas',
         'Coberturas',
-        'Você tem acesso a telemedicina, assistência funeral e benefícios em farmácia, conforme seu plano.\nEste serviço não é plano de saúde e não cobre procedimentos hospitalares.',
+        'Você tem acesso a Telemedicina, Assistência Funeral com suporte ao titular e aos dependentes e Assistência Farmácia com descontos em redes credenciadas, conforme seu plano.\nEste serviço não é plano de saúde e não cobre procedimentos hospitalares.',
         { actions: [action('Menu', 'LEG-144'), action('Encerrar', 'ENT-02')] },
       ),
       screen(
