@@ -22,7 +22,7 @@
 
 ## Funcionalidades (Plano 5: Flows)
 - [x] Flow JSON: esquema e validação
-- [ ] Motor de expressões de Flows
+- [x] Motor de expressões de Flows
 - [ ] Componentes de Flows (texto, entrada, navegação, estruturais)
 - [ ] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
 

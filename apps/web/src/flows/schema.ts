@@ -1,5 +1,6 @@
 import { err, ok, type Result } from '@seguradora/protocol';
 import { z } from 'zod';
+import { hasDynamicValue } from './expr';
 
 export type FlowIssue = { path: string; code: string; message: string };
 
@@ -109,9 +110,6 @@ export const MAX_COMPONENTS_PER_SCREEN = 50;
 export const MAX_NESTING = 3;
 export const MAX_BRANCHES = 10;
 export const RESERVED_SCREEN_ID = 'SUCCESS';
-
-// Stub: Task 2 replaces this with the expression engine's own check.
-const hasDynamicValue = (src: string): boolean => /\$\{(data|form)\./.test(src);
 
 /** Own-property lookup: untrusted keys such as `constructor` must never hit the prototype. */
 const own = <T>(table: Record<string, T>, key: string): T | undefined =>
