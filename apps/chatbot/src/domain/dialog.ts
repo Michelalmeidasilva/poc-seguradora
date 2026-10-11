@@ -16,6 +16,7 @@ import type {
 } from './models';
 import { parseQuoteSubmit } from './quote-submit';
 import type { ReplyBody } from './reply';
+import { claimTypeFromText, isExactCancel } from './typed-text';
 
 export type IntentName =
   | 'greeting'
@@ -95,9 +96,20 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
       return undefined;
     case 'text': {
       const { intent } = input;
-      // While the user writes a free-text description only "cancel" interrupts.
+      // A free-text description is never classified: only the bare word "cancelar" interrupts.
       if (state.name === 'claim.awaiting_description') {
-        return intent.name === 'cancel' ? reply(IDLE, catalog.menu()) : undefined;
+        return isExactCancel(input.text) ? reply(IDLE, catalog.menu()) : undefined;
+      }
+      // A typed number from the offered list answers the prompt (see apoliceFrom).
+      if (state.name === 'policies.awaiting_choice' || state.name === 'claim.awaiting_policy') {
+        const typed = intent.entities.apolice?.toUpperCase();
+        if (typed && state.numeros.includes(typed)) return undefined;
+      }
+      // A typed claim type ("colisão", "roubo") is the answer, not a new journey.
+      if (state.name === 'claim.awaiting_type') {
+        const resets =
+          intent.name === 'cancel' || intent.name === 'greeting' || intent.name === 'help';
+        return resets ? reply(IDLE, catalog.menu()) : undefined;
       }
       switch (intent.name) {
         case 'cancel':
@@ -204,16 +216,18 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
     }
 
     case 'claim.awaiting_type': {
-      if (input.kind === 'choice' && input.optionId.startsWith('claim.type:')) {
-        const tipo = CLAIM_TYPES.find((t) => `claim.type:${t}` === input.optionId);
-        if (tipo) {
-          return reply(
+      let tipo: ClaimType | undefined;
+      if (input.kind === 'choice') {
+        tipo = CLAIM_TYPES.find((t) => `claim.type:${t}` === input.optionId);
+      } else if (input.kind === 'text') {
+        tipo = claimTypeFromText(input.text);
+      }
+      return tipo
+        ? reply(
             { name: 'claim.awaiting_description', apolice: state.apolice, tipo },
             catalog.askClaimDescription(),
-          );
-        }
-      }
-      return reply(state, catalog.claimTypeChoices(state.apolice));
+          )
+        : reply(state, catalog.claimTypeChoices(state.apolice));
     }
 
     case 'claim.awaiting_description': {

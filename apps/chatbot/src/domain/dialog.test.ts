@@ -380,6 +380,20 @@ describe('claim journey', () => {
     expect(final.state).toEqual(IDLE);
   });
 
+  it('ignores the intent of a description that is not exactly "cancelar"', () => {
+    const state: DialogState = {
+      name: 'claim.awaiting_description',
+      apolice: 'AP-1001',
+      tipo: 'COLISAO',
+    };
+    const { calls } = run(state, say('tive que sair da pista', intent('cancel')), {
+      openClaim: ok(aClaimOpened()),
+    });
+    expect(calls[0]?.op === 'openClaim' && calls[0].request.descricao).toBe(
+      'tive que sair da pista',
+    );
+  });
+
   it('rejects a description above 1000 characters without calling the service', () => {
     const state: DialogState = {
       name: 'claim.awaiting_description',
