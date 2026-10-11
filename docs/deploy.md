@@ -91,7 +91,7 @@ gcloud auth application-default set-quota-project <PROJECT_ID>
 
 ### 2.3 Escolha a tag das primeiras imagens
 
-As imagens são `<REGION>-docker.pkg.dev/<PROJECT_ID>/seguradora/{web,gateway,chatbot,fake-services}:<IMAGE_TAG>`. Para o bootstrap use uma tag que o workflow nunca vai gerar, por exemplo `bootstrap-1` (o workflow usa o SHA completo do commit ou a tag `v*`). Regra geral: **toda imagem reconstruída ganha uma tag nova** (ver [10](#10-rollback)).
+As imagens são `<REGION>-docker.pkg.dev/<PROJECT_ID>/seguradora/{web,gateway,chatbot,fake-services}:<IMAGE_TAG>`. Para o bootstrap use uma tag que o workflow nunca vai gerar, por exemplo `bootstrap-1` (o workflow usa o SHA completo do commit ou a tag `v*`). Regra geral: **toda imagem construída ganha uma tag nova**; o workflow recusa construir numa tag que já existe no registro (ver [10](#10-rollback)). Depois do primeiro apply, o workflow pode implantar `bootstrap-1` de novo com `deploy_existing_tag`.
 
 ### 2.4 Bucket do estado
 
@@ -288,10 +288,10 @@ Falhas típicas no passo `google-github-actions/auth` do job `deploy`:
 
 O workflow `deploy` (`.github/workflows/deploy.yml`) roda em dois casos:
 
-- **Actions > deploy > Run workflow** (workflow_dispatch) na branch de deploy, com `image_tag` opcional (vazio = SHA do commit);
+- **Actions > deploy > Run workflow** (workflow_dispatch) na branch de deploy, com `image_tag` opcional (vazio = SHA do commit) e `deploy_existing_tag` (padrão desmarcado; marcado = não constrói e implanta imagens que já existem na tag, ver [10](#10-rollback));
 - push de uma tag `v*` (a tag vira a `image_tag`).
 
-Sequência: o job `deploy` espera a aprovação do environment `production`; depois valida a tag, confere que o commit é alcançável a partir da branch padrão do repositório, faz login no GCP pelo WIF, constrói e envia as quatro imagens com a tag, e roda `terraform init`, `plan` e `apply`. O job `smoke` (sem credenciais) roda `infra/smoke.mjs` contra o `web_url`.
+Sequência: o job `deploy` espera a aprovação do environment `production`; depois valida a tag, confere que o commit é alcançável a partir da branch padrão do repositório, faz login no GCP pelo WIF, confere a tag no registro (modo build: recusa se já existir; `deploy_existing_tag`: exige as quatro imagens), constrói e envia as quatro imagens com a tag (só no modo build), e roda `terraform init`, `plan` e `apply`. O job `smoke` (sem credenciais) roda `infra/smoke.mjs` contra o `web_url`.
 
 Para o primeiro deploy, rode o workflow manualmente com `image_tag` vazio (a tag será o SHA, diferente de `bootstrap-1`), aprove e acompanhe.
 
@@ -416,31 +416,45 @@ Para parar de gastar de vez: [destruição](#13-destruição).
 
 ## 10. Rollback
 
-Imagens no Artifact Registry têm tags **mutáveis**. Por isso:
+Imagens no Artifact Registry têm tags **mutáveis**: reconstruir e enviar com uma tag já publicada sobrescreveria a tag, o Terraform veria o mesmo `image_tag` e não criaria revisão nova, e num rollback futuro aquela tag apontaria para outro código. Por isso o workflow garante **uma tag nova para toda imagem construída**:
 
-- **Sempre use uma tag nova para uma imagem reconstruída.** Reconstruir e enviar com uma tag já publicada sobrescreve a tag; o Terraform vê o mesmo `image_tag`, não cria revisão nova, e o Cloud Run continua com a imagem antiga (que nem tem mais tag). Pior: num rollback futuro, aquela tag aponta para outro código.
-- O workflow **sempre constrói** a partir do commit em que roda e envia com a `image_tag`. Rodar o workflow da branch atual com `image_tag` = uma tag antiga **não** volta a versão: sobrescreve a tag antiga com o código atual.
+- **Modo build** (padrão: push de tag `v*` e Run workflow com `deploy_existing_tag` desmarcado): antes de construir, o job confere o registro e **recusa** a tag se qualquer uma das quatro imagens já existir nela (`tag ... already exists in the registry`). Use outra tag.
+- **Modo `deploy_existing_tag`** (só Run workflow, input booleano): **não constrói nada**; primeiro confere que `web`, `gateway`, `chatbot` e `fake-services` existem na tag (senão falha com `images missing at tag ...`) e depois roda o Terraform **atual** (o da branch em que o workflow roda) com `image_tag` = essa tag, com a mesma aprovação do environment `production`.
 
-Descubra a tag em produção:
+Descubra a tag em produção e as anteriores:
 
 ```bash
 gcloud run services describe gateway --region=<REGION> --project=<PROJECT_ID> --format='value(spec.template.spec.containers[0].image)'
 gcloud artifacts docker images list <REGION>-docker.pkg.dev/<PROJECT_ID>/seguradora/gateway --include-tags --sort-by=~UPDATE_TIME --limit=10
 ```
 
-Opções, da mais rápida para a mais lenta:
+As imagens antigas ficam no registro enquanto estiverem entre as 10 versões mais recentes de cada imagem (ou tiverem menos de 30 dias).
 
-1. **Apply local com a tag anterior (sem rebuild).** As imagens ainda estão no registro (até 10 versões por imagem):
+Opções, na ordem de preferência:
+
+1. **Workflow com `deploy_existing_tag` (recomendado).** Em **Actions > deploy > Run workflow**, na branch de deploy, preencha `image_tag` = `<TAG_ANTERIOR>` e marque `deploy_existing_tag`. Aprove no environment. Sem rebuild, com a aprovação e com a configuração **atual** do Terraform: só as imagens voltam; recursos, IAM e variáveis de ambiente continuam como estão na branch. Com o `gh`:
+
+   ```bash
+   gh workflow run deploy.yml --ref master -f image_tag=<TAG_ANTERIOR> -f deploy_existing_tag=true
+   ```
+
+2. **Apply local com a tag anterior (alternativa).** Mesmo efeito, sem rebuild, mas exige as credenciais de dono do projeto e **não passa pela aprovação** do environment. Use quando o GitHub Actions não estiver disponível:
 
    ```bash
    terraform -chdir=infra/terraform apply -var image_tag=<TAG_ANTERIOR>
    ```
 
-   Use o mesmo `terraform.tfvars` que espelha as variáveis do repositório. O próximo deploy pelo workflow volta para o que ele construir.
+   Use o mesmo `terraform.tfvars` que espelha as variáveis do repositório.
 
-2. **Workflow a partir da tag da versão anterior.** Em **Actions > deploy > Run workflow**, em "Use workflow from" escolha a tag `v<ANTERIOR>` e deixe `image_tag` vazio: o workflow reconstrói aquele commit com a tag = SHA dele (nova, a menos que aquele SHA já tenha sido publicado; nesse caso é o mesmo código). A tag `v*` é aceita pelo environment e pelo WIF.
+3. **Reverter o commit** na branch de deploy e fazer um deploy normal (modo build, tag nova = novo SHA).
 
-3. **Reverter o commit** na branch de deploy e fazer um deploy normal (nova tag = novo SHA).
+4. **Workflow a partir de uma tag `v*` antiga: cuidado.** Em "Use workflow from" escolher a tag `v<ANTERIOR>` faz o job usar o código **e** o `infra/terraform/*.tf` **e** o `.github/workflows/deploy.yml` daquela tag, aplicados sobre o estado atual. Isso **volta a infraestrutura junto com as imagens**: pode apagar ou reverter recursos, IAM e variáveis de ambiente criados depois, e uma condição de WIF antiga pode até bloquear os próximos deploys. Só use se não houver diferença na infraestrutura:
+
+   ```bash
+   git diff v<ANTERIOR> -- infra/terraform .github/workflows/deploy.yml
+   ```
+
+   A saída precisa ser vazia. Mesmo assim o modo build recusa uma tag que já exista: com `image_tag` vazio a tag é o SHA daquele commit, e se ele já foi publicado o job falha (use a opção 1 com essa tag). Na prática, esta opção só serve quando as imagens antigas já saíram do registro.
 
 Em emergência, `gcloud run services update-traffic gateway --to-revisions=<REVISAO>=100 --region=<REGION> --project=<PROJECT_ID>` move o tráfego na hora, mas o próximo apply volta ao estado do Terraform; use só para ganhar tempo.
 
@@ -517,7 +531,6 @@ Para apagar o projeto inteiro (some com tudo, inclusive o bucket): `gcloud proje
 - **Autenticação entre serviços com ID token** do Cloud Run (gateway → chatbot, chatbot → serviços), trocando os `allUsers` dos serviços internos por `roles/run.invoker` da conta chamadora. Hoje o controle é só o ingress interno.
 - **`svc-*` reais** no lugar do `fake-services`; ligar `deploy_fake_services`/`service_urls` no workflow.
 - **Domínio próprio, Cloud Armor/WAF e uptime checks** com alertas; fechar o acesso direto ao gateway (limite por IP contornável, [8](#8-verificar-trust_proxy_hops)).
-- **Rollback pelo workflow** só funciona a partir de uma tag `v*` antiga ([10](#10-rollback)); um modo "deploy sem rebuild" (input que pula o build e usa uma tag existente) facilitaria.
 - **Gateway `/v1/media`** (upload de voz e de mídia de Flows).
 - **Próxima tela decidida pelo servidor** depois de `data_exchange` (hoje a web avança de forma otimista).
 - **Validar os Flows** (cotação e demo) no Playground da Meta.

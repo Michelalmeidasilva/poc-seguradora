@@ -7,7 +7,8 @@
 //       infra/terraform/variables.tf;
 //   (c) every `vars.<NAME>` of .github/workflows/deploy.yml appears in the runbook and in its
 //       repository variable table (the first table after a heading "Variáveis do repositório"),
-//       and every name in that table is used by deploy.yml;
+//       and every name in that table is used by deploy.yml; every `workflow_dispatch` input of
+//       deploy.yml is named in the runbook;
 //   (d) every address in `-target=`, `-replace=` or `terraform taint` is declared in
 //       infra/terraform/*.tf;
 //   (e) the required sections exist (headings).
@@ -97,6 +98,27 @@ function declaredAddresses(root) {
   return addresses;
 }
 
+/** Input names of `on: workflow_dispatch: inputs:` (keys one level below `inputs:`). */
+function dispatchInputs(workflow) {
+  const names = [];
+  let dispatchIndent = -1;
+  let inputsIndent = -1;
+  for (const line of workflow.split('\n')) {
+    if (line.trim() === '' || /^\s*#/.test(line)) continue;
+    const indent = line.length - line.trimStart().length;
+    if (inputsIndent >= 0 && indent <= inputsIndent) inputsIndent = -1;
+    if (dispatchIndent >= 0 && indent <= dispatchIndent) dispatchIndent = -1;
+    if (/^\s*workflow_dispatch:\s*$/.test(line)) dispatchIndent = indent;
+    else if (dispatchIndent >= 0 && inputsIndent < 0 && /^\s*inputs:\s*$/.test(line)) {
+      inputsIndent = indent;
+    } else if (inputsIndent >= 0) {
+      const key = /^\s*([A-Za-z_][A-Za-z0-9_-]*):/.exec(line);
+      if (key && indent === inputsIndent + 2) names.push(key[1]);
+    }
+  }
+  return names;
+}
+
 /** Repository variable names listed in the first table after "Variáveis do repositório". */
 function variableTable(prose) {
   const start = prose.findIndex((l) => /^#{1,6}\s.*vari[aá]veis do reposit[oó]rio/i.test(l));
@@ -116,7 +138,7 @@ function variableTable(prose) {
 
 export function analyzeRunbook(root) {
   const errors = [];
-  const counts = { paths: 0, variables: 0, repoVariables: 0, addresses: 0 };
+  const counts = { paths: 0, variables: 0, repoVariables: 0, inputs: 0, addresses: 0 };
   const text = readOrNull(join(root, RUNBOOK));
   if (text === null) return { errors: [`${RUNBOOK} not found`], counts };
   const { blocks, prose } = parseMarkdown(text);
@@ -176,6 +198,12 @@ export function analyzeRunbook(root) {
       if (!table.includes(name)) errors.push(`variable table does not list ${name}`);
     }
   }
+  for (const name of dispatchInputs(workflow)) {
+    counts.inputs++;
+    if (!new RegExp(`\\b${name}\\b`).test(text)) {
+      errors.push(`workflow_dispatch input ${name} of ${DEPLOY_WORKFLOW} is missing`);
+    }
+  }
 
   // (d) resource addresses.
   const declared = declaredAddresses(root);
@@ -217,6 +245,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
   console.log(
     `ok ${RUNBOOK}: ${counts.paths} paths, ${counts.variables} Terraform variables, ` +
-      `${counts.repoVariables} repository variables, ${counts.addresses} resource addresses`,
+      `${counts.repoVariables} repository variables, ${counts.inputs} workflow inputs, ` +
+      `${counts.addresses} resource addresses`,
   );
 }

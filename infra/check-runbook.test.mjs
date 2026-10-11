@@ -18,6 +18,7 @@ const VALID = `# Runbook
 ## Bootstrap
 Ver \`infra/smoke.mjs\` e [o README](../infra/README.md).
 ## Primeiro apply
+Run workflow com \`image_tag\` e \`deploy_existing_tag\`.
 ${fence}bash
 terraform -chdir=infra/terraform apply -target=google_artifact_registry_repository.images
 terraform apply -var image_tag=abc -var "project_id=<PROJECT_ID>"
@@ -59,6 +60,8 @@ function makeRepo(runbook) {
       'resource "google_artifact_registry_repository" "images" {\n}\n' +
       'resource "random_password" "session_secret" {}\n',
     '.github/workflows/deploy.yml':
+      'on:\n  workflow_dispatch:\n    inputs:\n      image_tag:\n        type: string\n' +
+      '      deploy_existing_tag:\n        type: boolean\n  push:\n    tags:\n      - v*\n' +
       'env:\n  P: ${{ vars.GCP_PROJECT_ID }}\n  H: ${{ vars.TF_VAR_TRUST_PROXY_HOPS }}\n',
     'infra/smoke.mjs': '',
     'infra/README.md': '',
@@ -141,6 +144,15 @@ describe('checkRunbook', () => {
       errors.some((e) => e.includes('GCP_INVENTADA')),
       errors.join('\n'),
     );
+  });
+
+  it('rejects a workflow_dispatch input missing from the runbook', () => {
+    const errors = checkRunbook(makeRepo(VALID.replace('`deploy_existing_tag`', '`x`')));
+    assert.ok(
+      errors.some((e) => e.includes('input deploy_existing_tag')),
+      errors.join('\n'),
+    );
+    assert.ok(!errors.some((e) => e.includes('input image_tag')), errors.join('\n'));
   });
 
   it('rejects a workflow variable missing from the runbook', () => {

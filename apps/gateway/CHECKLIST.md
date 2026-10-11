@@ -14,7 +14,7 @@
 - [x] Turnos de uma sessão executam em série (fila FIFO, `MAX_QUEUED_TURNS`; fila cheia → 429)
 - [x] Rate limit por sessão e por IP (também em `GET /v1/stream`)
 - [x] Limite estrito de criação de sessão por IP (`SESSION_CREATE_CAPACITY`, `SESSION_CREATE_PER_MINUTE`) e TTL curto para sessão nunca usada (`UNUSED_SESSION_TTL_SECONDS`)
-- [x] IP do cliente confiável só por contagem de proxies (`TRUST_PROXY_HOPS`, padrão 0; Cloud Run = 1); IP fora dos logs
+- [x] IP do cliente confiável só por contagem de proxies (`TRUST_PROXY_HOPS`, padrão 0; via web no Cloud Run: 3, ver docs/deploy.md); IP fora dos logs
 - [x] Sessão anônima (JWT em cookie HttpOnly) e registro de sessões
 - [x] POST /v1/session
 - [x] POST /v1/events (validação, limites, 202/200/4xx)
