@@ -24,7 +24,7 @@ Corpo (`ChatbotRequest`):
 
 - Status `200` e `content-type: application/x-ndjson`.
 - O corpo tem **um evento por linha** (`UnsequencedServerEvent`: envelope `{ v: 1, id, sessionId, correlationId, ts, type, payload }` **sem `seq`**; o gateway atribui o `seq`). Toda linha termina em `\n`.
-- Tamanho máximo de uma linha: 256 KB (`LIMITS.maxEventBytes * 4` = 262144 caracteres). Acima disso o gateway aborta o turno com `internal_error`.
+- Tamanho máximo de uma linha: 262144 **caracteres** (`LIMITS.maxEventBytes * 4`; o gateway conta caracteres, não bytes). Acima disso o gateway aborta o turno com `internal_error`.
 - Linha inválida (JSON ruim ou fora do schema) aborta o turno com `internal_error`; o que já foi publicado permanece.
 - Linhas cujo `sessionId` difere do da requisição são **descartadas** (e registradas em log), nunca entregues.
 - Um corpo `200` vazio é um turno válido (por exemplo, um evento que não gera resposta).
@@ -69,3 +69,17 @@ Se a conexão cair, o corpo for inválido ou o turno estourar `CHATBOT_TURN_TIME
 
 - O `correlationId` do protocolo é restrito a `/^[\x21-\x7e]{1,128}$/` (ASCII imprimível sem espaços, 1 a 128 caracteres), portanto seguro como valor de cabeçalho. O gateway ainda omite o cabeçalho se o valor não satisfizer a regra (segunda barreira); o corpo sempre carrega o valor original.
 - O chatbot deve usar o `correlationId` do corpo (não confiar só no cabeçalho), repetir o mesmo valor em todos os eventos que emite e **repassá-lo, como `x-correlation-id`, aos serviços internos**.
+
+## 9. Eventos que o chatbot emite
+
+- `status.typing` (início e fim do processamento)
+- `message.text`
+- `message.quick_replies`
+- `message.template`
+- `message.carousel`
+- `message.code`
+- `message.location`
+- `message.flow`
+- `error` (`internal_error`)
+
+O chatbot nunca emite `status.delivered`, `status.read` nem eventos `user.*`.

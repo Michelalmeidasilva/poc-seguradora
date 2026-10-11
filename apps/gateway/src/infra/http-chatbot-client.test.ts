@@ -48,6 +48,21 @@ const makeClient = (o: Partial<typeof policyOptions> & { turnTimeoutMs?: number 
 };
 
 describe('HttpChatbotClient', () => {
+  it('answers 400 when the gateway sends a request that breaks the schema (other than correlationId)', async () => {
+    const res = await fetch(fake.url + '/v1/chat/events', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        v: 2,
+        sessionId: 's1',
+        correlationId: 'c',
+        event: { type: 'user.text' },
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(fake.requests).toHaveLength(0);
+  });
+
   it('posts the request as JSON and streams the reply events', async () => {
     const client = makeClient();
     const events = await drain(await client.send(request()));

@@ -88,17 +88,29 @@ export async function startFakeChatbot(initial: Behavior = replyText('ok')): Pro
         res.end();
         return;
       }
-      // Strict validation rejects non-header-safe correlation ids, which the gateway must still
-      // be able to send (second guard); in that case record the raw parsed body instead of a 400.
+      // Strict validation rejects non-header-safe correlation ids, which the gateway must still be
+      // able to send (second guard). Tolerate ONLY that: retry with the correlationId replaced and
+      // record the request with the original id; any other schema break is a 400.
+      let request: ChatbotRequest;
       const strict = ChatbotRequestSchema.safeParse(json);
-      const looksLikeRequest =
-        typeof json === 'object' && json !== null && 'event' in json && 'sessionId' in json;
-      if (!strict.success && !looksLikeRequest) {
-        res.writeHead(400);
-        res.end();
-        return;
+      if (strict.success) {
+        request = strict.data;
+      } else {
+        const original =
+          typeof json === 'object' && json !== null
+            ? (json as { correlationId?: unknown }).correlationId
+            : undefined;
+        const retry =
+          typeof original === 'string'
+            ? ChatbotRequestSchema.safeParse({ ...(json as object), correlationId: 'fake-corr' })
+            : undefined;
+        if (!retry?.success || typeof original !== 'string') {
+          res.writeHead(400);
+          res.end();
+          return;
+        }
+        request = { ...retry.data, correlationId: original };
       }
-      const request = (strict.success ? strict.data : json) as ChatbotRequest;
       fake.requests.push(request);
       fake.headers.push(req.headers);
       await behavior(request, res);
