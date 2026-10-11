@@ -14,7 +14,7 @@
     "@seguradora/resilience": "workspace:*",
     "fastify": "^5.12.5",
     "pino": "^10.4.0",
-    "zod": "^4.6.5"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "tsup": "^8.5.1"
