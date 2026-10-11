@@ -40,6 +40,9 @@ const COMPONENTS: Record<string, Renderer> = {
   Switch,
 };
 
+/** Every component type the engine renders (the demo Flow must cover all of them). */
+export const REGISTERED_TYPES: readonly string[] = Object.freeze(Object.keys(COMPONENTS));
+
 const warned = new Set<string>();
 
 /** Test hook: forget which unknown types were already reported. */

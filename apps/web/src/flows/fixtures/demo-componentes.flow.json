@@ -1,0 +1,265 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "INICIO": ["DADOS"],
+    "DADOS": ["PREFERENCIAS"],
+    "PREFERENCIAS": ["CONFIRMACAO"],
+    "CONFIRMACAO": []
+  },
+  "screens": [
+    {
+      "id": "INICIO",
+      "title": "Demonstração",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "Todos os componentes" },
+          { "type": "TextSubheading", "text": "Um Flow de demonstração" },
+          { "type": "TextBody", "text": "Este Flow percorre *todos* os componentes do motor." },
+          { "type": "TextCaption", "text": "Dados fictícios, apenas para teste." },
+          {
+            "type": "RichText",
+            "text": [
+              "# Como funciona",
+              "- Preencha os dados",
+              "- Escolha as preferências",
+              "- Confirme o envio"
+            ]
+          },
+          {
+            "type": "Image",
+            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            "alt-text": "Logo da seguradora",
+            "width": 48,
+            "height": 48
+          },
+          {
+            "type": "ImageCarousel",
+            "images": [
+              {
+                "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "alt-text": "Carro protegido"
+              },
+              {
+                "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+                "alt-text": "Casa protegida"
+              }
+            ]
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Conheça a seguradora",
+            "on-click-action": { "name": "open_url", "url": "https://exemplo.invalid/sobre" }
+          },
+          {
+            "type": "NavigationList",
+            "name": "inicio",
+            "list-items": [
+              {
+                "id": "cadastro",
+                "main-content": { "title": "Começar pelo cadastro", "description": "Seus dados" },
+                "tags": ["2 min"],
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "DADOS" },
+                  "payload": { "origem": "lista" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "DADOS",
+      "title": "Seus dados",
+      "data": { "origem": { "type": "string", "__example__": "lista" } },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextInput",
+            "name": "nome",
+            "label": "Nome completo",
+            "input-type": "text",
+            "required": true
+          },
+          { "type": "TextArea", "name": "observacoes", "label": "Observações" },
+          { "type": "DatePicker", "name": "nascimento", "label": "Data de nascimento" },
+          {
+            "type": "CalendarPicker",
+            "name": "inicio",
+            "label": "Início da vigência",
+            "mode": "single"
+          },
+          {
+            "type": "CalendarPicker",
+            "name": "periodo",
+            "label": "Período da viagem",
+            "mode": "range"
+          },
+          {
+            "type": "PhotoPicker",
+            "name": "fotos",
+            "label": "Fotos do veículo",
+            "description": "Opcional",
+            "photo-source": "gallery",
+            "max-uploaded-photos": 2
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "navigate",
+              "next": { "type": "screen", "name": "PREFERENCIAS" },
+              "payload": { "nome": "${form.nome}", "extrasResumo": "Nenhum extra" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "PREFERENCIAS",
+      "title": "Preferências",
+      "data": {
+        "nome": { "type": "string", "__example__": "Maria" },
+        "extrasResumo": { "type": "string", "__example__": "Nenhum extra" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextBody", "text": "Olá, ${data.nome}." },
+          {
+            "type": "CheckboxGroup",
+            "name": "coberturas",
+            "label": "Coberturas",
+            "required": true,
+            "data-source": [
+              { "id": "COLISAO", "title": "Colisão" },
+              { "id": "ROUBO", "title": "Roubo e furto" },
+              { "id": "INCENDIO", "title": "Incêndio" }
+            ]
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "plano",
+            "label": "Plano",
+            "required": true,
+            "data-source": [
+              { "id": "BASICO", "title": "Básico" },
+              { "id": "COMPLETO", "title": "Completo" }
+            ]
+          },
+          {
+            "type": "Switch",
+            "value": "${form.plano}",
+            "cases": {
+              "BASICO": [{ "type": "TextCaption", "text": "Plano básico: franquia maior." }],
+              "COMPLETO": [{ "type": "TextCaption", "text": "Plano completo: franquia reduzida." }]
+            }
+          },
+          {
+            "type": "Dropdown",
+            "name": "pagamento",
+            "label": "Forma de pagamento",
+            "required": true,
+            "data-source": [
+              { "id": "PIX", "title": "Pix" },
+              { "id": "BOLETO", "title": "Boleto" },
+              { "id": "CARTAO", "title": "Cartão de crédito" }
+            ]
+          },
+          {
+            "type": "ChipsSelector",
+            "name": "extras",
+            "label": "Extras",
+            "data-source": [
+              { "id": "GUINCHO", "title": "Guincho" },
+              { "id": "VIDROS", "title": "Vidros" }
+            ],
+            "on-select-action": {
+              "name": "update_data",
+              "payload": { "extrasResumo": "Com extras" }
+            },
+            "on-unselect-action": { "name": "update_data", "payload": {} }
+          },
+          { "type": "TextCaption", "text": "Extras: ${data.extrasResumo}" },
+          {
+            "type": "Footer",
+            "label": "Consultar",
+            "on-click-action": {
+              "name": "data_exchange",
+              "next": { "type": "screen", "name": "CONFIRMACAO" },
+              "payload": {
+                "coberturas": "${form.coberturas}",
+                "plano": "${form.plano}",
+                "pagamento": "${form.pagamento}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONFIRMACAO",
+      "title": "Confirmação",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "DocumentPicker",
+            "name": "comprovante",
+            "label": "Comprovante de residência",
+            "allowed-mime-types": ["application/pdf"],
+            "max-uploaded-documents": 1
+          },
+          {
+            "type": "OptIn",
+            "name": "aceite",
+            "label": "Li e aceito os termos",
+            "required": true,
+            "on-click-action": { "name": "open_url", "url": "https://exemplo.invalid/termos" }
+          },
+          {
+            "type": "If",
+            "condition": "${form.aceite}",
+            "then": [
+              { "type": "TextBody", "text": "Tudo pronto para enviar." },
+              {
+                "type": "Footer",
+                "label": "Enviar",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "nome": "${form.nome}",
+                    "observacoes": "${form.observacoes}",
+                    "nascimento": "${form.nascimento}",
+                    "inicio": "${form.inicio}",
+                    "periodo": "${form.periodo}",
+                    "fotos": "${form.fotos}",
+                    "coberturas": "${form.coberturas}",
+                    "plano": "${form.plano}",
+                    "pagamento": "${form.pagamento}",
+                    "extras": "${form.extras}",
+                    "comprovante": "${form.comprovante}",
+                    "aceite": "${form.aceite}"
+                  }
+                }
+              }
+            ],
+            "else": [
+              { "type": "TextCaption", "text": "Aceite os termos para enviar." },
+              {
+                "type": "Footer",
+                "label": "Aceite para enviar",
+                "on-click-action": { "name": "complete", "payload": { "aceite": "${form.aceite}" } }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
