@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './chat.css';
 import type { OpenFlow } from '../renderers/flow-host';
 import { Composer } from './Composer';
@@ -18,6 +19,12 @@ export function ChatScreen({ chat, openFlow = ignoreFlow }: ChatScreenProps) {
     onAutoStop: (r) => chat.sendVoice(r.blob, r.durationMs),
   });
   const { state } = chat;
+
+  // Demoted to a passive tab: release the microphone and discard any recording in progress.
+  const cancelRecording = recorder.cancel;
+  useEffect(() => {
+    if (chat.tab === 'other-tab') cancelRecording();
+  }, [chat.tab, cancelRecording]);
 
   return (
     <div className="chat">

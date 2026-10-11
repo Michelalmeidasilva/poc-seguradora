@@ -72,7 +72,8 @@ export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecor
       const rec = new MediaRecorder(media);
       recorder.current = rec;
       rec.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.current.push(e.data);
+        // A cancelled recorder's late chunk must not enter the next recording.
+        if (recorder.current === rec && e.data.size > 0) chunks.current.push(e.data);
       };
       rec.onstop = () => finish(rec);
       startedAt.current = Date.now();
@@ -82,7 +83,11 @@ export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecor
       ticker.current = setInterval(() => {
         const elapsed = Date.now() - startedAt.current;
         setElapsedMs(elapsed);
-        if (elapsed >= maxMs) rec.stop();
+        if (elapsed >= maxMs) {
+          clearInterval(ticker.current);
+          ticker.current = undefined;
+          if (rec.state === 'recording') rec.stop();
+        }
       }, 250);
     } catch {
       release();
@@ -103,6 +108,10 @@ export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecor
 
   const cancel = useCallback(() => {
     discard.current = true;
+    // A pending stop() must not hang, nor swallow the next recording's auto-stop.
+    const pending = resolveStop.current;
+    resolveStop.current = undefined;
+    pending?.(undefined);
     const rec = recorder.current;
     if (rec?.state === 'recording') rec.stop();
     release();

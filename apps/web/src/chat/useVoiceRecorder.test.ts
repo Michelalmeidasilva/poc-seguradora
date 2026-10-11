@@ -163,4 +163,71 @@ describe('useVoiceRecorder', () => {
     });
     expect(out).toBeUndefined();
   });
+
+  it("keeps a cancelled recorder's late chunk out of the next recording", async () => {
+    const { result } = renderHook(() => useVoiceRecorder());
+    await act(async () => {
+      await result.current.start();
+    });
+    const first = FakeRecorder.instances[0]!;
+    first.stop = () => {
+      first.state = 'inactive';
+    };
+    act(() => result.current.cancel());
+    await act(async () => {
+      await result.current.start();
+    });
+    act(() => first.ondataavailable?.({ data: new Blob(['late-chunk']) }));
+    let recording: Awaited<ReturnType<typeof result.current.stop>>;
+    await act(async () => {
+      recording = await result.current.stop();
+    });
+    expect(recording!.blob.size).toBe('audio'.length);
+  });
+
+  it('cancel() resolves a pending stop() with undefined and a later auto-stop is still delivered', async () => {
+    const onAutoStop = vi.fn();
+    const { result } = renderHook(() => useVoiceRecorder({ maxMs: 5000, onAutoStop }));
+    await act(async () => {
+      await result.current.start();
+    });
+    const first = FakeRecorder.instances[0]!;
+    first.stop = () => {
+      first.state = 'inactive'; // onstop never fires
+    };
+    let pending: Promise<unknown> | undefined;
+    let settled = false;
+    act(() => {
+      pending = result.current.stop().then((r) => {
+        settled = true;
+        return r;
+      });
+    });
+    expect(settled).toBe(false);
+    act(() => result.current.cancel());
+    await expect(pending).resolves.toBeUndefined();
+    await act(async () => {
+      await result.current.start();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5200);
+    });
+    expect(onAutoStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls stop() once at the maximum duration, not on every tick, and only while recording', async () => {
+    const { result } = renderHook(() => useVoiceRecorder({ maxMs: 1000 }));
+    await act(async () => {
+      await result.current.start();
+    });
+    const rec = FakeRecorder.instances[0]!;
+    const stop = vi.fn(() => {
+      rec.state = 'inactive'; // a real recorder fires onstop asynchronously
+    });
+    rec.stop = stop;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
 });

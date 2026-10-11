@@ -129,7 +129,7 @@ describe('chatReducer: user messages and status never go backwards', () => {
     expect(s.items).toHaveLength(1);
   });
 
-  it('a late delivered after a failed resend attempt does not override a newer failure', () => {
+  it('a server delivered fact overrides an earlier failed status', () => {
     const user = userItem(1, 'sending');
     const s = run([
       { type: 'user_queued', item: user },
@@ -138,6 +138,33 @@ describe('chatReducer: user messages and status never go backwards', () => {
     ]);
     // delivered is a server fact: the message did reach the chatbot.
     expect(s.items[0]).toMatchObject({ status: 'delivered' });
+  });
+
+  it('a client-side failure applies to a sending message but not to a sent or delivered one', () => {
+    const run1 = (from: 'sending' | 'sent' | 'delivered') =>
+      run([{ type: 'user_status', id: uuid(1001), status: 'failed' }], {
+        ...initialState(),
+        items: [userItem(1, from)],
+      }).items[0];
+    expect(run1('sending')).toMatchObject({ status: 'failed' });
+    expect(run1('sent')).toMatchObject({ status: 'sent' });
+    expect(run1('delivered')).toMatchObject({ status: 'delivered' });
+  });
+
+  it('a late sent does not hide a failure; only sending (resend) or delivered replace failed', () => {
+    const user = userItem(1, 'sending');
+    const failed: Action[] = [
+      { type: 'user_queued', item: user },
+      { type: 'user_status', id: user.id, status: 'failed' },
+    ];
+    const status = (more: Action[]) => run([...failed, ...more]).items[0];
+    expect(status([{ type: 'user_status', id: user.id, status: 'sent' }])).toMatchObject({
+      status: 'failed',
+    });
+    expect(status([server(delivered(1, user.id))])).toMatchObject({ status: 'delivered' });
+    expect(status([{ type: 'user_status', id: user.id, status: 'sending' }])).toMatchObject({
+      status: 'sending',
+    });
   });
 });
 

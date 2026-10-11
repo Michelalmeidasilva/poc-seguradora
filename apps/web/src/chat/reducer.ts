@@ -66,11 +66,18 @@ export function chatReducer(state: ChatState, action: Action): ChatState {
       return {
         ...state,
         items: mapUser(state.items, action.id, (u) => {
-          // Only a resend (failed → sending) may lower the status; otherwise it only moves forward.
-          const resend = u.status === 'failed' && action.status === 'sending';
-          return resend || RANK[action.status] > RANK[u.status]
-            ? { ...u, status: action.status }
-            : u;
+          // A failure (e.g. a server error{messageId} that beat the POST's 202) is only replaced by
+          // a resend (sending); a late `sent` must not hide it. Otherwise status only moves forward.
+          if (u.status === 'failed') {
+            return action.status === 'sending' || action.status === 'delivered'
+              ? { ...u, status: action.status }
+              : u;
+          }
+          // A client-side failure only applies to a message still in flight (RANK alone would
+          // reject sending → failed, since failed ranks lowest).
+          if (action.status === 'failed')
+            return u.status === 'sending' ? { ...u, status: 'failed' } : u;
+          return RANK[action.status] > RANK[u.status] ? { ...u, status: action.status } : u;
         }),
       };
 

@@ -6,6 +6,12 @@ import { initialState } from './model';
 import { ChatScreen } from './ChatScreen';
 import type { ChatApi } from './useChat';
 import { chatReducer } from './reducer';
+import { useVoiceRecorder, type VoiceRecorderOptions } from './useVoiceRecorder';
+
+vi.mock('./useVoiceRecorder', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./useVoiceRecorder')>();
+  return { ...actual, useVoiceRecorder: vi.fn(actual.useVoiceRecorder) };
+});
 
 const api = (over: Partial<ChatApi> = {}): ChatApi => ({
   state: initialState(),
@@ -101,5 +107,38 @@ describe('ChatScreen', () => {
     });
     render(<ChatScreen chat={api({ state })} />);
     expect(screen.getByText('Olá! Eu sou o assistente.')).toBeInTheDocument();
+  });
+
+  describe('voice recorder', () => {
+    const fakeRecorder = () => ({
+      status: 'idle' as const,
+      elapsedMs: 0,
+      start: vi.fn(async () => undefined),
+      stop: vi.fn(async () => undefined),
+      cancel: vi.fn(),
+    });
+
+    it('delivers an auto-stopped recording through chat.sendVoice while the tab is active', () => {
+      let options: VoiceRecorderOptions | undefined;
+      vi.mocked(useVoiceRecorder).mockImplementationOnce((o) => {
+        options = o;
+        return fakeRecorder();
+      });
+      const chat = api();
+      render(<ChatScreen chat={chat} />);
+      const blob = new Blob(['audio']);
+      options?.onAutoStop?.({ blob, durationMs: 120_000 });
+      expect(chat.sendVoice).toHaveBeenCalledWith(blob, 120_000);
+    });
+
+    it('cancels the recording (releasing the mic) when the tab is demoted, not while active', () => {
+      const recorder = fakeRecorder();
+      vi.mocked(useVoiceRecorder).mockReturnValue(recorder);
+      const { rerender } = render(<ChatScreen chat={api({ tab: 'active' })} />);
+      expect(recorder.cancel).not.toHaveBeenCalled();
+      rerender(<ChatScreen chat={api({ tab: 'other-tab' })} />);
+      expect(recorder.cancel).toHaveBeenCalledTimes(1);
+      vi.mocked(useVoiceRecorder).mockReset();
+    });
   });
 });
