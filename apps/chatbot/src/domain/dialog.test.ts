@@ -141,6 +141,7 @@ describe('quote journey', () => {
       { createQuote: err('unavailable') },
     );
     expect(textOf(final.replies)).toContain('Tente novamente');
+    expect(types(final.replies)).toEqual(['message.text', 'message.flow']);
     expect(final.state).toEqual({ name: 'quote.awaiting_flow' });
   });
 });
@@ -459,5 +460,110 @@ describe('hostile identifiers', () => {
     const state: DialogState = { name: 'claim.awaiting_policy', numeros: ['AP-1001'] };
     expect(run(state, choose('claimpolicy:AP-1001/../x')).calls).toHaveLength(0);
     expect(run({ name: 'policies.awaiting_cpf' }, say('1234567890a')).calls).toHaveLength(0);
+  });
+});
+
+describe('cpf entity validation', () => {
+  it.each(['1234567890a', '123/../x'])(
+    'never calls a service with the bad cpf entity %j',
+    (cpf) => {
+      for (const name of ['policies', 'claim'] as const) {
+        const { final, calls } = run(IDLE, say('x', intent(name, { cpf })));
+        expect(calls).toHaveLength(0);
+        expect(final.state).toEqual({
+          name: name === 'policies' ? 'policies.awaiting_cpf' : 'claim.awaiting_cpf',
+        });
+      }
+    },
+  );
+
+  it('a bad entity does not hide a valid cpf typed in the text', () => {
+    const { calls } = run(
+      { name: 'policies.awaiting_cpf' },
+      say('12345678901', intent('unknown', { cpf: 'bad' })),
+      {
+        listPolicies: ok([]),
+      },
+    );
+    expect(calls[0]?.op === 'listPolicies' && calls[0].cpf).toBe('12345678901');
+  });
+
+  it('reprompts when both the entity and the text are invalid', () => {
+    const { final, calls } = run(
+      { name: 'claim.awaiting_cpf' },
+      say('zzz', intent('unknown', { cpf: 'bad' })),
+    );
+    expect(calls).toHaveLength(0);
+    expect(textOf(final.replies)).toContain('CPF');
+  });
+});
+
+describe('unavailable keeps the step', () => {
+  it('getClaim', () => {
+    const state: DialogState = { name: 'claim_status.awaiting_protocol' };
+    const down = run(state, say('SN-2001'), { getClaim: err('unavailable') });
+    expect(textOf(down.final.replies)).toContain('Tente novamente');
+    expect(down.final.state).toEqual(state);
+    const again = run(down.final.state, say('SN-2001'), { getClaim: ok(aClaim()) });
+    expect(types(again.final.replies)).toEqual(['message.template']);
+  });
+
+  it('getPolicy', () => {
+    const state: DialogState = { name: 'policies.awaiting_choice', numeros: ['AP-1001'] };
+    expect(
+      run(state, choose('policy:AP-1001'), { getPolicy: err('unavailable') }).final.state,
+    ).toEqual(state);
+  });
+
+  it('secondCopy', () => {
+    const state: DialogState = { name: 'policies.awaiting_choice', numeros: ['AP-1001'] };
+    const { final } = run(state, choose('policy.second_copy:AP-1001'), {
+      secondCopy: err('unavailable'),
+    });
+    expect(final.state).toEqual(state);
+  });
+
+  it('listPolicies from the claim cpf step', () => {
+    const state: DialogState = { name: 'claim.awaiting_cpf' };
+    expect(
+      run(state, say('12345678901'), { listPolicies: err('unavailable') }).final.state,
+    ).toEqual(state);
+  });
+
+  it('not_found still resets to idle', () => {
+    const state: DialogState = { name: 'policies.awaiting_choice', numeros: ['AP-1001'] };
+    expect(
+      run(state, choose('policy:AP-1001'), { getPolicy: err('not_found') }).final.state,
+    ).toEqual(IDLE);
+  });
+});
+
+describe('list choices are constrained', () => {
+  it('policy button outside the offered list', () => {
+    const state: DialogState = { name: 'policies.awaiting_choice', numeros: ['AP-1001'] };
+    const { final, calls } = run(state, choose('policy:AP-1234'));
+    expect(calls).toHaveLength(0);
+    expect(final.state).toEqual(state);
+  });
+
+  it('claimpolicy button outside the offered list', () => {
+    const state: DialogState = { name: 'claim.awaiting_policy', numeros: ['AP-1001'] };
+    const { final, calls } = run(state, choose('claimpolicy:AP-1234'));
+    expect(calls).toHaveLength(0);
+    expect(final.state).toEqual(state);
+  });
+
+  it('the listed number still works', () => {
+    const state: DialogState = { name: 'claim.awaiting_policy', numeros: ['AP-1001'] };
+    expect(run(state, choose('claimpolicy:AP-1001')).final.state).toEqual({
+      name: 'claim.awaiting_type',
+      apolice: 'AP-1001',
+    });
+  });
+
+  it('upper-cases a typed policy number', () => {
+    const state: DialogState = { name: 'claim.awaiting_policy', numeros: ['AP-1001'] };
+    const { final } = run(state, say('ap-1001', intent('unknown', { apolice: 'ap-1001' })));
+    expect(final.state).toEqual({ name: 'claim.awaiting_type', apolice: 'AP-1001' });
   });
 });

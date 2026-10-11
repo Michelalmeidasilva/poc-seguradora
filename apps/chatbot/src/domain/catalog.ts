@@ -118,11 +118,14 @@ export const noActivePolicies = (): ReplyBody[] => [
   quick('Posso ajudar com outra coisa?', [MENU_OPTION]),
 ];
 
+/** Maximum number of policies offered as buttons. */
+export const MAX_CHOICES = 3;
+
 export function policyChoices(
   policies: PolicySummary[],
   prefix: 'policy' | 'claimpolicy',
 ): ReplyBody[] {
-  const shown = policies.slice(0, 3);
+  const shown = policies.slice(0, MAX_CHOICES);
   const lines = shown.map(
     (p) => `${p.numero} · ${PRODUCT_LABEL[p.produto]} · ${POLICY_STATUS_LABEL[p.status]}`,
   );

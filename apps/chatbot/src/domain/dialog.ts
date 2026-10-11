@@ -1,5 +1,6 @@
 import type { Result } from '@seguradora/protocol';
 import * as catalog from './catalog';
+import { MAX_CHOICES } from './catalog';
 import { CLAIM_TYPES, isPolicyNumber, normalizeCpf, normalizeProtocol } from './identifiers';
 import type {
   Claim,
@@ -89,7 +90,7 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
     case 'voice':
       return reply(state, catalog.voiceReceived(input.durationMs));
     case 'choice':
-      return fromChoice(input.optionId);
+      return fromChoice(state, input.optionId);
     case 'flow_submit':
       return undefined;
     case 'text': {
@@ -107,22 +108,29 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
           return startQuote();
         case 'policies':
           return intent.entities.apolice
-            ? viewPolicy(intent.entities.apolice)
+            ? viewPolicy(intent.entities.apolice.toUpperCase(), state)
             : startPolicies(intent.entities.cpf);
         case 'claim':
           return startClaim(intent.entities.cpf);
         case 'claim_status':
-          return startClaimStatus(intent.entities.protocolo);
+          return startClaimStatus(intent.entities.protocolo, state);
         case 'location':
           return reply(IDLE, catalog.branchLocation());
         case 'unknown':
           return undefined;
+        default: {
+          const unreachable: never = intent.name;
+          return unreachable;
+        }
       }
     }
   }
 }
 
-function fromChoice(id: string): Step | undefined {
+function fromChoice(state: DialogState, id: string): Step | undefined {
+  // States that carry an offered list handle their own buttons (see apoliceFrom).
+  if (state.name === 'policies.awaiting_choice' && id.startsWith('policy:')) return undefined;
+  if (state.name === 'claim.awaiting_policy' && id.startsWith('claimpolicy:')) return undefined;
   switch (id) {
     case 'menu':
       return reply(IDLE, catalog.menu());
@@ -137,9 +145,9 @@ function fromChoice(id: string): Step | undefined {
   const value = rest.join(':');
   switch (prefix) {
     case 'policy':
-      return isPolicyNumber(value) ? viewPolicy(value) : reply(IDLE, catalog.unknown());
+      return isPolicyNumber(value) ? viewPolicy(value, state) : reply(IDLE, catalog.unknown());
     case 'policy.second_copy':
-      return isPolicyNumber(value) ? secondCopy(value) : reply(IDLE, catalog.unknown());
+      return isPolicyNumber(value) ? secondCopy(value, state) : reply(IDLE, catalog.unknown());
     case 'policy.claim':
     case 'claimpolicy':
       return isPolicyNumber(value)
@@ -162,10 +170,13 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
         return call({
           op: 'createQuote',
           request: parsed.value,
-          then: (r) =>
-            r.ok
-              ? reply(IDLE, catalog.quoteResult(r.value))
-              : failure(r.error, state, catalog.invalidData()),
+          then: (r) => {
+            if (r.ok) return reply(IDLE, catalog.quoteResult(r.value));
+            if (r.error === 'unavailable') {
+              return reply(state, [...catalog.serviceUnavailable(), ...catalog.quoteFlow()]);
+            }
+            return failure(r.error, state, catalog.invalidData());
+          },
         });
       }
       return reply(state, catalog.quoteFlow());
@@ -176,8 +187,8 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
     }
 
     case 'policies.awaiting_choice': {
-      const numero = apoliceFrom(input, state.numeros);
-      return numero ? viewPolicy(numero) : reply(state, catalog.pickAnOption());
+      const numero = apoliceFrom(input, state.numeros, 'policy');
+      return numero ? viewPolicy(numero, state) : reply(state, catalog.pickAnOption());
     }
 
     case 'claim.awaiting_cpf': {
@@ -186,7 +197,7 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
     }
 
     case 'claim.awaiting_policy': {
-      const numero = apoliceFrom(input, state.numeros);
+      const numero = apoliceFrom(input, state.numeros, 'claimpolicy');
       return numero
         ? reply({ name: 'claim.awaiting_type', apolice: numero }, catalog.claimTypeChoices(numero))
         : reply(state, catalog.pickAnOption());
@@ -228,7 +239,7 @@ function byState(state: DialogState, input: Input, ctx: DialogContext): Step {
 
     case 'claim_status.awaiting_protocol': {
       const protocolo = protocolFrom(input);
-      return protocolo ? viewClaim(protocolo) : reply(state, catalog.askClaimProtocol());
+      return protocolo ? viewClaim(protocolo, state) : reply(state, catalog.askClaimProtocol());
     }
   }
 }
@@ -237,7 +248,8 @@ function startQuote(): Step {
   return reply({ name: 'quote.awaiting_flow' }, catalog.quoteFlow());
 }
 
-function startPolicies(cpf?: string): Step {
+function startPolicies(rawCpf?: string): Step {
+  const cpf = rawCpf ? normalizeCpf(rawCpf) : undefined;
   if (!cpf) return reply({ name: 'policies.awaiting_cpf' }, catalog.askCpf('policies'));
   const keep: DialogState = { name: 'policies.awaiting_cpf' };
   return call({
@@ -246,7 +258,7 @@ function startPolicies(cpf?: string): Step {
     then: (r) => {
       if (!r.ok) return failure(r.error, keep, catalog.notFound('policy'));
       if (r.value.length === 0) return reply(IDLE, catalog.noPolicies());
-      const shown = r.value.slice(0, 3);
+      const shown = r.value.slice(0, MAX_CHOICES);
       return reply(
         { name: 'policies.awaiting_choice', numeros: shown.map((p) => p.numero) },
         catalog.policyChoices(r.value, 'policy'),
@@ -255,7 +267,7 @@ function startPolicies(cpf?: string): Step {
   });
 }
 
-function viewPolicy(numero: string): Step {
+function viewPolicy(numero: string, keep: DialogState): Step {
   if (!isPolicyNumber(numero)) return reply(IDLE, catalog.unknown());
   return call({
     op: 'getPolicy',
@@ -263,23 +275,24 @@ function viewPolicy(numero: string): Step {
     then: (r) =>
       r.ok
         ? reply(IDLE, catalog.policyDetail(r.value))
-        : failure(r.error, IDLE, catalog.notFound('policy')),
+        : failure(r.error, keep, catalog.notFound('policy')),
   });
 }
 
-function secondCopy(numero: string): Step {
+function secondCopy(numero: string, keep: DialogState): Step {
   return call({
     op: 'secondCopy',
     numero,
     then: (r) => {
       if (r.ok) return reply(IDLE, catalog.secondCopy(r.value));
       if (r.error === 'conflict') return reply(IDLE, catalog.secondCopyRejected());
-      return failure(r.error, IDLE, catalog.notFound('policy'));
+      return failure(r.error, keep, catalog.notFound('policy'));
     },
   });
 }
 
-function startClaim(cpf?: string): Step {
+function startClaim(rawCpf?: string): Step {
+  const cpf = rawCpf ? normalizeCpf(rawCpf) : undefined;
   if (!cpf) return reply({ name: 'claim.awaiting_cpf' }, catalog.askCpf('claim'));
   const keep: DialogState = { name: 'claim.awaiting_cpf' };
   return call({
@@ -296,7 +309,7 @@ function startClaim(cpf?: string): Step {
           catalog.claimTypeChoices(only.numero),
         );
       }
-      const shown = active.slice(0, 3);
+      const shown = active.slice(0, MAX_CHOICES);
       return reply(
         { name: 'claim.awaiting_policy', numeros: shown.map((p) => p.numero) },
         catalog.policyChoices(active, 'claimpolicy'),
@@ -305,21 +318,21 @@ function startClaim(cpf?: string): Step {
   });
 }
 
-function startClaimStatus(protocolo?: string): Step {
+function startClaimStatus(protocolo: string | undefined, keep: DialogState): Step {
   const normalized = protocolo ? normalizeProtocol(protocolo) : undefined;
   return normalized
-    ? viewClaim(normalized)
+    ? viewClaim(normalized, keep)
     : reply({ name: 'claim_status.awaiting_protocol' }, catalog.askClaimProtocol());
 }
 
-function viewClaim(protocolo: string): Step {
+function viewClaim(protocolo: string, keep: DialogState): Step {
   return call({
     op: 'getClaim',
     protocolo,
     then: (r) =>
       r.ok
         ? reply(IDLE, catalog.claimDetail(r.value))
-        : failure(r.error, IDLE, catalog.notFound('claim')),
+        : failure(r.error, keep, catalog.notFound('claim')),
   });
 }
 
@@ -338,17 +351,23 @@ function failure(f: ServiceFailure, keep: DialogState, notFoundReply: ReplyBody[
 }
 
 const cpfFrom = (input: Input): string | undefined =>
-  input.kind === 'text' ? (input.intent.entities.cpf ?? normalizeCpf(input.text)) : undefined;
+  input.kind === 'text'
+    ? (normalizeCpf(input.intent.entities.cpf ?? '') ?? normalizeCpf(input.text))
+    : undefined;
 
-function apoliceFrom(input: Input, allowed: string[]): string | undefined {
+function apoliceFrom(
+  input: Input,
+  allowed: string[],
+  buttonPrefix: 'policy' | 'claimpolicy',
+): string | undefined {
   if (input.kind === 'choice') {
     const [prefix, value] = input.optionId.split(':');
-    return (prefix === 'policy' || prefix === 'claimpolicy') && value && allowed.includes(value)
-      ? value
+    return prefix === buttonPrefix && value && allowed.includes(value.toUpperCase())
+      ? value.toUpperCase()
       : undefined;
   }
   if (input.kind === 'text') {
-    const candidate = input.intent.entities.apolice;
+    const candidate = input.intent.entities.apolice?.toUpperCase();
     return candidate && allowed.includes(candidate) ? candidate : undefined;
   }
   return undefined;
