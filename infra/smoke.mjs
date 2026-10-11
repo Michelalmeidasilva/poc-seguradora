@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 export const STEP_TIMEOUT_MS = 10_000;
+export const GLOBAL_TIMEOUT_MS = 55_000;
 
 /** A failure attributed to one hop of the chain. */
 export class SmokeError extends Error {
@@ -73,30 +74,39 @@ export function createSseParser(onEvent) {
 /**
  * Opens an SSE stream. Resolves once the response headers are in (200 + text/event-stream),
  * then keeps reading in the background. `events` collects every parsed event in order.
+ * `timeoutMs` bounds only the wait for the headers; `onTimeout` builds the error to throw then.
  */
-export async function openStream(url, { cookie, origin, lastEventId, hop = 'sse' } = {}) {
+export async function openStream(
+  url,
+  { cookie, origin, lastEventId, hop = 'sse', timeoutMs = STEP_TIMEOUT_MS, onTimeout } = {},
+) {
+  const path = new URL(url).pathname;
   const controller = new AbortController();
   const headers = { accept: 'text/event-stream' };
   if (cookie) headers.cookie = cookie;
   if (origin) headers.origin = origin;
   if (lastEventId !== undefined) headers['last-event-id'] = String(lastEventId);
 
-  const connectTimer = setTimeout(() => controller.abort(), STEP_TIMEOUT_MS);
+  let timedOut = false;
+  const connectTimer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   let res;
   try {
     res = await fetch(url, { headers, signal: controller.signal });
   } catch (error) {
-    throw new SmokeError(hop, `GET ${new URL(url).pathname} failed: ${describe(error)}`);
+    if (timedOut) {
+      throw onTimeout?.() ?? new SmokeError(hop, `GET ${path} timed out after ${timeoutMs} ms`);
+    }
+    throw new SmokeError(hop, `GET ${path} failed: ${describe(error)}`);
   } finally {
     clearTimeout(connectTimer);
   }
   const type = res.headers.get('content-type') ?? '';
   if (res.status !== 200 || !type.startsWith('text/event-stream')) {
     controller.abort();
-    throw new SmokeError(
-      hop,
-      `GET ${new URL(url).pathname} returned ${res.status} (${type || 'no content-type'})`,
-    );
+    throw new SmokeError(hop, `GET ${path} returned ${res.status} (${type || 'no content-type'})`);
   }
 
   const stream = {
@@ -133,12 +143,13 @@ export async function openStream(url, { cookie, origin, lastEventId, hop = 'sse'
 
 /**
  * Waits for the first event at index >= `from` matching `predicate`. On timeout, rejects with
- * SmokeError(hop) naming what it waited for; a malformed or closed stream is an `sse` failure.
+ * `onTimeout()` or SmokeError(hop) naming what it waited for; a malformed or closed stream is
+ * an `sse` failure.
  */
 export function waitForEvent(
   stream,
   predicate,
-  { hop, what, from = 0, timeoutMs = STEP_TIMEOUT_MS },
+  { hop, what, from = 0, timeoutMs = STEP_TIMEOUT_MS, onTimeout },
 ) {
   return new Promise((resolve, reject) => {
     let timer;
@@ -157,7 +168,7 @@ export function waitForEvent(
       return undefined;
     }
     timer = setTimeout(
-      () => done(reject, new SmokeError(hop, `no ${what} within ${timeoutMs} ms`)),
+      () => done(reject, onTimeout?.() ?? new SmokeError(hop, `no ${what} within ${timeoutMs} ms`)),
       timeoutMs,
     );
     stream.listeners.add(check);
@@ -168,12 +179,37 @@ export function waitForEvent(
 const describe = (error) =>
   error?.cause?.code ?? error?.cause?.message ?? error?.message ?? String(error);
 
-async function request(hop, url, init) {
+/**
+ * The deadline of one step: the earlier of its own budget and the global budget. Every request
+ * and wait of the step uses `remaining()`, so the step as a whole never exceeds its budget.
+ */
+function createDeadline(hop, stepMs, globalEnd, globalMs) {
+  const stepEnd = Date.now() + stepMs;
+  const end = Math.min(stepEnd, globalEnd);
+  const byGlobal = globalEnd < stepEnd;
+  return {
+    hop,
+    remaining: () => Math.max(1, end - Date.now()),
+    /**
+     * The error for running out of time while `doing`: a step timeout is attributed to the
+     * operation's hop (`opHop`), the global budget to the hop of the step in progress.
+     */
+    expired: (doing, opHop = hop) =>
+      byGlobal
+        ? new SmokeError(hop, `global smoke budget exceeded (${globalMs / 1000}s) while ${doing}`)
+        : new SmokeError(opHop, `timed out ${doing} (${stepMs} ms step budget)`),
+  };
+}
+
+/** fetch bounded by the step deadline; failures and timeouts are attributed to `hop`. */
+async function request(deadline, hop, url, init = {}) {
+  const what = `${init.method ?? 'GET'} ${new URL(url).pathname}`;
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(STEP_TIMEOUT_MS) });
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(deadline.remaining()) });
   } catch (error) {
-    const method = init?.method ?? 'GET';
-    throw new SmokeError(hop, `${method} ${new URL(url).pathname} failed: ${describe(error)}`);
+    if (error?.name === 'TimeoutError')
+      throw deadline.expired(`waiting for a response to ${what}`, hop);
+    throw new SmokeError(hop, `${what} failed: ${describe(error)}`);
   }
 }
 
@@ -189,18 +225,38 @@ export const AUTO_QUOTE = {
   cep: '01310-100',
 };
 
-/** Runs the seven steps against `baseUrl`; throws SmokeError on the first failure. */
-export async function runSmoke(baseUrl, log = console.log) {
+/**
+ * Runs the seven steps against `baseUrl`; throws SmokeError on the first failure. Each step has
+ * one deadline (`stepTimeoutMs`) shared by its requests and its wait, and the whole run has one
+ * global deadline (`globalTimeoutMs`) folded into every step's deadline.
+ */
+export async function runSmoke(
+  baseUrl,
+  { log = console.log, stepTimeoutMs = STEP_TIMEOUT_MS, globalTimeoutMs = GLOBAL_TIMEOUT_MS } = {},
+) {
   const base = baseUrl.replace(/\/+$/, '');
   const origin = new URL(base).origin;
+  const globalEnd = Date.now() + globalTimeoutMs;
   const streams = [];
   let sessionId;
   let cookie;
   let stream;
 
-  const postEvent = async (type, payload) => {
+  /** Runs one step under its deadline; unexpected errors are attributed to the step's hop. */
+  const step = async (hop, fn) => {
+    const deadline = createDeadline(hop, stepTimeoutMs, globalEnd, globalTimeoutMs);
+    try {
+      await fn(deadline);
+    } catch (error) {
+      if (error instanceof SmokeError) throw error;
+      if (error?.name === 'TimeoutError') throw deadline.expired('reading a response');
+      throw new SmokeError(hop, describe(error));
+    }
+  };
+
+  const postEvent = async (deadline, type, payload) => {
     const id = randomUUID();
-    const res = await request('session', `${base}/v1/events`, {
+    const res = await request(deadline, 'session', `${base}/v1/events`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin, cookie },
       body: JSON.stringify({
@@ -213,35 +269,61 @@ export async function runSmoke(baseUrl, log = console.log) {
         payload,
       }),
     });
+    await res.arrayBuffer();
     if (res.status !== 202 && res.status !== 200) {
       throw new SmokeError('session', `POST /v1/events (${type}) returned ${res.status}`);
     }
   };
 
+  /** Waits for an event within what is left of the step. */
+  const expect = (deadline, s, predicate, what, from) =>
+    waitForEvent(s, predicate, {
+      hop: deadline.hop,
+      what,
+      from,
+      timeoutMs: deadline.remaining(),
+      onTimeout: () => deadline.expired(`waiting for ${what}`),
+    });
+
+  const connect = (deadline, lastEventId) =>
+    openStream(`${base}/v1/stream`, {
+      cookie,
+      origin,
+      lastEventId,
+      timeoutMs: deadline.remaining(),
+      onTimeout: () => deadline.expired('waiting for a response to GET /v1/stream', 'sse'),
+    });
+
   try {
     // 1. Static web app with its security headers.
-    {
-      const res = await request('web', `${base}/`);
+    await step('web', async (deadline) => {
+      const res = await request(deadline, 'web', `${base}/`);
       const type = res.headers.get('content-type') ?? '';
+      await res.text();
       if (res.status !== 200) throw new SmokeError('web', `GET / returned ${res.status}`);
       if (!type.includes('text/html')) throw new SmokeError('web', `GET / content-type ${type}`);
       if (!res.headers.get('content-security-policy')) {
         throw new SmokeError('web', 'GET / has no Content-Security-Policy header');
       }
-      await res.text();
       log('ok web');
-    }
+    });
 
     // 2. Session through the /v1 proxy.
-    {
-      const res = await request('session', `${base}/v1/session`, {
+    await step('session', async (deadline) => {
+      const res = await request(deadline, 'session', `${base}/v1/session`, {
         method: 'POST',
         headers: { origin },
       });
+      const text = await res.text();
       if (res.status !== 201 && res.status !== 200) {
         throw new SmokeError('session', `POST /v1/session returned ${res.status}`);
       }
-      const body = await res.json().catch(() => ({}));
+      let body = {};
+      try {
+        body = JSON.parse(text);
+      } catch {
+        // reported below as a missing sessionId
+      }
       if (typeof body.sessionId !== 'string') {
         throw new SmokeError('session', 'POST /v1/session answered without sessionId');
       }
@@ -253,49 +335,57 @@ export async function runSmoke(baseUrl, log = console.log) {
       sessionId = body.sessionId;
       cookie = sid;
       log('ok session');
-    }
+    });
 
     // 3. Event stream with the session cookie.
-    stream = await openStream(`${base}/v1/stream`, { cookie, origin });
-    streams.push(stream);
-    log('ok stream');
+    await step('sse', async (deadline) => {
+      stream = await connect(deadline);
+      streams.push(stream);
+      log('ok stream');
+    });
 
     // 4. A greeting reaches the chatbot and the menu comes back.
-    {
+    await step('chatbot', async (deadline) => {
       const from = stream.events.length;
-      await postEvent('user.text', { text: 'oi' });
-      await waitForEvent(stream, (e) => e.event === 'message.quick_replies', {
-        hop: 'chatbot',
-        what: 'message.quick_replies answering "oi"',
+      await postEvent(deadline, 'user.text', { text: 'oi' });
+      await expect(
+        deadline,
+        stream,
+        (e) => e.event === 'message.quick_replies',
+        'message.quick_replies answering "oi"',
         from,
-      });
+      );
       log('ok chatbot');
-    }
+    });
 
     // 5. The demo Flow.
-    {
+    await step('chatbot', async (deadline) => {
       const from = stream.events.length;
-      await postEvent('user.text', { text: 'demo flow' });
-      await waitForEvent(
+      await postEvent(deadline, 'user.text', { text: 'demo flow' });
+      await expect(
+        deadline,
         stream,
         (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'demo',
-        { hop: 'chatbot', what: 'message.flow with flowId "demo"', from },
+        'message.flow with flowId "demo"',
+        from,
       );
       log('ok demo-flow');
-    }
+    });
 
     // 6. A quote submission goes through the chatbot to the quote service.
-    {
+    await step('services', async (deadline) => {
       const from = stream.events.length;
-      await postEvent('user.flow_submit', { flowId: 'cotacao', data: AUTO_QUOTE });
+      await postEvent(deadline, 'user.flow_submit', { flowId: 'cotacao', data: AUTO_QUOTE });
       // The chatbot answers either with the quote or, when the service fails, the form again.
-      const answer = await waitForEvent(
+      const answer = await expect(
+        deadline,
         stream,
         (e) =>
           (e.event === 'message.template' &&
             String(e.data?.payload?.header ?? '').startsWith('Cotação')) ||
           (e.event === 'message.flow' && e.data?.payload?.flowId === 'cotacao'),
-        { hop: 'services', what: 'quote result (message.template "Cotação ...")', from },
+        'quote result (message.template "Cotação ...")',
+        from,
       );
       if (answer.event !== 'message.template') {
         throw new SmokeError(
@@ -304,32 +394,30 @@ export async function runSmoke(baseUrl, log = console.log) {
         );
       }
       log('ok quote');
-    }
+    });
 
     // 7. Reconnect with Last-Event-ID of the first event: every later event is replayed.
-    {
+    await step('sse', async (deadline) => {
       const first = stream.events.find((e) => e.id !== undefined);
       const later = stream.events.filter((e) => e.id !== undefined && e !== first).map((e) => e.id);
       if (!first || later.length === 0) throw new SmokeError('sse', 'no event ids to replay');
       stream.close();
-      const replay = await openStream(`${base}/v1/stream`, {
-        cookie,
-        origin,
-        lastEventId: first.id,
-      });
+      const replay = await connect(deadline, first.id);
       streams.push(replay);
       const last = later[later.length - 1];
-      await waitForEvent(replay, (e) => e.id === last, {
-        hop: 'sse',
-        what: `replay up to event ${last} after Last-Event-ID ${first.id}`,
-      });
+      await expect(
+        deadline,
+        replay,
+        (e) => e.id === last,
+        `replay up to event ${last} after Last-Event-ID ${first.id}`,
+      );
       const replayed = replay.events.filter((e) => e.id !== undefined).map((e) => e.id);
       const head = replayed.slice(0, later.length);
       if (head.join(',') !== later.join(',')) {
         throw new SmokeError('sse', `replay ${head.join(',')} differs from ${later.join(',')}`);
       }
       log('ok replay');
-    }
+    });
   } finally {
     for (const s of streams) s.close();
   }

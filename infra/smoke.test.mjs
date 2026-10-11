@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { createServer } from 'node:http';
 import { after, before, describe, it } from 'node:test';
-import { createSseParser, openStream, SmokeError, waitForEvent } from './smoke.mjs';
+import { createSseParser, openStream, runSmoke, SmokeError, waitForEvent } from './smoke.mjs';
 
 describe('createSseParser', () => {
   it('parses id, event and JSON data across arbitrary chunk boundaries', () => {
@@ -181,5 +182,136 @@ describe('openStream + waitForEvent', () => {
       openStream(`${base}/stream`, {}),
       (e) => e instanceof SmokeError && e.hop === 'sse' && /text\/html/.test(e.message),
     );
+  });
+});
+
+/** Minimal fake of web + gateway + chatbot, with configurable delays (ms) per hop. */
+async function startFakeGateway(delays = {}) {
+  const d = { page: 0, session: 0, stream: 0, events: 0, reply: 0, ...delays };
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const events = [];
+  let live;
+  const push = (type, payload) => {
+    const e = { seq: events.length + 1, type, payload };
+    events.push(e);
+    live?.write(`id: ${e.seq}\nevent: ${type}\ndata: ${JSON.stringify(e)}\n\n`);
+  };
+  const srv = createServer(async (req, res) => {
+    const path = new URL(req.url, 'http://x').pathname;
+    if (path === '/') {
+      await sleep(d.page);
+      res.writeHead(200, {
+        'content-type': 'text/html',
+        'content-security-policy': "default-src 'self'",
+      });
+      return res.end('<html></html>');
+    }
+    if (path === '/v1/session') {
+      await sleep(d.session);
+      res.writeHead(201, { 'content-type': 'application/json', 'set-cookie': 'sid=abc; Path=/' });
+      return res.end('{"sessionId":"s1"}');
+    }
+    if (path === '/v1/stream') {
+      await sleep(d.stream);
+      sse(res);
+      res.write('retry: 1000\n\n'); // like the gateway: flushes the headers at once
+      const last = Number(req.headers['last-event-id'] ?? 0);
+      for (const e of events.filter((x) => x.seq > last)) {
+        res.write(`id: ${e.seq}\nevent: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`);
+      }
+      live = res;
+      return undefined;
+    }
+    if (path === '/v1/events') {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      await sleep(d.events);
+      res.writeHead(202, { 'content-type': 'application/json' });
+      res.end('{"status":"accepted"}');
+      await sleep(d.reply);
+      if (body.type === 'user.flow_submit') push('message.template', { header: 'Cotação CT-3001' });
+      else if (body.payload.text === 'demo flow') push('message.flow', { flowId: 'demo' });
+      else push('message.quick_replies', { options: [] });
+      return undefined;
+    }
+    res.writeHead(404);
+    return res.end();
+  });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  return {
+    url: `http://127.0.0.1:${srv.address().port}`,
+    close: () => {
+      srv.closeAllConnections();
+      return new Promise((resolve) => srv.close(resolve));
+    },
+  };
+}
+
+describe('runSmoke deadlines (scaled-down budgets)', () => {
+  const budgets = { stepTimeoutMs: 400, globalTimeoutMs: 1500 };
+  const quiet = () => undefined;
+
+  /** Runs the smoke and returns { error, ms }. */
+  async function timed(delays, opts = budgets) {
+    const fake = await startFakeGateway(delays);
+    const started = Date.now();
+    try {
+      await runSmoke(fake.url, { log: quiet, ...opts });
+      return { error: undefined, ms: Date.now() - started };
+    } catch (error) {
+      return { error, ms: Date.now() - started };
+    } finally {
+      await fake.close();
+    }
+  }
+
+  it('passes all seven steps against a fast stack', { timeout: 3000 }, async () => {
+    const lines = [];
+    const fake = await startFakeGateway();
+    try {
+      await runSmoke(fake.url, { log: (l) => lines.push(l), ...budgets });
+    } finally {
+      await fake.close();
+    }
+    assert.deepEqual(lines, [
+      'ok web',
+      'ok session',
+      'ok stream',
+      'ok chatbot',
+      'ok demo-flow',
+      'ok quote',
+      'ok replay',
+    ]);
+  });
+
+  it('shares one step deadline between the POST and the wait', { timeout: 3000 }, async () => {
+    // POST 250 ms + reply 250 ms later: each fits 400 ms alone, together they do not.
+    const { error, ms } = await timed({ events: 250, reply: 250 });
+    assert.ok(error instanceof SmokeError, String(error));
+    assert.equal(error.hop, 'chatbot');
+    assert.match(error.message, /400 ms step budget/);
+    assert.ok(ms >= 380 && ms < 550, `failed after ${ms} ms, expected ~400`);
+  });
+
+  it('names the session hop when the POST alone exceeds the step', { timeout: 3000 }, async () => {
+    const { error, ms } = await timed({ events: 800 });
+    assert.ok(error instanceof SmokeError, String(error));
+    assert.equal(error.hop, 'session');
+    assert.match(error.message, /timed out waiting for a response to POST \/v1\/events/);
+    assert.ok(ms >= 380 && ms < 550, `failed after ${ms} ms, expected ~400`);
+  });
+
+  it('fails with the global budget across slow but passing steps', { timeout: 3000 }, async () => {
+    // Every hop takes 150 ms (< 400 ms step), but seven steps exceed a 700 ms total.
+    const delay = 150;
+    const { error, ms } = await timed(
+      { page: delay, session: delay, stream: delay, events: delay },
+      { stepTimeoutMs: 400, globalTimeoutMs: 700 },
+    );
+    assert.ok(error instanceof SmokeError, String(error));
+    assert.match(error.message, /^global smoke budget exceeded \(0\.7s\) while /);
+    assert.ok(['chatbot', 'services', 'sse', 'session'].includes(error.hop), error.hop);
+    assert.ok(ms >= 680 && ms < 850, `failed after ${ms} ms, expected ~700`);
   });
 });
