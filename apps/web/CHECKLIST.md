@@ -10,7 +10,7 @@
 
 ## Funcionalidades (Plano 4: chat)
 - [x] Tokens de design do WhatsApp (claro/escuro) e bolha com ticks
-- [ ] Texto com formatação do WhatsApp e links seguros
+- [x] Texto com formatação do WhatsApp e links seguros
 - [ ] Parser SSE e SseClient (reconexão, Last-Event-ID, heartbeat)
 - [ ] ChatClient (sessão, fila de saída com reenvio idempotente, user.ack)
 - [ ] Estado do chat (reducer), persistência em sessionStorage e aba única (Web Locks)
