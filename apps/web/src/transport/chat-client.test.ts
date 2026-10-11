@@ -66,19 +66,41 @@ describe('ChatClient: session and stream', () => {
     client.stop();
   });
 
-  it('advances the cursor even when the consumer throws', async () => {
+  it('advances the cursor and keeps the stream alive when the consumer throws, re-raising the error', async () => {
+    const reportError = vi.fn();
+    vi.stubGlobal('reportError', reportError);
+    let calls = 0;
     const { api, client } = setup({
       onServerEvent: () => {
+        calls++;
         throw new Error('boom');
       },
     });
     await client.start();
     await flush();
     api.pushEvent(botText(4));
+    api.pushEvent(botText(5));
     await flush();
+    expect(calls).toBe(2);
+    expect(reportError).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(300);
     await flush();
-    expect(postedEvent(api)).toMatchObject({ type: 'user.ack', payload: { lastSeq: 4 } });
+    expect(postedEvent(api)).toMatchObject({ type: 'user.ack', payload: { lastSeq: 5 } });
+    client.stop();
+    vi.unstubAllGlobals();
+  });
+
+  it('is generation-safe: start, stop, start leaves exactly one live stream and session', async () => {
+    const { api, client, sessions } = setup();
+    const first = client.start();
+    client.stop();
+    const second = client.start();
+    await flush();
+    await Promise.all([first, second]);
+    await flush();
+    expect(api.requests.filter((r) => r.path === '/v1/stream')).toHaveLength(1);
+    expect(sessions.map(([, kind]) => kind)).toEqual(['new']);
+    expect(client.sessionId).toBe(sessions[0]?.[0]);
     client.stop();
   });
 
@@ -308,6 +330,90 @@ describe('ChatClient: sending', () => {
       'user.voice',
       'user.flow_submit',
     ]);
+    client.stop();
+  });
+});
+
+describe('ChatClient: session races', () => {
+  it('a late 401 from the replaced session does not reset twice', async () => {
+    const api = createFakeApi();
+    const held: Array<(r: Response) => void> = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/v1/events') && held.length < 2 && init?.body) {
+        const body = JSON.parse(String(init.body)) as ClientEvent;
+        if (body.sessionId === 'session-1') {
+          void api.fetchImpl(input, init);
+          return new Promise<Response>((resolve) => held.push(resolve));
+        }
+      }
+      return api.fetchImpl(input, init);
+    }) as typeof fetch;
+    const { client, outgoing, resets } = setup({ fetchImpl });
+    await client.start();
+    await flush();
+    const a = client.send({ type: 'user.text', payload: { text: 'a' } });
+    const b = client.send({ type: 'user.text', payload: { text: 'b' } });
+    await flush();
+    expect(held).toHaveLength(2);
+    held[0]?.(new Response('{}', { status: 401 }));
+    await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    await flush();
+    held[1]?.(new Response('{}', { status: 401 }));
+    await flush();
+    await vi.advanceTimersByTimeAsync(2000);
+    await flush();
+    expect(resets()).toBe(1);
+    expect(api.requests.filter((r) => r.path === '/v1/session')).toHaveLength(2);
+    const delivered = api
+      .eventPosts()
+      .map((r) => r.body as ClientEvent)
+      .filter((e) => e.sessionId === 'session-2')
+      .map((e) => e.id);
+    expect(delivered.sort()).toEqual([a, b].sort());
+    expect(
+      outgoing
+        .filter(([, st]) => st === 'sent')
+        .map(([id]) => id)
+        .sort(),
+    ).toEqual([a, b].sort());
+    client.stop();
+  });
+
+  it('does not post with an empty sessionId while the first session is still pending', async () => {
+    const { api, client } = setup();
+    api.setSessionStatus(503);
+    const started = client.start();
+    const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    await flush();
+    expect(api.eventPosts()).toHaveLength(0);
+    api.setSessionStatus(201);
+    await vi.advanceTimersByTimeAsync(5000);
+    await started;
+    await flush();
+    const posts = api.eventPosts().map((r) => r.body as ClientEvent);
+    expect(posts.map((p) => p.sessionId)).toEqual(['session-1']);
+    expect(posts[0]?.id).toBe(id);
+    expect(api.sessionId).toBe('session-1');
+    client.stop();
+  });
+
+  it('gives up with failed after bounded session resets when /v1/events keeps answering 401', async () => {
+    const { api, client, outgoing } = setup();
+    api.setEventsStatus(401);
+    await client.start();
+    await flush();
+    const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
+    for (const wait of [0, 500, 1000, 2000, 4000, 8000]) {
+      await vi.advanceTimersByTimeAsync(wait);
+      await flush();
+    }
+    expect(outgoing.at(-1)).toEqual([id, 'failed']);
+    expect(
+      api.requests.filter((r) => r.method === 'POST' && r.path === '/v1/session'),
+    ).toHaveLength(3);
     client.stop();
   });
 });

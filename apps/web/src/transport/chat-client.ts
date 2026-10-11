@@ -51,9 +51,9 @@ export class ChatClient {
   private sse: { start(): void; stop(): void } | undefined;
   private ackTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly outbox = new Map<string, OutboxEntry>();
-  private resetting: Promise<void> | undefined;
   private generation = 0;
   private resetAttempts = 0;
+  private establishing: Promise<void> | undefined;
 
   constructor(private readonly o: ChatClientOptions) {}
 
@@ -75,17 +75,18 @@ export class ChatClient {
 
   async start(initial?: { sessionId: string; lastSeq: number }): Promise<void> {
     this.stopped = false;
+    this.resetAttempts = 0;
     const generation = ++this.generation;
     if (initial) {
       this.sessionIdValue = initial.sessionId;
       this.lastSeq = initial.lastSeq;
       this.ackedSeq = initial.lastSeq;
       this.o.onSession(initial.sessionId, 'resumed');
+      this.startStream(generation);
     } else {
-      await this.createSession('new');
-      if (this.stopped || this.generation !== generation) return;
+      this.sessionIdValue = undefined;
+      await this.establish(generation, false);
     }
-    this.startStream();
   }
 
   stop(): void {
@@ -95,6 +96,7 @@ export class ChatClient {
     this.ackTimer = undefined;
     this.sse?.stop();
     this.sse = undefined;
+    this.establishing = undefined;
   }
 
   send(draft: Draft): string {
@@ -123,58 +125,74 @@ export class ChatClient {
 
   // ---- session ---------------------------------------------------------------------------
 
-  private async createSession(kind: 'new'): Promise<void> {
+  private alive(generation: number): boolean {
+    return !this.stopped && this.generation === generation;
+  }
+
+  /** Returns the new session id, or undefined when this generation was stopped meanwhile. */
+  private async createSession(generation: number): Promise<string | undefined> {
     this.o.onConnection('connecting');
-    for (let attempt = 0; !this.stopped; attempt++) {
+    for (let attempt = 0; this.alive(generation); attempt++) {
       try {
         const res = await this.fetchImpl(`${this.base}/v1/session`, {
           method: 'POST',
           credentials: 'include',
         });
+        if (!this.alive(generation)) return undefined;
         if (res.status === 201) {
           const body = (await res.json()) as { sessionId?: unknown };
-          if (typeof body.sessionId === 'string') {
-            this.sessionIdValue = body.sessionId;
-            this.lastSeq = 0;
-            this.ackedSeq = 0;
-            this.o.onSession(body.sessionId, kind);
-            return;
-          }
+          if (!this.alive(generation)) return undefined;
+          if (typeof body.sessionId === 'string') return body.sessionId;
         }
       } catch {
         // network failure: retry below
       }
+      if (!this.alive(generation)) return undefined;
       this.o.onConnection('offline');
       await sleep(Math.min(30000, (this.o.retryBaseMs ?? 500) * 2 ** attempt));
     }
+    return undefined;
   }
 
-  private resetSession(): Promise<void> {
-    if (this.resetting) return this.resetting;
-    this.sse?.stop();
-    this.resetting = (async () => {
+  /** The single readiness promise: covers the initial session and every reset. */
+  private establish(generation: number, isReset: boolean): Promise<void> {
+    if (this.establishing) return this.establishing;
+    if (isReset) this.sse?.stop();
+    const self: { promise?: Promise<void> } = {};
+    const promise = (async () => {
       try {
         // A fresh session that is rejected again must not turn into a hot loop.
-        if (this.resetAttempts > 0) {
+        if (isReset && this.resetAttempts > 0) {
           await sleep(Math.min(30000, (this.o.retryBaseMs ?? 500) * 2 ** (this.resetAttempts - 1)));
         }
-        this.resetAttempts++;
-        if (this.stopped) return;
-        await this.createSession('new');
-        if (this.stopped) return;
-        this.o.onSessionReset();
-        this.startStream();
+        if (isReset) this.resetAttempts++;
+        if (!this.alive(generation)) return;
+        const sessionId = await this.createSession(generation);
+        if (sessionId === undefined || !this.alive(generation)) return;
+        this.sessionIdValue = sessionId;
+        this.lastSeq = 0;
+        this.ackedSeq = 0;
+        this.o.onSession(sessionId, 'new');
+        if (isReset) this.o.onSessionReset();
+        this.startStream(generation);
       } finally {
-        this.resetting = undefined;
+        if (this.establishing === self.promise) this.establishing = undefined;
       }
     })();
-    return this.resetting;
+    self.promise = promise;
+    this.establishing = promise;
+    return promise;
+  }
+
+  private resetSession(generation: number): Promise<void> {
+    return this.establish(generation, true);
   }
 
   // ---- stream ----------------------------------------------------------------------------
 
-  private startStream(): void {
+  private startStream(generation: number): void {
     this.sse?.stop();
+    const streamSession = this.sessionIdValue;
     const options: SseClientOptions = {
       url: `${this.base}/v1/stream`,
       ...(this.o.fetchImpl ? { fetchImpl: this.o.fetchImpl } : {}),
@@ -185,7 +203,12 @@ export class ChatClient {
         this.o.onConnection('online');
       },
       onDisconnect: () => this.o.onConnection('reconnecting'),
-      onUnauthorized: () => void this.resetSession(),
+      onUnauthorized: () => {
+        // Ignore a late 401 from a stream of a session that was already replaced.
+        if (!this.alive(generation) || this.establishing || this.sessionIdValue !== streamSession)
+          return;
+        void this.resetSession(generation);
+      },
     };
     this.sse = (this.o.createSse ?? ((opts) => new SseClient(opts)))(options);
     this.sse.start();
@@ -205,8 +228,13 @@ export class ChatClient {
     if (event.seq > this.lastSeq) this.lastSeq = event.seq;
     try {
       this.o.onServerEvent(event);
-    } catch {
-      // consumer errors must not break the stream
+    } catch (error) {
+      // Keep the stream alive, but re-surface the error (no content is logged here).
+      if (typeof globalThis.reportError === 'function') globalThis.reportError(error);
+      else
+        queueMicrotask(() => {
+          throw error;
+        });
     }
     this.scheduleAck();
   }
@@ -272,14 +300,20 @@ export class ChatClient {
 
   private async deliver(entry: OutboxEntry): Promise<void> {
     const maxAttempts = this.o.maxSendAttempts ?? 4;
+    const maxSessionResets = 2;
     const retryBase = this.o.retryBaseMs ?? 500;
+    const generation = this.generation;
     let attempts = 0;
+    let sessionResets = 0;
 
-    while (!this.stopped) {
-      if (this.resetting) await this.resetting;
-      if (this.stopped) return;
+    while (this.alive(generation)) {
+      // Never post before a session exists or while one is being (re)created.
+      while (this.establishing) await this.establishing;
+      if (!this.alive(generation) || !this.sessionIdValue) return;
+      const event = this.envelope(entry.id, entry.ts, entry.draft);
       attempts++;
-      const result = await this.post(this.envelope(entry.id, entry.ts, entry.draft));
+      const result = await this.post(event);
+      if (!this.alive(generation)) return;
 
       switch (result.kind) {
         case 'ok':
@@ -289,8 +323,15 @@ export class ChatClient {
           this.o.onOutgoing(entry.id, 'failed');
           return;
         case 'unauthorized':
-          await this.resetSession();
           attempts--; // a session change is not the message's fault
+          if (this.sessionIdValue === event.sessionId && !this.establishing) {
+            // Only the first 401 of a session resets it; late ones just retry in the new session.
+            if (sessionResets >= maxSessionResets) break;
+            if (sessionResets > 0) await sleep(retryBase * 2 ** (sessionResets - 1));
+            if (!this.alive(generation)) return;
+            sessionResets++;
+            await this.resetSession(generation);
+          }
           continue;
         case 'rate_limited':
           if (attempts >= maxAttempts) break;
