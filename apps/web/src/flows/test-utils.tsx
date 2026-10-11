@@ -2,13 +2,14 @@ import { render } from '@testing-library/react';
 import { type ReactElement, useReducer } from 'react';
 import { FlowProvider } from './FlowContext';
 import { initRuntime, reduce, type RuntimeState, scopeOf } from './runtime';
-import type { FlowJson } from './schema';
+import type { FlowAction, FlowJson } from './schema';
 
 interface Options {
   /** Initial screen data (as if passed by the first navigation). */
   data?: Record<string, unknown>;
   state?: RuntimeState;
   footerSlot?: HTMLElement | null;
+  runAction?: (action: FlowAction) => void;
 }
 
 function Harness({
@@ -31,7 +32,7 @@ function Harness({
         state,
         scope: scopeOf(state),
         dispatch,
-        runAction: () => {},
+        runAction: options.runAction ?? (() => {}),
         footerSlot: options.footerSlot ?? null,
       }}
     >

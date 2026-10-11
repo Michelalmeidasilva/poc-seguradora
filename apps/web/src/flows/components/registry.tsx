@@ -1,5 +1,8 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { FlowComponent } from '../schema';
+import { CalendarPicker } from './CalendarPicker';
+import { DatePicker } from './DatePicker';
+import { CheckboxGroup, Dropdown, OptIn, RadioButtonsGroup, TextArea, TextInput } from './inputs';
 import { RichText, TextBody, TextCaption, TextHeading, TextSubheading } from './text';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,6 +14,14 @@ const COMPONENTS: Record<string, Renderer> = {
   TextBody,
   TextCaption,
   RichText,
+  TextInput,
+  TextArea,
+  CheckboxGroup,
+  RadioButtonsGroup,
+  Dropdown,
+  OptIn,
+  DatePicker,
+  CalendarPicker,
 };
 
 const warned = new Set<string>();

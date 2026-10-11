@@ -26,7 +26,7 @@ const count = (v: unknown): number | undefined => {
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
 /** `YYYY-MM-DD` that names a real calendar day. */
-const isoDate = (v: unknown): string | undefined => {
+export const isoDate = (v: unknown): string | undefined => {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
   const [y, m, d] = v.split('-').map(Number) as [number, number, number];
   const t = new Date(Date.UTC(y, m - 1, d));
@@ -36,7 +36,7 @@ const isoDate = (v: unknown): string | undefined => {
 };
 
 /** Date bound: `YYYY-MM-DD`, or a millisecond timestamp string (older Flow JSON). */
-const dateBound = (v: unknown): string | undefined => {
+export const dateBound = (v: unknown): string | undefined => {
   if (typeof v === 'string' && /^\d{1,15}$/.test(v)) {
     const t = new Date(Number(v));
     return Number.isNaN(t.getTime()) ? undefined : t.toISOString().slice(0, 10);
@@ -52,6 +52,10 @@ const isBlank = (v: unknown): boolean =>
   (typeof v === 'string' && v.trim() === '') ||
   (Array.isArray(v) && v.length === 0);
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const weekday = (iso: string): number => new Date(`${iso}T00:00:00Z`).getUTCDay();
+const DAY_MS = 86_400_000;
+
 function checkDate(c: FlowComponent, value: string): string | undefined {
   const date = isoDate(value);
   if (!date) return 'Data inválida';
@@ -59,6 +63,12 @@ function checkDate(c: FlowComponent, value: string): string | undefined {
   const max = dateBound(prop(c, 'max-date'));
   if (min && date < min) return `A data deve ser a partir de ${br(min)}`;
   if (max && date > max) return `A data deve ser até ${br(max)}`;
+  const unavailable = prop(c, 'unavailable-dates');
+  if (Array.isArray(unavailable) && unavailable.some((u) => dateBound(u) === date))
+    return 'Data indisponível';
+  const days = prop(c, 'include-days');
+  if (Array.isArray(days) && days.length > 0 && !days.includes(WEEKDAYS[weekday(date)]))
+    return 'Dia da semana indisponível';
   return undefined;
 }
 
@@ -115,9 +125,17 @@ function checkRange(c: FlowComponent, value: unknown, required: boolean): string
   if (isBlank(start) || isBlank(end)) return required ? REQUIRED : 'Informe as duas datas';
   const a = checkDate(c, start as string) ?? checkDate(c, end as string);
   if (a) return a;
-  return (end as string) < (start as string)
-    ? 'A data final deve ser igual ou posterior à inicial'
-    : undefined;
+  if ((end as string) < (start as string))
+    return 'A data final deve ser igual ou posterior à inicial';
+  const span =
+    (Date.parse(`${end as string}T00:00:00Z`) - Date.parse(`${start as string}T00:00:00Z`)) /
+      DAY_MS +
+    1;
+  const min = count(prop(c, 'min-days'));
+  const max = count(prop(c, 'max-days'));
+  if (min !== undefined && span < min) return `Selecione pelo menos ${plural(min, 'dia', 'dias')}`;
+  if (max !== undefined && span > max) return `Selecione no máximo ${plural(max, 'dia', 'dias')}`;
+  return undefined;
 }
 
 function check(c: FlowComponent, value: unknown): string | undefined {

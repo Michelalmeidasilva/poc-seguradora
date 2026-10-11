@@ -226,3 +226,34 @@ describe('validateField: non-fields', () => {
     expect(validateField({ type: 'Mystery' }, '')).toBeUndefined();
   });
 });
+
+describe('validateField: date extras', () => {
+  const date = (extra: Record<string, unknown>) =>
+    ({ type: 'DatePicker', name: 'd', ...extra }) as FlowComponent;
+
+  it('rejects unavailable dates', () => {
+    const c = date({ 'unavailable-dates': ['2026-12-25'] });
+    expect(validateField(c, '2026-12-25')).toBe('Data indisponível');
+    expect(validateField(c, '2026-12-26')).toBeUndefined();
+  });
+
+  it('rejects days outside include-days', () => {
+    const c = { type: 'CalendarPicker', name: 'd', 'include-days': ['Mon'] } as FlowComponent;
+    expect(validateField(c, '2026-10-12')).toBeUndefined(); // Monday
+    expect(validateField(c, '2026-10-13')).toBe('Dia da semana indisponível');
+  });
+
+  it('enforces min-days and max-days (inclusive) on ranges', () => {
+    const c = {
+      type: 'CalendarPicker',
+      name: 'r',
+      mode: 'range',
+      'min-days': 2,
+      'max-days': 3,
+    } as FlowComponent;
+    const r = (a: string, b: string) => ({ 'start-date': a, 'end-date': b });
+    expect(validateField(c, r('2026-10-12', '2026-10-12'))).toBe('Selecione pelo menos 2 dias');
+    expect(validateField(c, r('2026-10-12', '2026-10-13'))).toBeUndefined();
+    expect(validateField(c, r('2026-10-12', '2026-10-15'))).toBe('Selecione no máximo 3 dias');
+  });
+});

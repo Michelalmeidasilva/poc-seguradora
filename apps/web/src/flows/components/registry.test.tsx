@@ -19,4 +19,20 @@ describe('renderComponent', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(renderComponent({ type: 'constructor' }, 'a')).toBeNull();
   });
+
+  it('registers the input components', () => {
+    const types = [
+      'TextInput',
+      'TextArea',
+      'CheckboxGroup',
+      'RadioButtonsGroup',
+      'Dropdown',
+      'OptIn',
+      'DatePicker',
+      'CalendarPicker',
+    ];
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    for (const type of types) expect(renderComponent({ type }, type)).not.toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+  });
 });
