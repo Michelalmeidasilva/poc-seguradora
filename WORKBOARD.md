@@ -13,4 +13,4 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | svc-sinistro | apps/svc-sinistro | not_started | - | - | - | - | Outro agente; mesmo contrato |
 | chatbot | apps/chatbot | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
 | gateway | apps/gateway | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
-| web-chat | apps/web | in_progress | claude | feat/web-chat | 2026-10-11 | 2026-10-11 | dona de apps/web durante o Plano 4 |
+| web-chat | apps/web | done | claude | feat/web-chat | 2026-10-11 | 2026-10-11 | Plano 4 concluído; web-flows será recriada no Plano 5 |
