@@ -63,6 +63,8 @@ export function chatReducer(state: ChatState, action: Action): ChatState {
     }
 
     case 'user_status':
+      // e.g. a flow data exchange: sent through the outbox, but never shown
+      if (!state.items.some((i) => i.kind === 'user' && i.id === action.id)) return state;
       return {
         ...state,
         items: mapUser(state.items, action.id, (u) => {

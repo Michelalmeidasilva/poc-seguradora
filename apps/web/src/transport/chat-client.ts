@@ -6,7 +6,11 @@ export type Draft =
   | { type: 'user.text'; payload: { text: string } }
   | { type: 'user.voice'; payload: { mediaId: string; durationMs: number } }
   | { type: 'user.quick_reply'; payload: { optionId: string; replyToId: string } }
-  | { type: 'user.flow_submit'; payload: { flowId: string; data: Record<string, unknown> } };
+  | { type: 'user.flow_submit'; payload: { flowId: string; data: Record<string, unknown> } }
+  | {
+      type: 'user.flow_data_exchange';
+      payload: { flowId: string; screen: string; action: string; data: Record<string, unknown> };
+    };
 
 export type OutgoingStatus = 'sending' | 'sent' | 'failed';
 export type ConnectionState = 'connecting' | 'online' | 'reconnecting' | 'offline';

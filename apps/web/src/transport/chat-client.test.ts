@@ -353,12 +353,16 @@ describe('ChatClient: sending', () => {
     });
     client.send({ type: 'user.voice', payload: { mediaId: 'local-1', durationMs: 3000 } });
     client.send({ type: 'user.flow_submit', payload: { flowId: 'cotacao', data: { nome: 'x' } } });
+    const exchange = { flowId: 'cotacao', screen: 'DADOS', action: 'data_exchange', data: {} };
+    client.send({ type: 'user.flow_data_exchange', payload: exchange });
     await flush();
     expect(api.eventPosts().map((r) => (r.body as ClientEvent).type)).toEqual([
       'user.quick_reply',
       'user.voice',
       'user.flow_submit',
+      'user.flow_data_exchange',
     ]);
+    expect(postedEvent(api, 3).payload).toEqual(exchange);
     client.stop();
   });
 });

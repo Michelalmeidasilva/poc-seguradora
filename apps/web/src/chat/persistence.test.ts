@@ -62,6 +62,50 @@ describe('persistence', () => {
     expect(item).toMatchObject({ status: 'failed', content: { type: 'voice' } });
   });
 
+  it('stores a flow submission as its summary only, never its data', () => {
+    const submit: UserItem = {
+      kind: 'user',
+      id: uuid(2),
+      ts: '2026-10-10T12:00:00.000Z',
+      status: 'sent',
+      content: { type: 'flow_submit', flowId: 'cotacao', summary: 'CPF: ••••' },
+    };
+    const withData = {
+      ...submit,
+      content: { ...submit.content, data: { cpf: '12345678901' } },
+    } as unknown as UserItem;
+    saveChat(sessionStorage, chatReducer(sample(), { type: 'user_queued', item: withData }));
+    expect(sessionStorage.getItem(KEY)).not.toContain('12345678901');
+    const item = loadChat(sessionStorage)?.items.find((i) => i.kind === 'user');
+    expect(item).toEqual(submit);
+  });
+
+  it('drops data from flow submissions saved by an older version', () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        v: 1,
+        sessionId: 's9',
+        lastSeq: 0,
+        items: [
+          {
+            kind: 'user',
+            id: uuid(3),
+            ts: '2026-10-10T12:00:00.000Z',
+            status: 'sent',
+            content: { type: 'flow_submit', flowId: 'f', summary: 'ok', data: { cpf: '1' } },
+          },
+        ],
+      }),
+    );
+    const item = loadChat(sessionStorage)?.items[0];
+    expect(item?.kind === 'user' && item.content).toEqual({
+      type: 'flow_submit',
+      flowId: 'f',
+      summary: 'ok',
+    });
+  });
+
   it('does not throw when the storage is full or unavailable', () => {
     const broken = {
       getItem: () => null,

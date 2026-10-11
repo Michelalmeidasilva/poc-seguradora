@@ -120,6 +120,11 @@ describe('chatReducer: user messages and status never go backwards', () => {
     expect(s.items[0]).toMatchObject({ status: 'sent' });
   });
 
+  it('ignores status updates for ids without an item (e.g. a flow data exchange)', () => {
+    const s = run([{ type: 'user_queued', item: userItem(1) }]);
+    expect(chatReducer(s, { type: 'user_status', id: 'no-item', status: 'failed' })).toBe(s);
+  });
+
   it('keeps one bubble when the same id is queued twice (resend)', () => {
     const user = userItem(1);
     const s = run([

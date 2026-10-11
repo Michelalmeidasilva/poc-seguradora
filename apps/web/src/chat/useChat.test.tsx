@@ -83,6 +83,27 @@ describe('useChat', () => {
     expect(users.every((u) => u.status === 'sending')).toBe(true);
   });
 
+  it('sends a flow data exchange through the outbox with no list item', async () => {
+    const f = fakeClient();
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+    await act(async () => {});
+    act(() => result.current.sendText('oi'));
+    const before = result.current.state;
+    act(() => result.current.sendFlowDataExchange('cotacao', 'DADOS', 'data_exchange', { a: 1 }));
+    expect(f.sent.at(-1)).toEqual({
+      type: 'user.flow_data_exchange',
+      payload: { flowId: 'cotacao', screen: 'DADOS', action: 'data_exchange', data: { a: 1 } },
+    });
+    expect(result.current.state).toBe(before);
+    // status callbacks for the invisible draft leave the chat untouched
+    const id = uuid(2002);
+    act(() => f.options().onOutgoing(id, 'sending'));
+    act(() => f.options().onOutgoing(id, 'failed'));
+    act(() => f.emit(delivered(1, id)));
+    expect(result.current.state.items).toEqual(before.items);
+    expect(result.current.canResend(id)).toBe(false);
+  });
+
   it('does not send blank text', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
@@ -233,17 +254,20 @@ describe('useChat', () => {
       expect(f.drafts[0]).toEqual({ type: 'user.text', payload: { text: 'oi' } });
     });
 
-    it('rebuilds quick replies and flow submissions that were persisted by useChat', async () => {
+    it('rebuilds quick replies persisted by useChat, but not flow submissions (data is not stored)', async () => {
       const f = fakeClient();
       const a = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
       await act(async () => {});
       act(() => a.result.current.sendChoice('menu.quote', 'Fazer cotação', uuid(7)));
       act(() => a.result.current.sendFlowSubmit('cotacao', { nome: 'x' }, 'Enviada'));
       const ids = a.result.current.state.items.map((i) => i.id);
+      // in this page lifetime the flow submission can still be resent
+      expect(a.result.current.canResend(ids[1] ?? '')).toBe(true);
       await act(async () => {
         await new Promise((r) => setTimeout(r, 400));
       });
       a.unmount();
+      expect(sessionStorage.getItem(KEY)).not.toContain('nome');
 
       const g = fakeClient();
       const b = renderHook(() => useChat({ createClient: g.create, guard: activeGuard() }));
@@ -253,8 +277,25 @@ describe('useChat', () => {
       expect(g.resent).toEqual(ids);
       expect(g.drafts).toEqual([
         { type: 'user.quick_reply', payload: { optionId: 'menu.quote', replyToId: uuid(7) } },
-        { type: 'user.flow_submit', payload: { flowId: 'cotacao', data: { nome: 'x' } } },
+        undefined,
       ]);
+      expect(b.result.current.canResend(ids[1] ?? '')).toBe(false);
+    });
+
+    it('cannot resend a flow submission restored from an old save that still has data', async () => {
+      stored({ type: 'flow_submit', flowId: 'cotacao', summary: 'Enviada', data: { cpf: '1' } });
+      const f = fakeClient();
+      const { result } = renderHook(() =>
+        useChat({ createClient: f.create, guard: activeGuard() }),
+      );
+      await act(async () => {});
+      expect(result.current.canResend(uuid(50))).toBe(false);
+      const item = result.current.state.items[0];
+      expect(item?.kind === 'user' && item.content).toEqual({
+        type: 'flow_submit',
+        flowId: 'cotacao',
+        summary: 'Enviada',
+      });
     });
 
     it('has no draft for a voice message after a reload (known limit)', async () => {

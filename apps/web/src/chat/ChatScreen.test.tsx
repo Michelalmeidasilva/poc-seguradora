@@ -20,6 +20,7 @@ const api = (over: Partial<ChatApi> = {}): ChatApi => ({
   sendChoice: vi.fn(),
   sendVoice: vi.fn(),
   sendFlowSubmit: vi.fn(),
+  sendFlowDataExchange: vi.fn(),
   resend: vi.fn(),
   canResend: vi.fn(() => true),
   takeOver: vi.fn(),

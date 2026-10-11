@@ -9,7 +9,8 @@ export type UserContent =
   | { type: 'text'; text: string }
   | { type: 'voice'; durationMs: number; objectUrl?: string }
   | { type: 'quick_reply'; optionId: string; title: string; replyToId?: string }
-  | { type: 'flow_submit'; flowId: string; summary: string; data?: Record<string, unknown> };
+  /** Summary only: the submitted data is never kept in the chat (nor in sessionStorage). */
+  | { type: 'flow_submit'; flowId: string; summary: string };
 
 export type UserItem = {
   kind: 'user';

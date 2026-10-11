@@ -31,7 +31,7 @@
 - [x] Componentes de Flows: entrada (texto, seleção, opt-in, datas)
 - [x] Componentes de Flows: exibição, navegação e estruturais (Image, EmbeddedLink, ImageCarousel, NavigationList, ChipsSelector, If/Switch, Footer)
 - [x] Componentes de Flows: upload de mídia (PhotoPicker, DocumentPicker)
-- [ ] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
+- [x] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
 
 ### Decisões próprias (Plano 5)
 
@@ -41,6 +41,11 @@
   - ImageCarousel: `images[{src,alt-text}]` (máx. 10; imagens com src inválido são descartadas).
 - Mídia: sem endpoint de upload no gateway, `media_id` é `local-<uuid>` (gerado só em `newMediaId`, em `MediaPickers.tsx`; trocar quando existir `/v1/media`). `form[name]` guarda só `{media_id, file_name}[]`, nunca conteúdo.
 - Footer usa `aria-disabled` (não `disabled`) para que o toque com erros revele os erros e foque o primeiro campo inválido (`data-flow-field` nos campos).
+- `data_exchange` é otimista: o chatbot ainda ignora `user.flow_data_exchange` e não responde, então a web envia o evento (sem bolha nem item na lista), marca `exchange_done` na hora e segue localmente: tela terminal finaliza como `complete` (um único submit), com `next` navega, sem `next` fica na tela. Rever quando o chatbot implementar o endpoint.
+- `flow_submit.data` não é guardado no chat nem no sessionStorage: só `flowId` e o resumo. Reenvio de um envio de Flow só funciona na mesma página (rascunho em memória); depois de recarregar, não é reenviável (como a voz). Saves antigos com `data` são limpos ao carregar.
+- Resumo do envio (`buildSummary`): uma linha `rótulo: valor` por campo enviado (rótulo do componente com o mesmo `name`, senão a chave), Sim/Não, ids de opção trocados pelo título, arquivos pelo nome, até 500 caracteres. Campos `sensitive` (da tela, lista ou `true`, ou do componente) aparecem como `••••`, e qualquer valor que contenha o valor de um campo sensível também é mascarado (pode mascarar a mais). Payload vazio vira "Formulário enviado".
+- `update_data` com `on-unselect-action` (ChipsSelector): o select guarda, por `name` do componente, os valores de `data` que o patch substituiu (o primeiro registro vale até o unselect); o unselect os restaura e depois aplica o próprio patch. O registro some ao navegar ou voltar. Semântica a validar (só documentada no changelog).
+- `open_url` com URL que não é http(s) é descartada com um `console.warn` sem a URL.
 
 ## Qualidade
 

@@ -1,4 +1,4 @@
-import { MAX_ITEMS, initialState, type ChatItem, type ChatState } from './model';
+import { MAX_ITEMS, initialState, type ChatItem, type ChatState, type UserItem } from './model';
 
 const KEY = 'seguradora-chat:v1';
 const KEEP = 200;
@@ -10,7 +10,18 @@ interface Stored {
   items: ChatItem[];
 }
 
-/** Makes an item safe to store: no blob URLs (they die with the page) and no in-flight statuses. */
+/** Flow submissions keep only flowId and summary (older saves may still carry `data`). */
+function withoutFlowData(item: UserItem): UserItem {
+  // `?.`: stored items are not validated, content may be missing
+  if (item.content?.type !== 'flow_submit') return item;
+  const { flowId, summary } = item.content;
+  return { ...item, content: { type: 'flow_submit', flowId, summary } };
+}
+
+/**
+ * Makes an item safe to store: no blob URLs (they die with the page), no flow submission data
+ * and no in-flight statuses.
+ */
 function toStorable(item: ChatItem): ChatItem {
   if (item.kind !== 'user') return item;
   const status = item.status === 'sending' ? 'failed' : item.status;
@@ -19,7 +30,7 @@ function toStorable(item: ChatItem): ChatItem {
     delete voice.objectUrl;
     return { ...item, status, content: voice };
   }
-  return { ...item, status };
+  return { ...withoutFlowData(item), status };
 }
 
 export function saveChat(storage: Storage, state: ChatState): void {
@@ -61,7 +72,9 @@ export function loadChat(storage: Storage): ChatState | undefined {
   ) {
     return undefined;
   }
-  const items = s.items.slice(-MAX_ITEMS) as ChatItem[];
+  const items = (s.items.slice(-MAX_ITEMS) as ChatItem[]).map((i) =>
+    i.kind === 'user' ? withoutFlowData(i) : i,
+  );
   const seen: Record<string, true> = {};
   for (const item of items) if (item.kind === 'bot') seen[item.id] = true;
   return { ...initialState(), sessionId: s.sessionId, lastSeq: s.lastSeq, items, seen };

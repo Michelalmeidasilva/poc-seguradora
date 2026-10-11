@@ -27,6 +27,13 @@ export interface ChatApi {
   sendChoice(optionId: string, title: string, replyToId: string): void;
   sendVoice(blob: Blob, durationMs: number): void;
   sendFlowSubmit(flowId: string, data: Record<string, unknown>, summary: string): void;
+  /** Sent through the outbox with no list item (nothing shown, nothing persisted). */
+  sendFlowDataExchange(
+    flowId: string,
+    screen: string,
+    action: string,
+    data: Record<string, unknown>,
+  ): void;
   resend(id: string): void;
   /** Whether a failed message can be redelivered (voice restored after a reload cannot). */
   canResend(id: string): boolean;
@@ -38,9 +45,9 @@ const DRAFT_MEMORY_LIMIT = 100;
 
 /**
  * Rebuilds the outgoing draft from a bubble, so a message restored after a reload can be resent
- * with its original id. Known limit: voice (the blob does not survive a reload) and legacy items
- * without replyToId/data have no draft; a voice sent in this page lifetime is covered by the
- * in-memory draft map of useChat instead.
+ * with its original id. Known limit: voice (the blob does not survive a reload), flow submissions
+ * (their data is never stored) and legacy items without replyToId have no draft; messages sent in
+ * this page lifetime are covered by the in-memory draft map of useChat instead.
  */
 function draftFor(content: UserContent): Draft | undefined {
   switch (content.type) {
@@ -54,9 +61,6 @@ function draftFor(content: UserContent): Draft | undefined {
           }
         : undefined;
     case 'flow_submit':
-      return content.data
-        ? { type: 'user.flow_submit', payload: { flowId: content.flowId, data: content.data } }
-        : undefined;
     case 'voice':
       return undefined;
   }
@@ -164,8 +168,15 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     sendFlowSubmit: (flowId, data, summary) =>
       queue(
         { type: 'user.flow_submit', payload: { flowId, data } },
-        { type: 'flow_submit', flowId, summary, data },
+        { type: 'flow_submit', flowId, summary },
       ),
+    sendFlowDataExchange: (flowId, screen, action, data) => {
+      // Not in draftsRef: with no item there is nothing to resend from.
+      clientRef.current?.send({
+        type: 'user.flow_data_exchange',
+        payload: { flowId, screen, action, data },
+      });
+    },
     resend: (id) => {
       const item = stateRef.current.items.find((i) => i.kind === 'user' && i.id === id);
       const draft =
