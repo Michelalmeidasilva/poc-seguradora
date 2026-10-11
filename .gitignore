@@ -6,3 +6,5 @@ coverage/
 .DS_Store
 .claude/settings.local.json
 !.env.example
+playwright-report/
+test-results/

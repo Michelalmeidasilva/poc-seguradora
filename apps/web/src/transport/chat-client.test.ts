@@ -39,6 +39,22 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('ChatClient: session and stream', () => {
+  it('calls the global fetch without the client as its receiver', async () => {
+    const calls: unknown[] = [];
+    vi.stubGlobal('fetch', function (this: unknown) {
+      calls.push(this);
+      if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(new Response('{}', { status: 500 }));
+    });
+    const { client } = setup({ fetchImpl: undefined });
+    void client.start();
+    await flush();
+    client.stop();
+    vi.unstubAllGlobals();
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every((c) => c === undefined || c === globalThis)).toBe(true);
+  });
+
   it('creates a session, then opens the stream with credentials', async () => {
     const { api, client, sessions, connection } = setup();
     await client.start();

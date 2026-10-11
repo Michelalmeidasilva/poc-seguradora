@@ -66,7 +66,8 @@ export class ChatClient {
   }
 
   private get fetchImpl(): typeof fetch {
-    return this.o.fetchImpl ?? fetch;
+    // Bound: the browser's fetch throws "Illegal invocation" when called with this = ChatClient.
+    return this.o.fetchImpl ?? ((input, init) => fetch(input, init));
   }
 
   private newId(): string {

@@ -18,7 +18,7 @@
 - [x] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
 - [x] Tela de chat, composer e gravação de voz
 - [x] Tema claro e escuro, acessibilidade
-- [ ] E2E (Playwright) com gateway simulado
+- [x] E2E (Playwright) com gateway simulado
 
 ## Funcionalidades (Plano 5: Flows)
 - [ ] Motor de expressões de Flows
@@ -33,3 +33,4 @@
 - A web chama /v1 no mesmo origin (proxy do Vite em dev; nginx em produção).
 - Voz do usuário fica no navegador (sem upload; ver decisão 5 do Plano 4).
 - A web não envia user.typing.
+- E2E do web roda localmente com `pnpm --filter @seguradora/web e2e`; incluir no CI quando houver cache do Playwright.
