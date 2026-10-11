@@ -226,6 +226,8 @@ const server = createServer(async (req, res) => {
     session.posted = session.posted ?? [];
     session.posted.push(event);
     if (event.type === 'user.ack') return json(res, 202, { status: 'accepted' });
+    // Intentional deviation from the real gateway: a retried id that failed ('erro') is reprocessed
+    // as accepted, whereas the real gateway would answer 200 duplicate.
     if (session.seen.has(event.id) && !session.failedOnce.has(event.id)) {
       return json(res, 200, { status: 'duplicate' });
     }
@@ -240,16 +242,6 @@ const server = createServer(async (req, res) => {
   // Test hooks (not part of the gateway contract)
   if (req.method === 'GET' && url.pathname === '/__posted') {
     return json(res, 200, { posted: (session?.posted ?? []).filter((e) => e.type !== 'user.ack') });
-  }
-  if (req.method === 'POST' && url.pathname === '/__drop-stream') {
-    session?.stream?.end();
-    if (session) session.stream = null;
-    return json(res, 200, { ok: true });
-  }
-  if (req.method === 'POST' && url.pathname === '/__push') {
-    const body = await readBody(req);
-    if (session && body) publish(session, body);
-    return json(res, 200, { ok: true });
   }
 
   return json(res, 404, { error: { code: 'invalid_schema', message: 'Rota não encontrada.' } });

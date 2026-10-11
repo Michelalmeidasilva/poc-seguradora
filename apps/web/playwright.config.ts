@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test';
 const MOCK_PORT = 8099;
 const WEB_PORT = 4173;
 
+// Note: reuseExistingServer (when CI is unset) can serve a stale dist/mock locally; set CI=1 or stop
+// the servers on ports 8099/4173 to force a fresh build.
 export default defineConfig({
   testDir: './e2e',
   timeout: 20_000,

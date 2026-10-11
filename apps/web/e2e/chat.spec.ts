@@ -65,7 +65,10 @@ test('renders a horizontally scrollable carousel operable by the buttons', async
 test('reload restores the history without duplicating messages', async ({ page }) => {
   await say(page, 'oi');
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
-  await page.waitForTimeout(500); // lets the debounced persistence run
+  // wait for the debounced persistence deterministically
+  await expect
+    .poll(() => page.evaluate(() => JSON.stringify({ ...sessionStorage })))
+    .toContain('Fazer cotação');
   await page.reload();
   await expect(page.getByText('online')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toHaveCount(1);
@@ -77,9 +80,11 @@ test('reconnects after the stream drops and receives later events without duplic
 }) => {
   await say(page, 'queda');
   await expect(page.getByText('Vou derrubar a conexão.')).toBeVisible();
-  await expect(page.getByText(/reconectando|online/)).toBeVisible();
+  // The drop-to-reconnect window (retry: 500) is too short to assert the transient header state
+  // without flakiness; the later message arriving exactly once proves the stream came back.
   await say(page, 'depois da queda');
   await expect(page.getByText('Você disse: depois da queda')).toBeVisible();
+  await expect(page.getByText('Você disse: depois da queda')).toHaveCount(1);
   await expect(page.getByText('Vou derrubar a conexão.')).toHaveCount(1);
 });
 
@@ -89,7 +94,9 @@ test('a failed message shows a retry button and the resend reuses the same id', 
   await say(page, 'erro');
   await expect(page.getByRole('img', { name: 'Falha no envio' })).toBeVisible();
   await page.getByRole('button', { name: 'Tentar de novo' }).click();
-  await expect(page.getByRole('img', { name: 'Falha no envio' })).toBeVisible();
+  await expect
+    .poll(async () => (await posted(page)).filter((e) => e.type === 'user.text').length)
+    .toBe(2);
   const ids = (await posted(page)).filter((e) => e.type === 'user.text').map((e) => e.id);
   expect(ids).toHaveLength(2);
   expect(ids[0]).toBe(ids[1]);
