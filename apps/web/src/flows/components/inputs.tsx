@@ -112,6 +112,7 @@ export function CheckboxGroup({ c }: { c: C }) {
   return (
     <fieldset
       className="flow-field flow-field--group"
+      data-flow-field={f.name}
       aria-describedby={f.describedBy}
       onBlur={groupBlur(f.touch)}
     >
@@ -142,6 +143,7 @@ export function RadioButtonsGroup({ c }: { c: C }) {
   return (
     <fieldset
       className="flow-field flow-field--group"
+      data-flow-field={f.name}
       aria-describedby={f.describedBy}
       onBlur={groupBlur(f.touch)}
     >
@@ -170,7 +172,7 @@ export function OptIn({ c }: { c: C }) {
   const action = prop(c, 'on-click-action');
   const isUrl = typeof action === 'object' && action !== null && (action as C).name === 'open_url';
   return (
-    <div className="flow-field">
+    <div className="flow-field" data-flow-field={f.name}>
       <div className="flow-choice">
         <input
           id={f.controlId}

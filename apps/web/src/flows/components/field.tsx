@@ -95,7 +95,7 @@ export function FieldMessages({ f }: { f: Field }) {
 /** Label plus control plus messages for single-control fields. */
 export function FieldShell({ f, children }: { f: Field; children: React.ReactNode }) {
   return (
-    <div className="flow-field">
+    <div className="flow-field" data-flow-field={f.name}>
       <label htmlFor={f.controlId} className="flow-field__label">
         {f.label}
       </label>

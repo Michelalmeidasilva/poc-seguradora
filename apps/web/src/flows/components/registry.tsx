@@ -1,7 +1,12 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { FlowComponent } from '../schema';
 import { CalendarPicker } from './CalendarPicker';
+import { ChipsSelector } from './ChipsSelector';
 import { DatePicker } from './DatePicker';
+import { EmbeddedLink, Image, ImageCarousel } from './display';
+import { Footer } from './Footer';
+import { NavigationList } from './NavigationList';
+import { If, Switch } from './structural';
 import { CheckboxGroup, Dropdown, OptIn, RadioButtonsGroup, TextArea, TextInput } from './inputs';
 import { RichText, TextBody, TextCaption, TextHeading, TextSubheading } from './text';
 
@@ -22,6 +27,14 @@ const COMPONENTS: Record<string, Renderer> = {
   OptIn,
   DatePicker,
   CalendarPicker,
+  ChipsSelector,
+  Image,
+  EmbeddedLink,
+  ImageCarousel,
+  NavigationList,
+  Footer,
+  If,
+  Switch,
 };
 
 const warned = new Set<string>();

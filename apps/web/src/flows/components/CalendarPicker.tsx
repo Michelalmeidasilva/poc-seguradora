@@ -31,6 +31,7 @@ function RangeCalendar({ c }: { c: C }) {
   return (
     <fieldset
       className="flow-field flow-field--group"
+      data-flow-field={f.name}
       aria-describedby={f.describedBy}
       onBlur={groupBlur(f.touch)}
     >
