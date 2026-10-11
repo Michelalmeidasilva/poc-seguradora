@@ -31,6 +31,10 @@ export interface HandleTurnDeps {
 const MAX_CALLS_PER_TURN = 5;
 const INTERNAL_ERROR_MESSAGE = 'Não foi possível processar sua mensagem. Tente novamente.';
 
+/** The claim occurrence date is the user's (Brazil) date, not the UTC one. */
+const SAO_PAULO_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
+const saoPauloDate = (now: number): string => SAO_PAULO_DATE.format(new Date(now));
+
 /** An outgoing event that does not match the protocol (carries the issue paths, never values). */
 export class InvalidOutgoingEventError extends Error {
   override readonly name = 'InvalidOutgoingEventError';
@@ -152,7 +156,7 @@ export class HandleTurn implements TurnRunner {
       idempotencyKey: idempotencyKeyFor(request.sessionId, request.event.id),
     };
     const state = this.d.dialogs.get(request.sessionId);
-    let step = next(state, input, { today: new Date(this.d.now()).toISOString().slice(0, 10) });
+    let step = next(state, input, { today: saoPauloDate(this.d.now()) });
     for (let calls = 0; step.kind === 'call'; calls++) {
       if (calls >= MAX_CALLS_PER_TURN) throw new Error('too many service calls in one turn');
       step = await this.runCall(step.call, ctx);

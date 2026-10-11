@@ -107,6 +107,14 @@ function interrupt(state: DialogState, input: Input): Step | undefined {
         const typed = intent.entities.apolice?.toUpperCase();
         if (typed && state.numeros.includes(typed)) return undefined;
       }
+      // A valid cpf / protocol answers the step even when other words look like another journey.
+      if (intent.name !== 'cancel') {
+        const awaitingCpf =
+          state.name === 'policies.awaiting_cpf' || state.name === 'claim.awaiting_cpf';
+        if (awaitingCpf && cpfFrom(input)) return undefined;
+        if (state.name === 'claim_status.awaiting_protocol' && protocolFrom(input))
+          return undefined;
+      }
       // A typed claim type ("colisão", "roubo") is the answer, not a new journey.
       if (state.name === 'claim.awaiting_type') {
         const resets =

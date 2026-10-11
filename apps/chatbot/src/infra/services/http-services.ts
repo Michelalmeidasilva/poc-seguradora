@@ -27,6 +27,7 @@ export class HttpServices implements ServicesPort {
   async listPolicies(cpf: string, ctx: CallContext) {
     if (!/^\d{11}$/.test(cpf)) return invalid();
     const r = await this.c.apolice.call({
+      op: 'listPolicies',
       method: 'GET',
       path: '/v1/apolices',
       query: { cpf },
@@ -48,6 +49,7 @@ export class HttpServices implements ServicesPort {
   getPolicy(numero: string, ctx: CallContext) {
     if (!isPolicyNumber(numero)) return invalid();
     return this.c.apolice.call({
+      op: 'getPolicy',
       method: 'GET',
       path: `/v1/apolices/${encodeURIComponent(numero)}`,
       schema: PolicySchema,
@@ -58,6 +60,7 @@ export class HttpServices implements ServicesPort {
   secondCopy(numero: string, ctx: CallContext) {
     if (!isPolicyNumber(numero)) return invalid();
     return this.c.apolice.call({
+      op: 'secondCopy',
       method: 'GET',
       path: `/v1/apolices/${encodeURIComponent(numero)}/segunda-via`,
       schema: SecondCopySchema,
@@ -67,6 +70,7 @@ export class HttpServices implements ServicesPort {
 
   createQuote(request: QuoteRequest, ctx: CallContext) {
     return this.c.cotacao.call({
+      op: 'createQuote',
       method: 'POST',
       path: '/v1/cotacoes',
       body: {
@@ -83,6 +87,7 @@ export class HttpServices implements ServicesPort {
   openClaim(request: ClaimRequest, ctx: CallContext) {
     if (!isPolicyNumber(request.apoliceNumero)) return invalid();
     return this.c.sinistro.call({
+      op: 'openClaim',
       method: 'POST',
       path: '/v1/sinistros',
       body: {
@@ -99,6 +104,7 @@ export class HttpServices implements ServicesPort {
   getClaim(protocolo: string, ctx: CallContext) {
     if (!isClaimProtocol(protocolo)) return invalid();
     return this.c.sinistro.call({
+      op: 'getClaim',
       method: 'GET',
       path: `/v1/sinistros/${encodeURIComponent(protocolo)}`,
       schema: ClaimSchema,

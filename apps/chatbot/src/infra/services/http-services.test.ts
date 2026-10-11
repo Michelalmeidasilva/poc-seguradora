@@ -245,6 +245,7 @@ describe('HttpServices failure mapping', () => {
     // The fake answers /v1/sinistros/SN-2001 with a valid claim; the schema below expects
     // another shape, so the response breaks the contract.
     const wrong = await client.call({
+      op: 'getClaim',
       method: 'GET',
       path: '/v1/sinistros/SN-2001',
       schema: z.object({ apolices: z.array(z.string()) }),
@@ -252,6 +253,37 @@ describe('HttpServices failure mapping', () => {
     });
     expect(wrong).toEqual({ ok: false, error: 'unavailable' });
     expect(lines.join('')).not.toContain('Colisão leve');
+  });
+});
+
+describe('HttpServices failure logs', () => {
+  const recording = () => {
+    const lines: string[] = [];
+    const logger: Logger = { ...silent, warn: (o, m) => void lines.push(JSON.stringify([o, m])) };
+    const client = () =>
+      new HttpJsonClient({
+        baseUrl: fake.url,
+        policy: createServicePolicy({ ...policyOptions, retries: 0 }),
+        logger,
+      });
+    const services = new HttpServices({ cotacao: client(), apolice: client(), sinistro: client() });
+    return { lines, services };
+  };
+
+  it('labels a failed call with a fixed operation name and no identifiers', async () => {
+    const { lines, services } = recording();
+    fake.failNext(500, 3);
+    await services.getPolicy('AP-1001', ctx);
+    await services.secondCopy('AP-1001', ctx);
+    await services.listPolicies('12345678901', ctx);
+    const all = lines.join('\n');
+    expect(lines.map((l) => (JSON.parse(l) as [{ op: string }])[0].op)).toEqual([
+      'getPolicy',
+      'secondCopy',
+      'listPolicies',
+    ]);
+    expect(all).not.toContain('AP-1001');
+    expect(all).not.toContain('12345678901');
   });
 });
 

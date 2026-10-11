@@ -68,6 +68,7 @@ const make = (
     services?: ServicesPort;
     dialogs?: DialogStore;
     capacity?: number;
+    now?: number;
   } = {},
 ) => {
   const dialogs = over.dialogs ?? memoryStore();
@@ -79,7 +80,7 @@ const make = (
     dialogs,
     turns: new TurnLog(over.capacity ?? 50),
     newId: () => uuid(5000 + ++counter),
-    now: () => Date.parse('2026-10-10T12:00:00.000Z'),
+    now: () => over.now ?? Date.parse('2026-10-10T12:00:00.000Z'),
     logger: silent,
   });
   return { handler, dialogs, services };
@@ -443,6 +444,23 @@ describe('HandleTurn', () => {
       llm.cancel();
       await events;
     });
+  });
+
+  it('uses the São Paulo date as today (late evening there is already tomorrow in UTC)', async () => {
+    const dialogs = memoryStore();
+    dialogs.set('s1', { name: 'claim.awaiting_description', apolice: 'AP-1001', tipo: 'COLISAO' });
+    const services = okServices();
+    const { handler } = make({
+      llm: { classify: async () => intent('unknown') },
+      services,
+      dialogs,
+      now: Date.parse('2026-10-11T01:30:00.000Z'),
+    });
+    await collect(handler.run(text('bati no portão')));
+    expect(services.openClaim).toHaveBeenCalledWith(
+      expect.objectContaining({ dataOcorrencia: '2026-10-10' }),
+      expect.anything(),
+    );
   });
 
   it('does not log the text the user typed', async () => {

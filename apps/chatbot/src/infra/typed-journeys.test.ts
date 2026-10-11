@@ -1,8 +1,9 @@
 import { ok } from '@seguradora/protocol';
 import { describe, expect, it } from 'vitest';
-import { IDLE, next, type DialogState } from '../domain/dialog';
+import { IDLE, next, type DialogState, type ServiceCall } from '../domain/dialog';
+import type { ClaimType } from '../domain/models';
 import { drive, type Fakes } from '../test/drive';
-import { aClaimOpened, aPolicy } from '../test/fixtures';
+import { aClaim, aClaimOpened, aPolicy, aPolicySummary, aQuote } from '../test/fixtures';
 import { MockLlmProvider } from './mock-llm-provider';
 
 /**
@@ -92,5 +93,176 @@ describe('typed claim type', () => {
   it('"cancelar" cancels', async () => {
     const { final } = await typed(choosing, 'cancelar');
     expect(final.state).toEqual(IDLE);
+  });
+});
+
+/** Table of realistic typed messages per state that expects text. */
+type Expected =
+  | { state: DialogState }
+  | {
+      call: 'listPolicies' | 'getPolicy' | 'getClaim' | 'openClaim' | 'createQuote';
+      arg: string;
+      /** State after the call answered (allOk), when the journey matters. */
+      then?: DialogState;
+    };
+
+const allOk: Fakes = {
+  listPolicies: ok([aPolicySummary(), aPolicySummary({ numero: 'AP-1005' })]),
+  getPolicy: ok(aPolicy()),
+  getClaim: ok(aClaim()),
+  openClaim: ok(aClaimOpened()),
+  createQuote: ok(aQuote()),
+};
+
+const argOf = (c: ServiceCall): string => {
+  switch (c.op) {
+    case 'listPolicies':
+      return c.cpf;
+    case 'getPolicy':
+    case 'secondCopy':
+      return c.numero;
+    case 'getClaim':
+      return c.protocolo;
+    case 'openClaim':
+      return c.request.descricao;
+    case 'createQuote':
+      return c.request.produto;
+  }
+};
+
+const awaitingFlow: DialogState = { name: 'quote.awaiting_flow' };
+const listed = ['AP-1001', 'AP-1005'];
+const toType = (apolice: string): DialogState => ({ name: 'claim.awaiting_type', apolice });
+const toDescription = (tipo: ClaimType): DialogState => ({
+  name: 'claim.awaiting_description',
+  apolice: 'AP-1001',
+  tipo,
+});
+
+const afterCpf = (name: 'policies.awaiting_cpf' | 'claim.awaiting_cpf'): DialogState =>
+  name === 'claim.awaiting_cpf'
+    ? { name: 'claim.awaiting_policy', numeros: listed }
+    : { name: 'policies.awaiting_choice', numeros: listed };
+
+const TABLE: Array<[DialogState, string, Expected]> = [
+  // CPF steps
+  ...(['policies.awaiting_cpf', 'claim.awaiting_cpf'] as const).flatMap(
+    (name): Array<[DialogState, string, Expected]> =>
+      ['meu cpf é 123.456.789-01', '12345678901', '123.456.789-01', ' 123.456.789-01. '].map(
+        (t) => [{ name }, t, { call: 'listPolicies', arg: '12345678901', then: afterCpf(name) }],
+      ),
+  ),
+  // A cpf typed with words that look like another journey still answers the step
+  ...(
+    [
+      ['claim.awaiting_cpf', 'o cpf do meu seguro é 123.456.789-01'],
+      ['claim.awaiting_cpf', 'cpf da apólice: 12345678901'],
+      ['claim.awaiting_cpf', 'meu cpf é 12345678901, onde fica a agência?'],
+      ['policies.awaiting_cpf', 'o cpf para a cotação é 12345678901'],
+      ['policies.awaiting_cpf', 'meu cpf é 12345678901, quero abrir um sinistro depois'],
+    ] as const
+  ).map(([name, t]): [DialogState, string, Expected] => [
+    { name },
+    t,
+    { call: 'listPolicies', arg: '12345678901', then: afterCpf(name) },
+  ]),
+  [{ name: 'claim.awaiting_cpf' }, 'cancelar', { state: IDLE }],
+  [{ name: 'policies.awaiting_cpf' }, '123', { state: { name: 'policies.awaiting_cpf' } }],
+  [{ name: 'claim.awaiting_cpf' }, 'não sei', { state: { name: 'claim.awaiting_cpf' } }],
+  // Lists
+  [{ name: 'claim.awaiting_policy', numeros: listed }, 'AP-1005', { state: toType('AP-1005') }],
+  [
+    { name: 'claim.awaiting_policy', numeros: listed },
+    'quero a ap-1005',
+    { state: toType('AP-1005') },
+  ],
+  [
+    { name: 'claim.awaiting_policy', numeros: listed },
+    'a apólice AP-1001',
+    { state: toType('AP-1001') },
+  ],
+  [
+    { name: 'policies.awaiting_choice', numeros: listed },
+    'AP-1005',
+    { call: 'getPolicy', arg: 'AP-1005' },
+  ],
+  [
+    { name: 'policies.awaiting_choice', numeros: listed },
+    'ap1001',
+    { call: 'getPolicy', arg: 'AP-1001' },
+  ],
+  [
+    { name: 'policies.awaiting_choice', numeros: listed },
+    'quero ver a apólice AP-1001',
+    { call: 'getPolicy', arg: 'AP-1001' },
+  ],
+  // Claim type
+  [toType('AP-1001'), 'colisão', { state: toDescription('COLISAO') }],
+  [toType('AP-1001'), 'bati o carro', { state: toDescription('COLISAO') }],
+  [toType('AP-1001'), 'Roubo', { state: toDescription('ROUBO') }],
+  [toType('AP-1001'), 'roubaram meu carro', { state: toDescription('ROUBO') }],
+  [toType('AP-1001'), 'foi um furto', { state: toDescription('ROUBO') }],
+  [toType('AP-1001'), 'outros', { state: toDescription('OUTROS') }],
+  [toType('AP-1001'), 'quero ver minhas apólices', { state: toType('AP-1001') }],
+  [toType('AP-1001'), 'cancelar', { state: IDLE }],
+  // Description: everything but the bare word "cancelar" is the description
+  ...[
+    'Ao voltar do trabalho bati o carro no poste',
+    'Tive que sair da pista e bati',
+    'Precisei parar o carro e outro veículo bateu atrás',
+    'Não quero cancelar o seguro, só registrar que bati no portão',
+    'Quero abrir um sinistro: bati na traseira de um ônibus',
+    'Foi um roubo no estacionamento do mercado',
+    'Qual o status do sinistro? Bati de novo',
+    'O carro da apólice AP-1001 foi riscado',
+    'oi',
+  ].map((t): [DialogState, string, Expected] => [
+    toDescription('COLISAO'),
+    t,
+    { call: 'openClaim', arg: t },
+  ]),
+  [toDescription('COLISAO'), 'Cancelar', { state: IDLE }],
+  // Claim protocol
+  ...['SN-2001', 'sn2001', 'o protocolo é SN-2001', 'meu sinistro é o sn-2001'].map(
+    (t): [DialogState, string, Expected] => [
+      { name: 'claim_status.awaiting_protocol' },
+      t,
+      { call: 'getClaim', arg: 'SN-2001' },
+    ],
+  ),
+  [
+    { name: 'claim_status.awaiting_protocol' },
+    'o protocolo da minha apólice é SN-2001',
+    { call: 'getClaim', arg: 'SN-2001' },
+  ],
+  [
+    { name: 'claim_status.awaiting_protocol' },
+    'não lembro',
+    { state: { name: 'claim_status.awaiting_protocol' } },
+  ],
+  // Pending Flow: random text re-sends the Flow
+  [awaitingFlow, 'não consegui abrir', { state: awaitingFlow }],
+  [awaitingFlow, 'e agora?', { state: awaitingFlow }],
+  [awaitingFlow, 'asdfgh', { state: awaitingFlow }],
+  // Idle
+  [IDLE, 'oi', { state: IDLE }],
+  [IDLE, 'quero uma cotação', { state: awaitingFlow }],
+  [IDLE, 'preciso da segunda via', { state: { name: 'policies.awaiting_cpf' } }],
+  [IDLE, 'onde fica a agência', { state: IDLE }],
+  [IDLE, 'quero abrir um sinistro', { state: { name: 'claim.awaiting_cpf' } }],
+  [IDLE, 'status do sinistro SN-2001', { call: 'getClaim', arg: 'SN-2001' }],
+  [IDLE, 'minhas apólices, cpf 123.456.789-01', { call: 'listPolicies', arg: '12345678901' }],
+];
+
+describe('typed journeys (real classifier)', () => {
+  it.each(TABLE)('in %o, %j', async (state, text, expected) => {
+    const { final, calls } = await typed(state, text, allOk);
+    if ('call' in expected) {
+      expect(calls[0] && [calls[0].op, argOf(calls[0])]).toEqual([expected.call, expected.arg]);
+      if (expected.then) expect(final.state).toEqual(expected.then);
+    } else {
+      expect(calls).toHaveLength(0);
+      expect(final.state).toEqual(expected.state);
+    }
   });
 });

@@ -13,6 +13,8 @@ export interface HttpJsonClientOptions {
 }
 
 export interface JsonCall<T> {
+  /** Fixed operation name for logs (never derived from the path, which carries identifiers). */
+  op: string;
   method: 'GET' | 'POST';
   path: string;
   query?: Record<string, string>;
@@ -62,7 +64,7 @@ export class HttpJsonClient {
       // Never log the URL (it can carry a cpf) nor the message: only the kind of failure.
       this.o.logger.warn(
         {
-          op: `${c.method} ${c.path.replace(/\/[^/]*$/, '/…')}`,
+          op: c.op,
           reason: error instanceof Error ? error.name : 'UnknownError',
         },
         'service call failed',
@@ -79,13 +81,14 @@ export class HttpJsonClient {
     try {
       json = JSON.parse(outcome.text);
     } catch {
-      this.o.logger.warn({ status: outcome.status }, 'service returned invalid JSON');
+      this.o.logger.warn({ op: c.op, status: outcome.status }, 'service returned invalid JSON');
       return err('unavailable');
     }
     const parsed = c.schema.safeParse(json);
     if (!parsed.success) {
       this.o.logger.warn(
         {
+          op: c.op,
           status: outcome.status,
           paths: parsed.error.issues.slice(0, 5).map((i) => i.path.join('.')),
         },
