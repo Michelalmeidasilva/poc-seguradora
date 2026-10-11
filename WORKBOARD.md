@@ -11,7 +11,7 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | svc-cotacao | apps/svc-cotacao | not_started | - | - | - | - | Outro agente; contrato em docs/superpowers/specs/2026-10-10-internal-services-contracts.md |
 | svc-apolice | apps/svc-apolice | not_started | - | - | - | - | Outro agente; mesmo contrato |
 | svc-sinistro | apps/svc-sinistro | not_started | - | - | - | - | Outro agente; mesmo contrato |
-| chatbot | apps/chatbot | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
+| chatbot | apps/chatbot | in_progress | claude | feat/flow-pendencias | 2026-10-10 | 2026-10-11 | Dockerfile não verificado (sem Docker); reaberta no Plano 6 (pendências dos Flows; cobre também apps/web/src/flows, linha web-flows) |
 | gateway | apps/gateway | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
-| web-chat | apps/web | done | claude | feat/web-chat | 2026-10-11 | 2026-10-11 | Plano 4 concluído; web-flows será recriada no Plano 5 |
+| web-chat | apps/web | in_progress | claude | feat/flow-pendencias | 2026-10-11 | 2026-10-11 | Plano 4 concluído; web-flows será recriada no Plano 5; reaberta no Plano 6 (pendências dos Flows; cobre também apps/web/src/flows, linha web-flows) |
 | web-flows | apps/web/src/flows | done | claude | feat/web-flows | 2026-10-11 | 2026-10-11 | Plano 5 concluído (demo Flow + E2E). Integração fora de src/flows: app/App.tsx, renderers/flow-host.ts + remoção do FlowPlaceholder, chat/useChat.ts, chat/persistence.ts, chat/model.ts, chat/reducer.ts, transport/chat-client.ts, eslint.config.js, .dependency-cruiser.cjs; e2e/ (mock e jornadas) e CHECKLIST.md do web. Pendências no CHECKLIST do web |
