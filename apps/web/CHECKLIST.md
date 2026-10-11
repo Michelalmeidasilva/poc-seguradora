@@ -24,7 +24,8 @@
 - [x] Flow JSON: esquema e validação
 - [x] Motor de expressões de Flows
 - [x] Runtime e validação
-- [ ] Componentes de Flows (texto, entrada, navegação, estruturais)
+- [x] Componentes de Flows: host e texto
+- [ ] Componentes de Flows (entrada, navegação, estruturais)
 - [ ] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
 
 ## Qualidade

@@ -1,0 +1,34 @@
+import type { ComponentType, ReactNode } from 'react';
+import type { FlowComponent } from '../schema';
+import { RichText, TextBody, TextCaption, TextHeading, TextSubheading } from './text';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Renderer = ComponentType<{ c: any }>;
+
+const COMPONENTS: Record<string, Renderer> = {
+  TextHeading,
+  TextSubheading,
+  TextBody,
+  TextCaption,
+  RichText,
+};
+
+const warned = new Set<string>();
+
+/** Test hook: forget which unknown types were already reported. */
+export function resetUnknownWarnings(): void {
+  warned.clear();
+}
+
+/** Unknown types render nothing; the type is reported once. */
+export function renderComponent(c: FlowComponent, key: string): ReactNode {
+  const Component = Object.hasOwn(COMPONENTS, c.type) ? COMPONENTS[c.type] : undefined;
+  if (!Component) {
+    if (!warned.has(c.type)) {
+      warned.add(c.type);
+      console.warn(`Flow component type not supported: ${c.type}`);
+    }
+    return null;
+  }
+  return <Component key={key} c={c} />;
+}

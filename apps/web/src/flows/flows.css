@@ -1,0 +1,64 @@
+.flow-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--wa-font);
+  color: var(--wa-text);
+}
+
+.flow-heading,
+.flow-subheading,
+.flow-body,
+.flow-caption,
+.flow-rich__p,
+.flow-rich__heading {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.flow-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.flow-subheading {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.flow-body {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.flow-body--bold {
+  font-weight: 700;
+}
+.flow-body--italic {
+  font-style: italic;
+}
+.flow-body--strike {
+  text-decoration: line-through;
+}
+.flow-caption {
+  font-size: 0.8125rem;
+  color: var(--wa-meta);
+  white-space: pre-wrap;
+}
+
+.flow-rich {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+.flow-rich__heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.flow-rich__list {
+  margin: 0;
+  padding-left: 1.4em;
+}
+.flow-layout a,
+.flow-rich a {
+  color: var(--wa-link);
+}
