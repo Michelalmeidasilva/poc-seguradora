@@ -9,3 +9,8 @@ coverage
 .env
 .env.*
 !.env.example
+
+infra/terraform/.terraform
+**/*.tfvars
+**/tfplan
+**/*.tfstate*

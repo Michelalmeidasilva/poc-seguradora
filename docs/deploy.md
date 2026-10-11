@@ -125,7 +125,7 @@ github_repository = "<OWNER>/<REPO>"
 # budget_alert_email = "<SEU_EMAIL>"
 ```
 
-`github_repository` precisa ser igual ao `owner/nome` do GitHub, porque o workflow passa sempre `github_repository = github.repository`; se o primeiro apply for sem ele, o primeiro deploy pelo CI cria o WIF que ele mesmo precisaria para logar. Todas as variáveis estão em [`infra/terraform/README.md`](../infra/terraform/README.md#variáveis).
+`github_repository` precisa ser igual ao `owner/nome` real do GitHub, **incluindo maiúsculas e minúsculas** (a condição do WIF compara texto exato). Para obter o valor exato: `gh repo view --json nameWithOwner -q .nameWithOwner`. Com a caixa diferente, o primeiro login do CI falha e o CI não consegue corrigir isso (só um apply local com o valor certo). Isso vale porque o workflow passa sempre `github_repository = github.repository`; se o primeiro apply for sem ele, o primeiro deploy pelo CI cria o WIF que ele mesmo precisaria para logar. Todas as variáveis estão em [`infra/terraform/README.md`](../infra/terraform/README.md#variáveis).
 
 ```bash
 terraform -chdir=infra/terraform init -backend-config="bucket=<TF_STATE_BUCKET>" -backend-config="prefix=seguradora"
@@ -186,6 +186,8 @@ curl -s "$(terraform -chdir=infra/terraform output -raw web_url)/health"
 ```
 
 O `curl` deve imprimir `ok`. Compare `computed_urls` (o que foi injetado nas variáveis de ambiente) com `service_uris` (o que o Cloud Run informa; pode vir no formato com hash): as URLs computadas precisam responder (o output `url_consistency_note` explica).
+
+> **Atenção: use sempre o `web_url`.** O Cloud Run serve o `web` em duas URLs: a determinística (`web-<número_do_projeto>.<região>.run.app`, a do output `web_url` e a usada em `ALLOWED_ORIGIN`) e a com hash, mostrada pelo console, por `gcloud run services list` e pelo output `service_uris`. O gateway só aceita a Origin igual a `ALLOWED_ORIGIN`; abrir a URL com hash faz `POST /v1/session` responder 403 e o chat parece quebrado, sem nenhum aviso. Abra o `web_url` (ou o domínio próprio); a outra URL responde 403 em `/v1` por desenho.
 
 ### 3.5 Permissões do deployer fora do Terraform
 
@@ -310,6 +312,8 @@ O job `smoke` do workflow roda sozinho. Para rodar do seu computador:
 ```bash
 node infra/smoke.mjs "$(terraform -chdir=infra/terraform output -raw web_url)"
 ```
+
+> **Atenção:** passe ao smoke e abra no navegador o `web_url` (ou o domínio próprio), nunca a URL com hash do console, do `gcloud run services list` ou de `service_uris`: o gateway responde 403 em `/v1` para qualquer Origin diferente de `ALLOWED_ORIGIN`, por desenho.
 
 Saída esperada: `ok web`, `ok session`, `ok stream`, `ok chatbot`, `ok demo-flow`, `ok quote`, `ok replay`. Uma falha imprime `FAIL <hop>: <motivo>` e sai com código 1:
 
@@ -456,6 +460,16 @@ Opções, na ordem de preferência:
 
    A saída precisa ser vazia. Mesmo assim o modo build recusa uma tag que já exista: com `image_tag` vazio a tag é o SHA daquele commit, e se ele já foi publicado o job falha (use a opção 1 com essa tag). Na prática, esta opção só serve quando as imagens antigas já saíram do registro.
 
+### Re-executar um run `v*` que falhou
+
+- Se as quatro imagens (`web`, `gateway`, `chatbot`, `fake-services`) já foram enviadas ao registro com a tag, não reconstrua: dispare o workflow na branch de deploy com `image_tag=<vX.Y.Z>` e `deploy_existing_tag=true`:
+
+  ```bash
+  gh workflow run deploy.yml --ref master -f image_tag=<vX.Y.Z> -f deploy_existing_tag=true
+  ```
+
+- Se só algumas foram enviadas, use uma tag nova (por exemplo `vX.Y.Z-r1`), porque o modo build recusa uma tag que já exista no registro.
+
 Em emergência, `gcloud run services update-traffic gateway --to-revisions=<REVISAO>=100 --region=<REGION> --project=<PROJECT_ID>` move o tráfego na hora, mas o próximo apply volta ao estado do Terraform; use só para ganhar tempo.
 
 ## 11. Segurança
@@ -489,6 +503,7 @@ Em emergência, `gcloud run services update-traffic gateway --to-revisions=<REVI
   ```
 
   Hoje essas duas variáveis **não passam pelo workflow** (ele usa os padrões, com o `fake-services` ligado): um apply local com elas é revertido no próximo deploy pelo CI. Antes de trocar, ligue-as no `.github/workflows/deploy.yml` como as outras `TF_VAR_*` ([14](#14-pendências)).
+- **Duas URLs do `web`.** Use sempre o `web_url` (ou o domínio próprio). A URL com hash do console, do `gcloud run services list` e de `service_uris` responde 403 em `/v1` por desenho, porque o gateway só aceita a Origin de `ALLOWED_ORIGIN`; um domínio próprio exige atualizar `ALLOWED_ORIGIN` para ele.
 - **URLs computadas.** As variáveis de ambiente usam `https://<serviço>-<número_do_projeto>.<região>.run.app`; se o Cloud Run do projeto não servir esse formato, o smoke falha em `session` ou `chatbot` ([3.4](#34-apply-completo)).
 - **Cold start** em cadeia (web → gateway → chatbot → fake-services) no primeiro acesso.
 

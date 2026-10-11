@@ -1,3 +1,6 @@
+// This file is copied alone into the fake-services image (infra/fake-services/Dockerfile) and run
+// with Node's type stripping: keep it free of runtime imports other than `node:*` built-ins and
+// use only erasable TypeScript syntax (no enums, namespaces or parameter properties).
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
