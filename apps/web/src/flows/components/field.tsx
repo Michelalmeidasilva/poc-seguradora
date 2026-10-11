@@ -20,7 +20,8 @@ export function useInitValue(name: string, initValue: unknown): void {
   const seed = initValue === undefined ? undefined : resolveValue(initValue, scope);
   useEffect(() => {
     // Re-running (StrictMode) is harmless: `unset` flips once the set lands.
-    if (name !== '' && unset && seed !== undefined) dispatch({ type: 'set', name, value: seed });
+    if (name !== '' && unset && seed !== undefined)
+      dispatch({ type: 'set', name, value: seed, source: 'init' });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed only when the field is unset
   }, [name, unset]);
 }

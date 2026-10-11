@@ -166,6 +166,53 @@ describe('FlowSheet', () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  describe('with init-value defaults', () => {
+    const seededFlow = {
+      version: '7.0',
+      screens: [
+        {
+          id: 'A',
+          title: 'Contato',
+          terminal: true,
+          layout: {
+            type: 'SingleColumnLayout',
+            children: [
+              { type: 'TextInput', name: 'nome', label: 'Nome', 'init-value': 'Ana' },
+              { type: 'Footer', label: 'Ok', 'on-click-action': { name: 'complete', payload: {} } },
+            ],
+          },
+        },
+      ],
+    };
+
+    it('closes at once when untouched (Close and Escape)', async () => {
+      const a = setup({ flowJson: seededFlow });
+      expect(screen.getByLabelText('Nome')).toHaveValue('Ana');
+      await a.user.click(screen.getByRole('button', { name: 'Fechar' }));
+      expect(a.onClose).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      a.unmount();
+      const b = setup({ flowJson: seededFlow });
+      await b.user.keyboard('{Escape}');
+      expect(b.onClose).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('asks once the user edited a field, even back to the default value', async () => {
+      const { user, onClose } = setup({ flowJson: seededFlow });
+      const input = screen.getByLabelText('Nome');
+      // focus, type, then restore the default: still an edit
+      await user.type(input, 'x');
+      await user.type(input, '{Backspace}');
+      expect(input).toHaveValue('Ana');
+      await user.keyboard('{Escape}');
+      expect(
+        screen.getByRole('alertdialog', { name: 'Descartar o formulário?' }),
+      ).toBeInTheDocument();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
   it('returns the focus to the opener on close', () => {
     const opener = document.createElement('button');
     document.body.append(opener);

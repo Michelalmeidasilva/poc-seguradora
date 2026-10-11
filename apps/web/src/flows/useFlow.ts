@@ -16,7 +16,7 @@ export interface FlowSheetSession {
   screen: FlowScreen;
   canGoBack: boolean;
   back(): void;
-  /** Whether closing now would lose input (any value set or field touched, not completed). */
+  /** Whether closing would lose input: the user set or touched a field (seeding does not count). */
   isDirty(): boolean;
 }
 
@@ -50,7 +50,7 @@ export function useFlowSheet(
     isDirty: () => {
       const s = getState();
       if (s.outcome) return false;
-      return Object.keys(s.form).length > 0 || Object.keys(s.touched).length > 0;
+      return s.edited === true || Object.keys(s.touched).length > 0;
     },
   };
 }

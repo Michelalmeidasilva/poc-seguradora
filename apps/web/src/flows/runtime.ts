@@ -18,6 +18,8 @@ export interface RuntimeState {
   /** `exchange` while a data_exchange is in flight. */
   pending: 'idle' | 'exchange';
   outcome?: { kind: 'complete'; payload: Record<string, unknown> };
+  /** Set by the first user `set`; `init-value` seeding (`source: 'init'`) leaves it unset. */
+  edited?: true;
   /**
    * Per component name, the current-screen `data` values that a select `update_data` replaced
    * (`had: false` = the key did not exist). Cleared on navigate and back.
@@ -37,7 +39,8 @@ export type UndoMode = { name: string; mode: 'record' | 'restore' };
  * `resolvePayload(flow, state, raw)` yourself; do not dispatch its result.
  */
 export type RuntimeEvent =
-  | { type: 'set'; name: string; value: unknown }
+  /** `source: 'init'` = init-value seeding, which does not count as a user edit. */
+  | { type: 'set'; name: string; value: unknown; source?: 'init' }
   | { type: 'touch'; name: string }
   | { type: 'back' }
   | { type: 'navigate'; screenId: string; payload: Record<string, unknown> }
@@ -232,7 +235,10 @@ function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
     case 'touch': {
       if (typeof e.name !== 'string') return s;
       if (!visibleFieldNames(currentScreen(flow, s), scopeOf(s)).has(e.name)) return s;
-      if (e.type === 'set') return { ...s, form: { ...s.form, [e.name]: e.value } };
+      if (e.type === 'set') {
+        const next = { ...s, form: { ...s.form, [e.name]: e.value } };
+        return e.source === 'init' || s.edited ? next : { ...next, edited: true as const };
+      }
       if (Object.hasOwn(s.touched, e.name)) return s;
       return { ...s, touched: { ...s.touched, [e.name]: true } };
     }

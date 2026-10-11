@@ -90,6 +90,21 @@ describe('set and touch', () => {
     expect(s.form).not.toHaveProperty('capital');
   });
 
+  it('marks the form edited on a user set, not on init-value seeding', () => {
+    const seeded = run(flow, [{ type: 'set', name: 'produto', value: 'AUTO', source: 'init' }]);
+    expect(seeded.form).toEqual({ produto: 'AUTO' });
+    expect(seeded.edited).toBeUndefined();
+    const edited = reduce(flow, seeded, { type: 'set', name: 'produto', value: 'AUTO' });
+    expect(edited.edited).toBe(true);
+    // stays edited, even after a later seed
+    const later = run(
+      flow,
+      [...toDados, { type: 'set', name: 'nome', value: 'x', source: 'init' }],
+      edited,
+    );
+    expect(later.edited).toBe(true);
+  });
+
   it('is immutable', () => {
     const s0 = initRuntime(flow);
     const s1 = reduce(flow, s0, { type: 'set', name: 'produto', value: 'AUTO' });
