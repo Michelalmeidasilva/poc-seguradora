@@ -27,6 +27,13 @@
 - [x] /health e /ready
 - [x] Encerramento gracioso: no `close` as rotas param de aceitar requisições, os turnos em andamento e suas respostas têm até `SHUTDOWN_GRACE_MS` (padrão 8000, abaixo dos 10 s do Cloud Run) para terminar e só então as conexões são cortadas (testado: turno de ~300 ms entrega o corpo completo; turno de 5 s é cortado após a carência)
 
+## Plano 6 (pendências dos Flows)
+
+- [x] Flow de cotação com `sensitive` (`cpf`, `nascimento`)
+- [x] Flow de demonstração no catálogo (digitar "demo" ou "demo flow") e resposta ao envio do `demo`
+- [x] `user.flow_data_exchange` explícito no HandleTurn (turno vazio, log só com metadados)
+- [x] Fonte única dos Flows em `src/domain/flows/` com teste de deriva contra as cópias da web
+
 ## Qualidade
 
 - [x] Testes unitários (domain e application)
@@ -41,6 +48,10 @@
 - Autenticação chatbot → serviços (Cloud Run IAM, ID token) não implementada; ingress interno e IAM ficam para o plano de deploy.
 - A validação de CPF verifica só o formato (11 dígitos), porque os fixtures dos serviços usam CPFs fictícios sem dígito verificador válido.
 - Validar os JSONs dos Flows (cotação e demonstração) no Playground da Meta; hoje só são verificados pelos testes deste repositório.
+- Protocolo: falta um evento para o servidor decidir a próxima tela depois de `data_exchange` (hoje o chatbot não responde nada e a web avança de forma otimista); erros de `data_exchange` também não chegam ao servidor.
+- Gateway `/v1/media` não existe: ids de mídia dos Flows seguem `local-*`.
+- Plano de deploy (Cloud Run, `TRUST_PROXY_HOPS`, Origin/cookies) e teste de integração da pilha completa com os `svc-*` reais.
+- Valores de mídia são aceitos em payloads de `navigate` (a Meta proíbe); Escape e seletores nativos só verificados no Chromium (web).
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
 - Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
 - Dockerfile não verificado com Docker real (daemon indisponível). Verificado sem Docker: build tsup (bundle ESM com @seguradora/* e Flow JSON embutidos), smoke test do `dist/main.js` (/health ok, SIGTERM com exit 0) e o layout de `pnpm deploy --legacy --prod` montado como na imagem. Rodar `docker build -f apps/chatbot/Dockerfile .` quando houver Docker.
