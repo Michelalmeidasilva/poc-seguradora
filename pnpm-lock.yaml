@@ -33,7 +33,27 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.43)
 
-  apps/chatbot: {}
+  apps/chatbot:
+    dependencies:
+      '@seguradora/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@seguradora/resilience':
+        specifier: workspace:*
+        version: link:../../packages/resilience
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      pino:
+        specifier: ^10.4.0
+        version: 10.4.0
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.29)(typescript@5.9.3)
 
   apps/gateway:
     dependencies:
@@ -1645,6 +1665,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
 snapshots:
 
   '@esbuild/aix-ppc64@0.21.5':
@@ -3048,3 +3071,5 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@3.25.76: {}
+
+  zod@4.6.5: {}

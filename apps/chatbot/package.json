@@ -2,5 +2,21 @@
   "name": "@seguradora/chatbot",
   "private": true,
   "version": "0.0.0",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsup",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@seguradora/protocol": "workspace:*",
+    "@seguradora/resilience": "workspace:*",
+    "fastify": "^5.12.5",
+    "pino": "^10.4.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1"
+  }
 }
