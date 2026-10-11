@@ -4,10 +4,10 @@
 
 ## Estrutura
 
-- [ ] Pastas hexagonais criadas (domain / application / infra / main.ts)
+- [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
 - [x] Configuração por variáveis de ambiente validada na subida
 - [ ] Dockerfile e execução local
-- [ ] Regras de dependência verificadas (dependency-cruiser)
+- [x] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades
 
@@ -25,10 +25,10 @@
 
 ## Qualidade
 
-- [ ] Testes unitários (domain e application)
+- [x] Testes unitários (domain e application)
 - [x] Testes de contrato com serviços fake
 - [x] Testes E2E da API
-- [ ] Lint, formatação e tsconfig estrito sem erros
+- [x] Lint, formatação e tsconfig estrito sem erros
 
 ## Pendências e decisões
 
@@ -38,3 +38,4 @@
 - O JSON do Flow de cotação é uma proposta; o schema de Flow JSON do Plano 5 deve validá-lo.
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
 - Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
+- Dockerfile não verificado com Docker real (daemon indisponível). Verificado sem Docker: build tsup (bundle ESM com @seguradora/* e Flow JSON embutidos), smoke test do `dist/main.js` (/health ok, SIGTERM com exit 0) e o layout de `pnpm deploy --legacy --prod` montado como na imagem. Rodar `docker build -f apps/chatbot/Dockerfile .` quando houver Docker.
