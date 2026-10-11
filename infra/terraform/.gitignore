@@ -1,0 +1,21 @@
+# Provider plugins and local state: never committed (the real state lives in the GCS bucket).
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+
+# Variables may carry project ids and e-mails: only the example is tracked.
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+
+# Crash logs and local overrides.
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

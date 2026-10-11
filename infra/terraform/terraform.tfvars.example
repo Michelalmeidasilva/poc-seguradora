@@ -1,0 +1,26 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Placeholders only: no real values here.
+project_id = "<PROJECT_ID>"
+image_tag  = "<IMAGE_TAG>" # commit SHA or release tag pushed to Artifact Registry
+
+# region                 = "southamerica-east1"
+# artifact_registry_repo = "seguradora"
+# trust_proxy_hops       = 3     # verify from the gateway logs on the first deploy
+# log_level              = "info"
+# web_custom_domain_url  = ""    # e.g. "https://chat.example.com"
+
+# GitHub Actions deploy through Workload Identity Federation (empty = skip):
+# github_repository = "<OWNER>/<REPO>"
+# tf_state_bucket   = "<TF_STATE_BUCKET>"
+
+# Budget alert (empty billing_account_id = no budget):
+# billing_account_id = "<XXXXXX-XXXXXX-XXXXXX>"
+# budget_amount_brl  = 200
+# budget_alert_email = "<ALERT_EMAIL>"
+
+# Real internal services instead of fake-services (reachable through the VPC):
+# deploy_fake_services = false
+# service_urls = {
+#   cotacao  = "https://<COTACAO_HOST>"
+#   apolice  = "https://<APOLICE_HOST>"
+#   sinistro = "https://<SINISTRO_HOST>"
+# }
