@@ -256,6 +256,18 @@ describe('parseFlow', () => {
     );
   });
 
+  it('rejects If conditions with syntax errors, not ones that only fail on unset fields', () => {
+    const mk = (condition: string): Json =>
+      flow([screen('END', [ifOf([footer()], [footer()], condition)], { terminal: true })]);
+    expect(codes(mk('${form.a} == ('))).toContain('invalid_condition');
+    expect(codes(mk('${form.a} === 1'))).toContain('invalid_condition');
+    expect(codes(mk('${form.a} &&'))).toContain('invalid_condition');
+    // an unset field is null: not_boolean / type_mismatch are runtime outcomes, not syntax
+    expect(codes(mk('${form.a}'))).toEqual([]);
+    expect(codes(mk('${form.a} > 1'))).toEqual([]);
+    expect(codes(mk("${form.a} == 'x' && ${data.n} >= 2"))).toEqual([]);
+  });
+
   it('requires a dynamic value in If conditions', () => {
     const f = flow([
       screen('END', [ifOf(body(1), undefined, '1 == 1'), ifOf([])], { terminal: true }),

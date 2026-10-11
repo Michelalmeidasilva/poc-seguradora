@@ -108,6 +108,75 @@ describe('FlowSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a Flow that references a form field no screen declares', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const flowJson = {
+      version: '7.1',
+      screens: [
+        {
+          id: 'A',
+          terminal: true,
+          layout: {
+            type: 'SingleColumnLayout',
+            children: [
+              { type: 'TextInput', name: 'nome', label: 'Nome' },
+              {
+                type: 'Footer',
+                label: 'Enviar',
+                'on-click-action': { name: 'complete', payload: { x: '${form.fantasma}' } },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    setup({ flowJson });
+    expect(screen.getByText('Não foi possível abrir este formulário.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Nome')).toBeNull();
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain('fantasma');
+    expect(logged).toContain('unknown_form_ref');
+  });
+
+  it('opens a Flow whose form refs cross screens but are all declared', async () => {
+    const screenOf = (id: string, children: unknown[], extra = {}) => ({
+      id,
+      layout: { type: 'SingleColumnLayout', children },
+      ...extra,
+    });
+    const flowJson = {
+      version: '7.1',
+      screens: [
+        screenOf('A', [
+          { type: 'TextInput', name: 'nome', label: 'Nome' },
+          {
+            type: 'Footer',
+            label: 'Seguir',
+            'on-click-action': { name: 'navigate', next: { type: 'screen', name: 'B' } },
+          },
+        ]),
+        screenOf(
+          'B',
+          [
+            { type: 'TextBody', text: 'Olá ${form.nome}' },
+            {
+              type: 'Footer',
+              label: 'Enviar',
+              'on-click-action': { name: 'complete', payload: { nome: '${form.nome}' } },
+            },
+          ],
+          { terminal: true },
+        ),
+      ],
+    };
+    const { user, submit } = setup({ flowJson, flowId: 'x' });
+    await user.type(screen.getByLabelText('Nome'), 'Ana');
+    await user.click(screen.getByRole('button', { name: 'Seguir' }));
+    expect(screen.getByText('Olá Ana')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    expect(submit).toHaveBeenCalledWith('x', { nome: 'Ana' }, expect.any(String));
+  });
+
   it('traps Tab and Shift+Tab inside the sheet, including the footer', async () => {
     const outside = document.createElement('button');
     outside.textContent = 'fora';

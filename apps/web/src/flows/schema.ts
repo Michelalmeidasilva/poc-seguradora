@@ -1,6 +1,6 @@
 import { err, ok, type Result } from '@seguradora/protocol';
 import { z } from 'zod';
-import { hasDynamicValue } from './expr';
+import { evalCondition, hasDynamicValue } from './expr';
 
 export type FlowIssue = { path: string; code: string; message: string };
 
@@ -343,6 +343,8 @@ function walkList(
   return { footers: direct + nested, nested };
 }
 
+const RUNTIME_CONDITION_ERRORS = new Set(['not_boolean', 'type_mismatch']);
+
 /** Walks an If/Switch; returns the Footers on its heaviest branch. */
 function walkStructural(
   node: Record<string, unknown>,
@@ -359,6 +361,11 @@ function walkStructural(
         'condition_not_dynamic',
         'A condição precisa de ${data.*} ou ${form.*}.',
       );
+    }
+    // Syntax only: with every field unset (null), not_boolean / type_mismatch are expected.
+    const probe = evalCondition(node.condition as string, { data: {}, form: {} });
+    if (!probe.ok && !RUNTIME_CONDITION_ERRORS.has(probe.error)) {
+      issues.add(`${path}.condition`, 'invalid_condition', 'Condição do If inválida.');
     }
     branches.push({ path: `${path}.then`, list: node.then });
     if (node.else !== undefined) branches.push({ path: `${path}.else`, list: node.else });

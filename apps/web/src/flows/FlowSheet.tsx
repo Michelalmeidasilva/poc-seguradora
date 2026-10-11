@@ -8,12 +8,14 @@ import {
   useRef,
   useState,
 } from 'react';
+import { err, type Result } from '@seguradora/protocol';
 import './flows.css';
 import type { FlowHost } from './actions';
 import { Layout } from './components/Layout';
 import { interpolate } from './expr';
 import { FlowProvider } from './FlowContext';
-import { type FlowJson, parseFlow } from './schema';
+import { unknownFormRefs } from './runtime';
+import { type FlowIssue, type FlowJson, parseFlow } from './schema';
 import { useFlowSheet } from './useFlow';
 
 /** What the sheet needs to open a Flow (structurally a subset of the chat's OpenFlowRequest). */
@@ -32,9 +34,27 @@ export interface FlowSheetProps {
 
 const FALLBACK_TITLE = 'Formulário';
 
+/**
+ * parseFlow plus the open-time check that every `${form.x}` names a field some screen declares.
+ * Cross-screen refs are allowed (shared form; a deviation from Meta, which allows same-screen only).
+ */
+function openFlow(json: Record<string, unknown>): Result<FlowJson, FlowIssue[]> {
+  const parsed = parseFlow(json);
+  if (!parsed.ok) return parsed;
+  const unknown = unknownFormRefs(parsed.value);
+  if (unknown.length === 0) return parsed;
+  return err(
+    unknown.map((name) => ({
+      path: `form.${name}`,
+      code: 'unknown_form_ref',
+      message: 'Campo referenciado não existe.',
+    })),
+  );
+}
+
 /** Full-screen bottom sheet hosting one Flow. Remount it (key) to start the Flow over. */
 export function FlowSheet({ request, onClose, submit, exchange }: FlowSheetProps) {
-  const parsed = useMemo(() => parseFlow(request.flowJson), [request.flowJson]);
+  const parsed = useMemo(() => openFlow(request.flowJson), [request.flowJson]);
 
   useEffect(() => {
     if (parsed.ok) return;

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { REGISTERED_TYPES } from './components/registry';
+import cotacao from './fixtures/cotacao.flow.json';
 import demo from './fixtures/demo-componentes.flow.json';
-import { parseFlow } from './schema';
+import { unknownFormRefs } from './runtime';
+import { type FlowJson, parseFlow } from './schema';
 
 type Node = Record<string, unknown>;
 
@@ -38,6 +40,11 @@ describe('demo-componentes flow', () => {
     const r = parseFlow(demo);
     expect(r.ok ? [] : r.error).toEqual([]);
     expect(demo.version).toBe('7.1');
+  });
+
+  it('opens: the demo and cotação Flows reference only declared form fields', () => {
+    expect(unknownFormRefs(demo as unknown as FlowJson)).toEqual([]);
+    expect(unknownFormRefs(cotacao as unknown as FlowJson)).toEqual([]);
   });
 
   it('uses exactly the component types the registry implements', () => {
