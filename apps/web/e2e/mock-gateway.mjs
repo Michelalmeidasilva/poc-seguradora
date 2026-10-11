@@ -222,6 +222,10 @@ const server = createServer(async (req, res) => {
     if (!event || typeof event.id !== 'string' || typeof event.type !== 'string') {
       return json(res, 400, { error: { code: 'invalid_schema', message: 'Evento inválido.' } });
     }
+    // Like the real gateway: the envelope must belong to the session of the cookie.
+    if (event.sessionId !== session.id) {
+      return json(res, 403, { error: { code: 'unauthorized', message: 'Sessão inválida.' } });
+    }
     // Test hook: every accepted event is recorded so the tests can assert ids and order.
     session.posted = session.posted ?? [];
     session.posted.push(event);

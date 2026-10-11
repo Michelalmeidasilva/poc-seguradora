@@ -54,6 +54,9 @@ export class ChatClient {
   private generation = 0;
   private resetAttempts = 0;
   private establishing: Promise<void> | undefined;
+  /** Ids already reported as `sent`/`failed`; everything else in the outbox is still in flight. */
+  private readonly settled = new Set<string>();
+  private mismatchResetFor: string | undefined;
 
   constructor(private readonly o: ChatClientOptions) {}
 
@@ -91,6 +94,7 @@ export class ChatClient {
   }
 
   stop(): void {
+    const wasRunning = !this.stopped;
     this.stopped = true;
     this.generation++;
     clearTimeout(this.ackTimer);
@@ -98,6 +102,15 @@ export class ChatClient {
     this.sse?.stop();
     this.sse = undefined;
     this.establishing = undefined;
+    // Deliveries of this generation end silently now: give every in-flight entry a final status.
+    if (wasRunning) {
+      for (const id of this.outbox.keys()) {
+        if (!this.settled.has(id)) {
+          this.settled.add(id);
+          this.o.onOutgoing(id, 'failed');
+        }
+      }
+    }
   }
 
   send(draft: Draft): string {
@@ -112,6 +125,7 @@ export class ChatClient {
       const oldest = this.outbox.keys().next().value;
       if (oldest !== undefined) this.outbox.delete(oldest);
     }
+    this.settled.delete(id);
     this.o.onOutgoing(id, 'sending');
     void this.deliver(entry);
     return id;
@@ -132,6 +146,7 @@ export class ChatClient {
         if (oldest !== undefined) this.outbox.delete(oldest);
       }
     }
+    this.settled.delete(id);
     this.o.onOutgoing(id, 'sending');
     void this.deliver(entry);
     return true;
@@ -238,6 +253,21 @@ export class ChatClient {
     const parsed = parseServerEvent(json);
     if (!parsed.ok) return;
     const event = parsed.value;
+    if (event.sessionId !== this.sessionIdValue) {
+      // The stream authenticates by the shared cookie: a foreign session id means another tab
+      // replaced it. Drop the event and move to a fresh session, once per stale session.
+      const stale = this.sessionIdValue;
+      if (
+        !this.stopped &&
+        !this.establishing &&
+        stale !== undefined &&
+        this.mismatchResetFor !== stale
+      ) {
+        this.mismatchResetFor = stale;
+        void this.resetSession(this.generation);
+      }
+      return;
+    }
     // Advance the cursor first: a throwing consumer must not cause an endless replay.
     if (event.seq > this.lastSeq) this.lastSeq = event.seq;
     try {
@@ -300,7 +330,8 @@ export class ChatClient {
       return { kind: 'retry' };
     }
     if (res.status === 202 || res.status === 200) return { kind: 'ok' };
-    if (res.status === 401) return { kind: 'unauthorized' };
+    // 403 = the cookie's session differs from the envelope's (another tab replaced the cookie).
+    if (res.status === 401 || res.status === 403) return { kind: 'unauthorized' };
     if (res.status === 429) {
       const seconds = Number(res.headers.get('retry-after'));
       return {
@@ -331,9 +362,11 @@ export class ChatClient {
 
       switch (result.kind) {
         case 'ok':
+          this.settled.add(entry.id);
           this.o.onOutgoing(entry.id, 'sent');
           return;
         case 'rejected':
+          this.settled.add(entry.id);
           this.o.onOutgoing(entry.id, 'failed');
           return;
         case 'unauthorized':
@@ -356,6 +389,7 @@ export class ChatClient {
           await sleep(retryBase * 2 ** (attempts - 1));
           continue;
       }
+      this.settled.add(entry.id);
       this.o.onOutgoing(entry.id, 'failed');
       return;
     }

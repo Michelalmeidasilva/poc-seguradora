@@ -82,7 +82,12 @@ export function createFakeApi() {
       streamStatus = status;
       streamAttempts = 0;
     },
+    /** Stamps the fake gateway's current session id (like the real stream), unless none exists yet. */
     pushEvent(event: ServerEvent) {
+      this.pushForeignEvent(currentSessionId ? { ...event, sessionId: currentSessionId } : event);
+    },
+    /** Pushes the event exactly as given (e.g. carrying another session's id). */
+    pushForeignEvent(event: ServerEvent) {
       controller?.enqueue(
         encoder.encode(
           `id: ${event.seq}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,

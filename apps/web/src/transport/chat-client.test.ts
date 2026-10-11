@@ -242,20 +242,17 @@ describe('ChatClient: sending', () => {
     client.stop();
   });
 
-  it.each([400, 403, 413, 415])(
-    'marks the message failed at once on a %d answer',
-    async (status) => {
-      const { api, client, outgoing } = setup();
-      api.setEventsStatus(status);
-      await client.start();
-      await flush();
-      const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
-      await flush();
-      expect(api.eventPosts()).toHaveLength(1);
-      expect(outgoing.at(-1)).toEqual([id, 'failed']);
-      client.stop();
-    },
-  );
+  it.each([400, 413, 415])('marks the message failed at once on a %d answer', async (status) => {
+    const { api, client, outgoing } = setup();
+    api.setEventsStatus(status);
+    await client.start();
+    await flush();
+    const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
+    await flush();
+    expect(api.eventPosts()).toHaveLength(1);
+    expect(outgoing.at(-1)).toEqual([id, 'failed']);
+    client.stop();
+  });
 
   it('waits for the Retry-After of a 429 and tries again', async () => {
     const { api, client, outgoing } = setup();
@@ -492,5 +489,68 @@ describe('ChatClient: ack', () => {
     client.stop();
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.eventPosts()).toHaveLength(0);
+  });
+});
+
+describe('ChatClient: shared-cookie session mismatch (another tab took over)', () => {
+  it('treats 403 on /v1/events as unauthorized: resets the session once and redelivers', async () => {
+    const { api, client, resets, outgoing } = setup();
+    api.setEventsStatus((attempt) => (attempt === 1 ? 403 : 202));
+    await client.start();
+    await flush();
+    const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
+    await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    await flush();
+    expect(resets()).toBe(1);
+    const posts = api.eventPosts().map((r) => r.body as ClientEvent);
+    expect(posts.map((p) => p.sessionId)).toEqual(['session-1', 'session-2']);
+    expect(outgoing.at(-1)).toEqual([id, 'sent']);
+    expect(outgoing.some(([, st]) => st === 'failed')).toBe(false);
+    client.stop();
+  });
+
+  it('drops a stream event of a foreign session and resets once', async () => {
+    const { api, client, received, resets, sessions } = setup();
+    await client.start();
+    await flush();
+    api.pushForeignEvent({ ...botText(1), sessionId: 'session-other' });
+    api.pushForeignEvent({ ...botText(2), sessionId: 'session-other' });
+    await flush();
+    await vi.advanceTimersByTimeAsync(1000);
+    await flush();
+    expect(received).toEqual([]);
+    expect(resets()).toBe(1);
+    expect(api.requests.filter((r) => r.path === '/v1/session')).toHaveLength(2);
+    expect(sessions.at(-1)).toEqual(['session-2', 'new']);
+    // The dropped events did not advance the cursor of the new session.
+    expect(
+      api.requests.filter((r) => r.path === '/v1/stream').at(-1)?.headers['last-event-id'],
+    ).toBeUndefined();
+    // Events of the new session flow normally.
+    api.pushEvent(botText(1, 'ola'));
+    await flush();
+    expect(received).toHaveLength(1);
+    client.stop();
+  });
+});
+
+describe('ChatClient: stop() with deliveries in flight', () => {
+  it('reports failed for entries that were not yet sent, and not for sent ones', async () => {
+    const { api, client, outgoing } = setup();
+    await client.start();
+    await flush();
+    const sentId = client.send({ type: 'user.text', payload: { text: 'a' } });
+    await flush();
+    api.setEventsStatus(503); // the next send keeps retrying
+    const pendingId = client.send({ type: 'user.text', payload: { text: 'b' } });
+    await flush();
+    expect(outgoing).toContainEqual([sentId, 'sent']);
+    client.stop();
+    expect(outgoing.filter(([id, st]) => id === pendingId && st === 'failed')).toHaveLength(1);
+    expect(outgoing.some(([id, st]) => id === sentId && st === 'failed')).toBe(false);
+    // Stopping twice does not report again.
+    client.stop();
+    expect(outgoing.filter(([id, st]) => id === pendingId && st === 'failed')).toHaveLength(1);
   });
 });

@@ -112,6 +112,15 @@ test('a second tab shows the notice and can take over', async ({ page, context }
   await other.getByRole('button', { name: 'Usar esta aba' }).click();
   await expect(other.getByRole('textbox', { name: 'Mensagem' })).toBeVisible();
   await expect(page.getByText(/aberta em outra aba/i)).toBeVisible();
+
+  // Tab B's takeover replaced the shared sid cookie. Going back to tab A (which still holds its
+  // saved, now foreign session) must recover on its own instead of bricking.
+  await page.bringToFront();
+  await page.getByRole('button', { name: 'Usar esta aba' }).click();
+  await expect(page.getByRole('textbox', { name: 'Mensagem' })).toBeVisible();
+  await say(page, 'depois da troca');
+  await expect(page.getByText('Uma nova conversa foi iniciada.')).toBeVisible();
+  await expect(page.getByText('Você disse: depois da troca')).toBeVisible();
 });
 
 test('starts a new conversation when the session is invalidated', async ({ page }) => {
