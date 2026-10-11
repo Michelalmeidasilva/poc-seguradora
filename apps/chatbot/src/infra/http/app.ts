@@ -37,8 +37,13 @@ const summarizeIssue = (error: { issues: Array<{ path: PropertyKey[]; code: stri
 /** Waits until the response can take more data, or the client is gone. */
 const drained = (raw: NodeJS.WritableStream & { destroyed?: boolean }) =>
   new Promise<void>((resolve) => {
-    raw.once('drain', resolve);
-    raw.once('close', resolve);
+    const done = () => {
+      raw.removeListener('drain', done);
+      raw.removeListener('close', done);
+      resolve();
+    };
+    raw.on('drain', done);
+    raw.on('close', done);
   });
 
 export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInstance> {
@@ -59,7 +64,7 @@ export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInsta
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const status =
       typeof error.statusCode === 'number' && error.statusCode >= 400 ? error.statusCode : 500;
-    if (status >= 500) request.log.error({ err: error }, 'unhandled error');
+    if (status >= 500) request.log.error({ err: { name: error.name } }, 'unhandled error');
     const { code, message } = describeStatus(status);
     return deny(reply, status, code, message);
   });
@@ -89,18 +94,22 @@ export async function buildApp({ turns, logger }: AppDeps): Promise<FastifyInsta
       clientGone = true;
     });
 
+    let failed = false;
     try {
       for await (const event of turns.run(parsed.data)) {
         if (clientGone) break; // the turn keeps running; only the writing stops
         if (!raw.write(serializeChatbotLine(event))) await drained(raw);
       }
     } catch (error) {
+      failed = true;
       request.log.error(
         { err: error instanceof Error ? { name: error.name } : { name: 'UnknownError' } },
         'turn stream failed after the headers were sent',
       );
     } finally {
-      if (!raw.writableEnded) raw.end();
+      // On failure, abort without the terminating chunk so the gateway sees a broken stream.
+      if (failed) raw.destroy();
+      else if (!raw.writableEnded) raw.end();
     }
   });
 

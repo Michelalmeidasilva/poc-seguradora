@@ -164,7 +164,7 @@ describe('POST /v1/chat/events', () => {
     expect(typeof finished).toBe('boolean');
   });
 
-  it('survives a use case that throws after the headers were sent', async () => {
+  it('aborts the connection when the use case throws after an event was sent', async () => {
     const url = await start({
       run: async function* () {
         yield event(1);
@@ -173,8 +173,58 @@ describe('POST /v1/chat/events', () => {
     });
     const res = await post(url, validRequest());
     expect(res.status).toBe(200);
-    await res.text();
+    await expect(res.text()).rejects.toBeDefined();
     expect((await fetch(`${url}/health`)).status).toBe(200);
+  });
+
+  it('aborts the connection when the use case throws before yielding anything', async () => {
+    const url = await start({
+      // eslint-disable-next-line require-yield -- the runner fails before producing an event
+      run: async function* () {
+        throw new Error('boom');
+      },
+    });
+    const res = await post(url, validRequest());
+    expect(res.status).toBe(200);
+    await expect(res.text()).rejects.toBeDefined();
+    expect((await fetch(`${url}/health`)).status).toBe(200);
+  });
+
+  it('applies backpressure to a slow client without accumulating listeners', async () => {
+    const warnings: string[] = [];
+    const onWarning = (w: Error) => warnings.push(w.name);
+    process.on('warning', onWarning);
+    const total = 300;
+    const url = await start({
+      run: async function* () {
+        for (let i = 0; i < total; i++) {
+          yield {
+            ...event(i + 1),
+            type: 'message.code',
+            payload: { code: 'x'.repeat(8000) },
+          } as UnsequencedServerEvent;
+        }
+      },
+    });
+    try {
+      const res = await post(url, validRequest());
+      const reader = res.body!.getReader();
+      let text = '';
+      const decoder = new TextDecoder();
+      // Read slowly so the server hits backpressure many times.
+      for (;;) {
+        await sleep(2);
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      const lines = text.split('\n').slice(0, -1);
+      expect(lines).toHaveLength(total);
+      expect(lines.every((l) => parseChatbotLine(l).ok)).toBe(true);
+      expect(warnings).not.toContain('MaxListenersExceededWarning');
+    } finally {
+      process.off('warning', onWarning);
+    }
   });
 });
 
@@ -193,10 +243,13 @@ describe('health and errors', () => {
   });
 
   it('closes quickly even with a stream still open', async () => {
+    let timer: NodeJS.Timeout | undefined;
     const url = await start({
       run: async function* () {
         yield event(1);
-        await sleep(5000);
+        await new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, 5000);
+        });
       },
     });
     const res = await post(url, validRequest());
@@ -205,6 +258,7 @@ describe('health and errors', () => {
     const t = Date.now();
     await app.close();
     expect(Date.now() - t).toBeLessThan(1000);
+    clearTimeout(timer);
     app = await buildApp({
       turns: { run: async function* () {} },
       logger: pino({ level: 'silent' }),
