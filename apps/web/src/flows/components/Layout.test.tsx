@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flowOf, renderInFlow } from '../test-utils';
 import { Layout } from './Layout';
@@ -46,5 +47,27 @@ describe('Layout', () => {
     ]);
     renderInFlow(<Layout />, flow, { data: { ok: false } });
     expect(screen.getByText('no')).toBeInTheDocument();
+  });
+
+  it('keeps a field mounted (and focused) when a conditional above it toggles', async () => {
+    const user = userEvent.setup();
+    const flow = flowOf([
+      {
+        type: 'If',
+        condition: "${form.nome} == 'M'",
+        then: [{ type: 'TextCaption', text: 'Olá, M' }],
+      },
+      { type: 'TextInput', name: 'nome', label: 'Nome' },
+    ]);
+    renderInFlow(<Layout />, flow);
+    const input = screen.getByLabelText('Nome');
+    await user.click(input);
+    await user.keyboard('M');
+    expect(screen.getByText('Olá, M')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nome')).toBe(input);
+    expect(input).toHaveFocus();
+    await user.keyboard('a');
+    expect(screen.getByLabelText('Nome')).toBe(input);
+    expect(input).toHaveValue('Ma');
   });
 });

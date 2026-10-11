@@ -330,3 +330,23 @@ describe('OptIn', () => {
     expect(screen.getByText('Campo obrigatório')).toBeInTheDocument();
   });
 });
+
+describe('option lists with repeated ids', () => {
+  const dup = [
+    { id: 'x', title: 'Primeiro' },
+    { id: 'x', title: 'Segundo' },
+  ];
+  it.each([
+    ['CheckboxGroup', CheckboxGroup],
+    ['RadioButtonsGroup', RadioButtonsGroup],
+    ['Dropdown', Dropdown],
+  ] as const)('%s renders every option without a duplicate-key warning', (type, Component) => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const c = { type, name: 'f', label: 'F', 'data-source': dup };
+    renderInFlow(<Component c={c} />, flowOf([c]));
+    expect(screen.getByText('Primeiro')).toBeInTheDocument();
+    expect(screen.getByText('Segundo')).toBeInTheDocument();
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});

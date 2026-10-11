@@ -106,29 +106,48 @@ const isVisible = (c: FlowComponent, scope: Scope): boolean => {
   return Boolean(r) && r !== 'false';
 };
 
-function walkVisible(list: unknown, scope: Scope, depth: number, out: FlowComponent[]): void {
+/** A visible leaf and its structural path in the screen (stable while siblings toggle). */
+export interface VisibleEntry {
+  component: FlowComponent;
+  path: string;
+}
+
+function walkVisible(
+  list: unknown,
+  scope: Scope,
+  depth: number,
+  path: string,
+  out: VisibleEntry[],
+): void {
   if (!Array.isArray(list) || depth > MAX_NESTING) return;
-  for (const c of list as unknown[]) {
-    if (!isRecord(c) || typeof c.type !== 'string') continue;
+  (list as unknown[]).forEach((c, i) => {
+    if (!isRecord(c) || typeof c.type !== 'string') return;
+    const at = `${path}[${i}]`;
     if (c.type === 'If') {
       const r = evalCondition(c.condition as string, scope);
-      walkVisible(r.ok && r.value ? c.then : c.else, scope, depth + 1, out);
+      const branch = r.ok && r.value ? 'then' : 'else';
+      walkVisible(c[branch], scope, depth + 1, `${at}.${branch}`, out);
     } else if (c.type === 'Switch') {
       const key = interpolate(c.value as string, scope);
       if (isRecord(c.cases) && Object.hasOwn(c.cases, key)) {
-        walkVisible(c.cases[key], scope, depth + 1, out);
+        walkVisible(c.cases[key], scope, depth + 1, `${at}.cases.${key}`, out);
       }
     } else if (isVisible(c as FlowComponent, scope)) {
-      out.push(c as FlowComponent);
+      out.push({ component: c as FlowComponent, path: at });
     }
-  }
+  });
+}
+
+/** Visible leaves with their structural path (`children[1].then[0]`), for React keys. */
+export function visibleEntries(screen: FlowScreen, scope: Scope): VisibleEntry[] {
+  const out: VisibleEntry[] = [];
+  walkVisible(children(screen), scope, 0, 'children', out);
+  return out;
 }
 
 /** Leaves of the screen as shown now: If/Switch flattened, `visible: false` dropped. */
 export function visibleComponents(screen: FlowScreen, scope: Scope): FlowComponent[] {
-  const out: FlowComponent[] = [];
-  walkVisible(children(screen), scope, 0, out);
-  return out;
+  return visibleEntries(screen, scope).map((e) => e.component);
 }
 
 /** Field names on every branch, visible or not. */

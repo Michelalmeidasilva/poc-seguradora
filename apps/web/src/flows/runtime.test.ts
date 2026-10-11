@@ -12,6 +12,7 @@ import {
   screenErrors,
   unknownFormRefs,
   visibleComponents,
+  visibleEntries,
 } from './runtime';
 import type { FlowJson, FlowScreen } from './schema';
 
@@ -670,5 +671,25 @@ describe('totality', () => {
     const s0 = initRuntime(flow);
     expect(reduce(flow, s0, { type: 'nope' } as unknown as RuntimeEvent)).toBe(s0);
     expect(reduce(flow, s0, { type: 'set', name: 1 } as unknown as RuntimeEvent)).toBe(s0);
+  });
+});
+
+describe('visibleEntries', () => {
+  it('gives each leaf its structural path', () => {
+    const screen = {
+      id: 'A',
+      layout: {
+        type: 'SingleColumnLayout',
+        children: [
+          { type: 'TextBody', text: 'a' },
+          { type: 'If', condition: '${data.ok}', then: [{ type: 'TextBody', text: 'b' }] },
+          { type: 'Switch', value: '${data.k}', cases: { X: [{ type: 'TextBody', text: 'c' }] } },
+        ],
+      },
+    } as unknown as FlowScreen;
+    const paths = visibleEntries(screen, { data: { ok: true, k: 'X' }, form: {} }).map(
+      (e) => e.path,
+    );
+    expect(paths).toEqual(['children[0]', 'children[1].then[0]', 'children[2].cases.X[0]']);
   });
 });

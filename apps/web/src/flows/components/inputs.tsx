@@ -75,8 +75,9 @@ export function Dropdown({ c }: { c: C }) {
         {...aria(f)}
       >
         <option value="">Selecione</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id} disabled={o.enabled === false}>
+        {options.map((o, i) => (
+          // option ids come from untrusted JSON and may repeat
+          <option key={`${i}:${o.id}`} value={o.id} disabled={o.enabled === false}>
             {o.title}
           </option>
         ))}
@@ -117,10 +118,10 @@ export function CheckboxGroup({ c }: { c: C }) {
       onBlur={groupBlur(f.touch)}
     >
       <legend className="flow-field__label">{f.label}</legend>
-      {options.map((o) => {
+      {options.map((o, i) => {
         const checked = selected.includes(o.id);
         return (
-          <label key={o.id} className="flow-choice">
+          <label key={`${i}:${o.id}`} className="flow-choice">
             <input
               type="checkbox"
               checked={checked}
@@ -148,8 +149,8 @@ export function RadioButtonsGroup({ c }: { c: C }) {
       onBlur={groupBlur(f.touch)}
     >
       <legend className="flow-field__label">{f.label}</legend>
-      {options.map((o) => (
-        <label key={o.id} className="flow-choice">
+      {options.map((o, i) => (
+        <label key={`${i}:${o.id}`} className="flow-choice">
           <input
             type="radio"
             name={f.controlId}
