@@ -14,3 +14,4 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | chatbot | apps/chatbot | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
 | gateway | apps/gateway | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
 | web-chat | apps/web | done | claude | feat/web-chat | 2026-10-11 | 2026-10-11 | Plano 4 concluído; web-flows será recriada no Plano 5 |
+| web-flows | apps/web/src/flows | in_progress | claude | feat/web-flows | 2026-10-11 | 2026-10-11 | Plano 5; só toca o host em app/ e renderers/flow-host (integração) |
