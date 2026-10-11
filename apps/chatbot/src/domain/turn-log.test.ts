@@ -83,7 +83,7 @@ describe('TurnRecord', () => {
 });
 
 describe('TurnLog', () => {
-  it('creates a record once per event id and returns the same record afterwards', () => {
+  it('creates a record once per key and returns the same record afterwards', () => {
     const log = new TurnLog(10);
     const first = log.begin('a');
     const second = log.begin('a');

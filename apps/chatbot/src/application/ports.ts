@@ -20,7 +20,7 @@ export interface LlmProvider {
 export interface CallContext {
   /** Forwarded as `x-correlation-id` to the internal services. */
   correlationId: string;
-  /** Sent as `Idempotency-Key` on POSTs (the id of the user event that caused the call). */
+  /** Sent as `Idempotency-Key` on POSTs (derived from the session and the user event id). */
   idempotencyKey: string;
 }
 

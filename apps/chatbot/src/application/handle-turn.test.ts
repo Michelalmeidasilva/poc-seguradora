@@ -11,7 +11,8 @@ import { IDLE, type DialogState, type Intent } from '../domain/dialog';
 import { TurnLog } from '../domain/turn-log';
 import { aClaimOpened, aPolicy, aPolicySummary, aQuote } from '../test/fixtures';
 import { HandleTurn } from './handle-turn';
-import type { DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
+import { idempotencyKeyFor } from './idempotency';
+import type { CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
 
 const silent: Logger = { info: () => undefined, warn: () => undefined, error: () => undefined };
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -38,6 +39,9 @@ const request = (
       ...event,
     },
   }) as ChatbotRequest;
+
+const inSession = (r: ChatbotRequest, sessionId: string): ChatbotRequest =>
+  ({ ...r, sessionId, event: { ...r.event, sessionId } }) as ChatbotRequest;
 
 const text = (t: string, id = 1) => request({ type: 'user.text', payload: { text: t } }, id);
 const quickReply = (optionId: string, id = 1) =>
@@ -157,8 +161,36 @@ describe('HandleTurn', () => {
     await collect(handler.run(text('minhas apolices 12345678901', 9)));
     expect(services.listPolicies).toHaveBeenCalledWith('12345678901', {
       correlationId: 'corr-9',
-      idempotencyKey: uuid(9),
+      idempotencyKey: idempotencyKeyFor('s1', uuid(9)),
     });
+  });
+
+  it('scopes a repeated event id by session: each session executes and gets its own events', async () => {
+    const services = okServices();
+    const { handler } = make({
+      llm: { classify: async () => intent('policies', { cpf: '12345678901' }) },
+      services,
+    });
+    const a = await collect(handler.run(text('apolices 12345678901', 11)));
+    const b = await collect(handler.run(inSession(text('apolices 12345678901', 11), 's2')));
+    expect(services.listPolicies).toHaveBeenCalledTimes(2);
+    const keys = services.listPolicies.mock.calls.map((c) => (c[1] as CallContext).idempotencyKey);
+    expect(keys[0]).not.toBe(keys[1]);
+    expect(keys).toEqual([idempotencyKeyFor('s1', uuid(11)), idempotencyKeyFor('s2', uuid(11))]);
+    expect(a.every((e) => e.sessionId === 's1')).toBe(true);
+    expect(b.every((e) => e.sessionId === 's2')).toBe(true);
+    expect(b.length).toBe(a.length);
+  });
+
+  it('still executes a repeated event id once within the same session', async () => {
+    const services = okServices();
+    const { handler } = make({
+      llm: { classify: async () => intent('policies', { cpf: '12345678901' }) },
+      services,
+    });
+    await collect(handler.run(text('apolices 12345678901', 12)));
+    await collect(handler.run(text('apolices 12345678901', 12)));
+    expect(services.listPolicies).toHaveBeenCalledTimes(1);
   });
 
   it('turns a service failure into a friendly message and keeps the state', async () => {

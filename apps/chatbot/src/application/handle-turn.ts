@@ -2,6 +2,7 @@ import type { ChatbotRequest, UnsequencedServerEvent } from '@seguradora/protoco
 import { next, type Input, type ServiceCall, type Step } from '../domain/dialog';
 import type { ReplyBody } from '../domain/reply';
 import type { TurnLog, TurnRecord } from '../domain/turn-log';
+import { idempotencyKeyFor } from './idempotency';
 import type {
   CallContext,
   Clock,
@@ -32,15 +33,16 @@ const describeError = (error: unknown): { name: string } => ({
 });
 
 /**
- * One turn = one user event. The first call for an `event.id` runs the turn in the background
- * and every call (first or repeated) reads the events from the `TurnRecord`, so the same id
- * never executes twice and always yields the same events.
+ * One turn = one user event. The first call for a (session, `event.id`) pair runs the turn in
+ * the background and every call (first or repeated) reads the events from the `TurnRecord`, so
+ * the same id in the same session never executes twice and always yields the same events.
  */
 export class HandleTurn implements TurnRunner {
   constructor(private readonly d: HandleTurnDeps) {}
 
   run(request: ChatbotRequest): AsyncGenerator<UnsequencedServerEvent> {
-    const { record, created } = this.d.turns.begin(request.event.id);
+    // Event ids come from the client: scope them by session so sessions never share a turn.
+    const { record, created } = this.d.turns.begin(`${request.sessionId}\n${request.event.id}`);
     if (created) void this.execute(request, record);
     return record.stream();
   }
@@ -100,7 +102,7 @@ export class HandleTurn implements TurnRunner {
   ): Promise<Extract<Step, { kind: 'reply' }>> {
     const ctx: CallContext = {
       correlationId: request.correlationId,
-      idempotencyKey: request.event.id,
+      idempotencyKey: idempotencyKeyFor(request.sessionId, request.event.id),
     };
     const state = this.d.dialogs.get(request.sessionId);
     let step = next(state, input, { today: new Date(this.d.now()).toISOString().slice(0, 10) });

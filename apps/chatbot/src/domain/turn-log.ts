@@ -1,7 +1,7 @@
 import type { UnsequencedServerEvent } from '@seguradora/protocol';
 
 /**
- * Everything one turn (one `event.id`) produced. The turn writes into it; any number of
+ * Everything one turn (one `event.id` of one session) produced. The turn writes into it; any number of
  * consumers read it, including ones that arrive while the turn is still running or after it
  * has finished. That is what makes a repeated `event.id` idempotent.
  */
@@ -48,7 +48,7 @@ export class TurnRecord {
   }
 }
 
-/** Bounded map of event id → record (oldest ids are forgotten first). */
+/** Bounded map of turn key → record (oldest keys are forgotten first). The caller builds the key. */
 export class TurnLog {
   private readonly records = new Map<string, TurnRecord>();
 
@@ -58,11 +58,11 @@ export class TurnLog {
     }
   }
 
-  begin(eventId: string): { record: TurnRecord; created: boolean } {
-    const existing = this.records.get(eventId);
+  begin(key: string): { record: TurnRecord; created: boolean } {
+    const existing = this.records.get(key);
     if (existing) return { record: existing, created: false };
     const record = new TurnRecord();
-    this.records.set(eventId, record);
+    this.records.set(key, record);
     if (this.records.size > this.capacity) {
       const oldest = this.records.keys().next().value;
       if (oldest !== undefined) this.records.delete(oldest);
