@@ -13,7 +13,13 @@ export interface UploadedFile {
  * local and no bytes leave the browser; a future `/v1/media` upload replaces this function.
  */
 export function newMediaId(): string {
-  return `local-${crypto.randomUUID()}`;
+  // randomUUID exists only in secure contexts; getRandomValues also works on plain http.
+  if (typeof crypto.randomUUID === 'function') return `local-${crypto.randomUUID()}`;
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6]! & 0x0f) | 0x40;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `local-${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 const count = (v: unknown): number | undefined =>
@@ -35,7 +41,11 @@ function mimeList(c: Props, kind: 'photos' | 'documents'): string[] | undefined 
 
 const mimeAllowed = (type: string, allowed: string[] | undefined): boolean =>
   allowed === undefined ||
-  allowed.some((a) => (a.endsWith('/*') ? type.startsWith(a.slice(0, -1)) : a === type));
+  allowed.some((raw) => {
+    const a = raw.toLowerCase();
+    const t = type.toLowerCase();
+    return a.endsWith('/*') ? t.startsWith(a.slice(0, -1)) : a === t;
+  });
 
 function MediaPicker({ c, kind }: { c: Props; kind: 'photos' | 'documents' }) {
   const f = useField(c);

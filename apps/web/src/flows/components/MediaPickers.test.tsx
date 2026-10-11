@@ -1,6 +1,6 @@
-import { act, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useFlow } from '../FlowContext';
 import { footerDisabled } from '../runtime';
 import { flowOf, renderInFlow } from '../test-utils';
@@ -157,12 +157,68 @@ describe('DocumentPicker', () => {
     expect(form().docs[0].file_name).toBe('a.pdf');
   });
 
+  it('accepts image/* wildcard and mixed-case configured types', async () => {
+    const mixed = {
+      ...c,
+      'max-uploaded-documents': 5,
+      'allowed-mime-types': ['IMAGE/*', 'Application/PDF'],
+    };
+    const { user, container } = setup(mixed, DocumentPicker);
+    await user.upload(input(container), [
+      file('a.png', 'image/png'),
+      file('b.pdf', 'application/pdf'),
+      file('c.txt', 'text/plain'),
+    ]);
+    expect(form().docs.map((x: { file_name: string }) => x.file_name)).toEqual(['a.png', 'b.pdf']);
+    expect(screen.getByText('c.txt não é um tipo de arquivo permitido')).toBeInTheDocument();
+  });
+
   it('is registered with the host registry', () => {
-    const { container } = renderInFlow(
-      <>{renderComponent({ type: 'DocumentPicker', name: 'd', label: 'D' } as never, 'k')}</>,
-      flowOf([]),
+    for (const [type, name] of [
+      ['PhotoPicker', 'Adicionar fotos'],
+      ['DocumentPicker', 'Adicionar documentos'],
+    ]) {
+      const { unmount } = renderInFlow(
+        <>{renderComponent({ type, name: 'x', label: 'Rótulo' } as never, 'k')}</>,
+        flowOf([]),
+      );
+      expect(screen.getByRole('button', { name: 'Rótulo' })).toHaveTextContent(name!);
+      unmount();
+    }
+  });
+});
+
+describe('edge cases', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const c = { type: 'PhotoPicker', name: 'fotos', label: 'Fotos' };
+
+  it('re-selecting the same file after removing it fires change again', async () => {
+    const { user, container } = setup(c);
+    const f = file('a.png', 'image/png');
+    await user.upload(input(container), f);
+    await user.click(screen.getByRole('button', { name: 'Remover a.png' }));
+    await user.upload(input(container), f);
+    expect(form().fotos.map((x: { file_name: string }) => x.file_name)).toEqual(['a.png']);
+  });
+
+  it('size limit boundary: 1 KB = 1024 bytes', async () => {
+    const { user, container } = setup({ ...c, 'max-file-size-kb': 1 });
+    await user.upload(input(container), file('ok.png', 'image/png', 1024));
+    expect(form().fotos).toHaveLength(1);
+    await user.upload(input(container), file('big.png', 'image/png', 1025));
+    expect(screen.getByText('big.png excede o limite de 1 KB')).toBeInTheDocument();
+    expect(form().fotos).toHaveLength(1);
+  });
+
+  it('falls back to getRandomValues when randomUUID is unavailable', async () => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+      randomUUID: undefined,
+    });
+    const { user, container } = setup(c);
+    await user.upload(input(container), file('a.png', 'image/png'));
+    expect(form().fotos[0].media_id).toMatch(
+      /^local-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
-    expect(input(container)).toBeTruthy();
-    act(() => {});
   });
 });
