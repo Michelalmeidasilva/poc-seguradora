@@ -36,7 +36,10 @@ const postedEvent = (api: ReturnType<typeof createFakeApi>, index = 0) =>
   api.eventPosts()[index]?.body as ClientEvent;
 
 beforeEach(() => vi.useFakeTimers());
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe('ChatClient: session and stream', () => {
   it('calls the global fetch without the client as its receiver', async () => {
@@ -184,10 +187,10 @@ describe('ChatClient: sending', () => {
     const { api, client } = setup({ newId: undefined });
     await client.start();
     await flush();
-    client.send({ type: 'user.text', payload: { text: 'oi' } });
+    const id = client.send({ type: 'user.text', payload: { text: 'oi' } });
     await flush();
-    vi.unstubAllGlobals();
-    expect(postedEvent(api)).toMatchObject({ type: 'user.text', payload: { text: 'oi' } });
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(postedEvent(api)).toMatchObject({ id, type: 'user.text', payload: { text: 'oi' } });
   });
 
   it('posts a text event with the envelope and reports sent', async () => {

@@ -1,12 +1,17 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import type { ServerEvent } from '@seguradora/protocol';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatClientOptions, Draft } from '../transport/chat-client';
 import { botText, delivered, errorEvent, uuid } from '../test/fixtures';
 import { useChat } from './useChat';
 
+const originalCreateObjectURL = URL.createObjectURL;
 beforeEach(() => sessionStorage.clear());
+afterEach(() => {
+  URL.createObjectURL = originalCreateObjectURL;
+  vi.unstubAllGlobals();
+});
 
 function fakeClient() {
   const sent: Draft[] = [];
@@ -136,13 +141,10 @@ describe('useChat', () => {
       getRandomValues: crypto.getRandomValues.bind(crypto),
     });
     const f = fakeClient();
-    const original = URL.createObjectURL;
     URL.createObjectURL = vi.fn(() => 'blob:http://localhost/voice-2');
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
     await act(async () => {});
     act(() => result.current.sendVoice(new Blob(['x'], { type: 'audio/webm' }), 1000));
-    URL.createObjectURL = original;
-    vi.unstubAllGlobals();
     const mediaId = (f.sent[0] as Extract<Draft, { type: 'user.voice' }>).payload.mediaId;
     expect(mediaId).toMatch(
       /^local-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
