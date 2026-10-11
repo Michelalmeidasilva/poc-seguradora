@@ -5,3 +5,7 @@ node_modules
 .superpowers
 docs
 coverage
+
+.env
+.env.*
+!.env.example
