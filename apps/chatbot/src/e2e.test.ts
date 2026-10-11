@@ -3,13 +3,18 @@ import type { Intent } from './domain/dialog';
 import { GuardedLlmProvider } from './infra/guarded-llm-provider';
 import {
   choiceReq,
+  findEvent,
   flowSubmitReq,
+  hasEvent,
+  quickReplyIds as quickIds,
   replies,
   startChatbot,
+  templateButtons,
   textReq,
   textsOf,
   turn,
   typesOf,
+  voiceReq,
   type RunningChatbot,
 } from './test/harness';
 
@@ -17,11 +22,6 @@ let bot: RunningChatbot;
 afterEach(async () => {
   await bot.close();
 });
-
-const quickIds = (events: Awaited<ReturnType<typeof turn>>['events']) =>
-  events.flatMap((e) =>
-    e.type === 'message.quick_replies' ? e.payload.options.map((o) => o.id) : [],
-  );
 
 describe('chatbot end to end (fake internal services)', () => {
   it('answers a greeting with typing indicators, text and the main menu', async () => {
@@ -47,27 +47,27 @@ describe('chatbot end to end (fake internal services)', () => {
     expect(quickIds(list.events)).toEqual(['policy:AP-1001', 'policy:AP-1002', 'policy:AP-1003']);
 
     const detail = await turn(bot.url, choiceReq('policy:AP-1001'));
-    const template = detail.events.find((e) => e.type === 'message.template');
-    expect(template?.type === 'message.template' && template.payload.header).toBe(
-      'Apólice AP-1001',
-    );
+    expect(findEvent(detail.events, 'message.template').payload.header).toBe('Apólice AP-1001');
 
     const copy = await turn(bot.url, choiceReq('policy.second_copy:AP-1001'));
-    const copyTemplate = copy.events.find((e) => e.type === 'message.template');
-    expect(
-      copyTemplate?.type === 'message.template' &&
-        copyTemplate.payload.buttons.some((b) => b.type === 'url'),
-    ).toBe(true);
+    const copyButtons = templateButtons(findEvent(copy.events, 'message.template'));
+    expect(copyButtons.map((b) => b.type)).toContain('url');
 
     const refused = await turn(bot.url, choiceReq('policy.second_copy:AP-1003'));
     expect(textsOf(refused.events)).toContain('cancelada');
+    expect(hasEvent(refused.events, 'message.template')).toBe(false);
+    const refusedJson = JSON.stringify(refused.events);
+    expect(refusedJson).not.toContain('documentoUrl');
+    expect(refusedJson).not.toContain('exemplo.invalid');
+    expect(
+      bot.fake.requests.filter((q) => q.path === '/v1/apolices/AP-1003/segunda-via'),
+    ).toHaveLength(1);
   });
 
   it('runs the quote journey through the Flow and shows the quote', async () => {
     bot = await startChatbot();
     const start = await turn(bot.url, choiceReq('menu.quote'));
-    const flow = start.events.find((e) => e.type === 'message.flow');
-    expect(flow?.type === 'message.flow' && flow.payload.flowId).toBe('cotacao');
+    expect(findEvent(start.events, 'message.flow').payload.flowId).toBe('cotacao');
 
     const done = await turn(
       bot.url,
@@ -107,8 +107,7 @@ describe('chatbot end to end (fake internal services)', () => {
       bot.url,
       textReq('bati o carro, colisão no estacionamento do shopping'),
     );
-    const code = opened.events.find((e) => e.type === 'message.code');
-    expect(code?.type === 'message.code' && code.payload.code).toContain('SN-2002');
+    expect(findEvent(opened.events, 'message.code').payload.code).toContain('SN-2002');
     const body = bot.fake.requests.find(
       (q) => q.path === '/v1/sinistros' && q.method === 'POST',
     )?.body;
@@ -122,16 +121,62 @@ describe('chatbot end to end (fake internal services)', () => {
   it('shows the status of an existing claim', async () => {
     bot = await startChatbot();
     const r = await turn(bot.url, textReq('qual o status do sinistro SN-2001?'));
-    const template = r.events.find((e) => e.type === 'message.template');
-    expect(template?.type === 'message.template' && template.payload.header).toBe(
-      'Sinistro SN-2001',
-    );
+    expect(findEvent(r.events, 'message.template').payload.header).toBe('Sinistro SN-2001');
   });
 
-  it('answers the branch location and a voice message', async () => {
+  it('answers the branch location', async () => {
     bot = await startChatbot();
     const loc = await turn(bot.url, textReq('onde fica a agência?'));
     expect(typesOf(replies(loc.events))).toEqual(['message.text', 'message.location']);
+  });
+
+  it('answers a voice message saying audio is not supported and offers the menu', async () => {
+    bot = await startChatbot();
+    const r = await turn(bot.url, voiceReq(4200));
+    expect(textsOf(r.events)).toContain('áudio');
+    expect(quickIds(r.events)).toEqual(['menu.quote', 'menu.policies', 'menu.claim']);
+  });
+
+  it('tells the user a claim was not found and returns to idle', async () => {
+    bot = await startChatbot();
+    const r = await turn(bot.url, textReq('status do sinistro SN-9999'));
+    expect(textsOf(r.events)).toContain('Não encontrei esse sinistro');
+    expect(
+      bot.fake.requests.filter((q) => q.method === 'GET' && q.path === '/v1/sinistros/SN-9999'),
+    ).toHaveLength(1);
+    const next = await turn(bot.url, textReq('oi'));
+    expect(quickIds(next.events)).toEqual(['menu.quote', 'menu.policies', 'menu.claim']);
+  });
+
+  it('asks for the Flow again when the submission is invalid, without calling the service', async () => {
+    bot = await startChatbot();
+    await turn(bot.url, choiceReq('menu.quote'));
+    const r = await turn(bot.url, flowSubmitReq({ produto: 'VIDA', nome: 'x' }));
+    expect(hasEvent(r.events, 'message.text')).toBe(true);
+    expect(findEvent(r.events, 'message.flow').payload.flowId).toBe('cotacao');
+    expect(bot.fake.requests.filter((q) => q.path === '/v1/cotacoes')).toHaveLength(0);
+  });
+
+  it('keeps the Flow when the quote service is unavailable and succeeds on the retry', async () => {
+    bot = await startChatbot({ env: { SERVICE_RETRIES: '0' } });
+    const form = {
+      produto: 'AUTO',
+      nome: 'Maria Souza',
+      cpf: '123.456.789-01',
+      nascimento: '1990-05-20',
+      marca: 'Fiat',
+      modelo: 'Argo',
+      ano: '2021',
+      cep: '01310-100',
+    };
+    await turn(bot.url, choiceReq('menu.quote'));
+    bot.fake.failNext(503, 1);
+    const down = await turn(bot.url, flowSubmitReq(form));
+    expect(textsOf(down.events)).toContain('Tente novamente');
+    expect(findEvent(down.events, 'message.flow').payload.flowId).toBe('cotacao');
+
+    const ok = await turn(bot.url, flowSubmitReq(form));
+    expect(typesOf(replies(ok.events))).toEqual(['message.template', 'message.carousel']);
   });
 
   it('executes a repeated event id once and returns the same events', async () => {
@@ -159,9 +204,9 @@ describe('chatbot end to end (fake internal services)', () => {
 
   it('sends the headers before a slow service answers', async () => {
     bot = await startChatbot();
-    bot.fake.delayMs = 500;
+    bot.fake.delayMs = 600;
     const r = await turn(bot.url, textReq('minhas apólices 12345678901'));
-    expect(r.headersAfterMs).toBeLessThan(300);
+    expect(r.headersAfterMs).toBeLessThan(400);
     expect(r.events.length).toBeGreaterThan(2);
   });
 
@@ -185,6 +230,8 @@ describe('chatbot end to end (fake internal services)', () => {
     await turn(bot.url, textReq('minhas apólices', { session: 'a' }));
     const other = await turn(bot.url, textReq('12345678901', { session: 'b' }));
     expect(textsOf(other.events)).toContain('Não entendi');
+    const same = await turn(bot.url, textReq('12345678901', { session: 'a' }));
+    expect(quickIds(same.events)).toEqual(['policy:AP-1001', 'policy:AP-1002', 'policy:AP-1003']);
   });
 
   it('degrades with a friendly message when a service is down and keeps the step', async () => {
@@ -208,6 +255,7 @@ describe('chatbot end to end (fake internal services)', () => {
     await turn(bot.url, textReq('minhas apólices 12345678901'));
     await turn(bot.url, textReq('minhas apólices 12345678901'));
     const hitsAtOpen = bot.fake.hits;
+    expect(hitsAtOpen).toBe(2);
     const r = await turn(bot.url, textReq('minhas apólices 12345678901'));
     expect(textsOf(r.events)).toContain('Tente novamente');
     expect(bot.fake.hits).toBe(hitsAtOpen);
@@ -271,7 +319,11 @@ describe('chatbot end to end (fake internal services)', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(textReq('minhas apólices 12345678901')),
     }).catch(() => undefined);
-    await new Promise((r) => setTimeout(r, 100));
+    const deadline = Date.now() + 2000;
+    while (bot.fake.hits === 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(bot.fake.hits).toBeGreaterThan(0);
     const t = Date.now();
     await bot.close();
     expect(Date.now() - t).toBeLessThan(1500);

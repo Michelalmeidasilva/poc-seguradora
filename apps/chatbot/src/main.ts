@@ -33,4 +33,12 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   });
 }
 
-await app.listen({ port: config.PORT, host: config.HOST });
+try {
+  await app.listen({ port: config.PORT, host: config.HOST });
+} catch (error) {
+  app.log.error(
+    { err: { name: error instanceof Error ? error.name : 'Error' } },
+    'failed to start',
+  );
+  process.exit(1);
+}

@@ -59,6 +59,17 @@ export const flowSubmitReq = (data: Record<string, unknown>, o: { session?: stri
     'corr-flow',
   );
 
+export const voiceReq = (
+  durationMs: number,
+  o: { session?: string; corr?: string; id?: string } = {},
+) =>
+  wrap(
+    { type: 'user.voice', payload: { mediaId: 'm1', durationMs } },
+    o.session ?? 's1',
+    o.corr ?? 'corr-voice',
+    o.id,
+  );
+
 export interface RunningChatbot {
   url: string;
   fake: FakeServices;
@@ -122,3 +133,30 @@ export const replies = (events: UnsequencedServerEvent[]) =>
   events.filter((e) => e.type !== 'status.typing');
 export const textsOf = (events: UnsequencedServerEvent[]) =>
   events.flatMap((e) => (e.type === 'message.text' ? [e.payload.text] : [])).join(' | ');
+
+type EventOf<T extends UnsequencedServerEvent['type']> = Extract<
+  UnsequencedServerEvent,
+  { type: T }
+>;
+
+/** Returns the first event of the given type, or throws naming the types actually received. */
+export function findEvent<T extends UnsequencedServerEvent['type']>(
+  events: UnsequencedServerEvent[],
+  type: T,
+): EventOf<T> {
+  const found = events.find((e): e is EventOf<T> => e.type === type);
+  if (!found) {
+    throw new Error(`expected a ${type} event, received: [${typesOf(events).join(', ')}]`);
+  }
+  return found;
+}
+
+export const hasEvent = (events: UnsequencedServerEvent[], type: UnsequencedServerEvent['type']) =>
+  events.some((e) => e.type === type);
+
+export const templateButtons = (event: EventOf<'message.template'>) => event.payload.buttons;
+
+export const quickReplyIds = (events: UnsequencedServerEvent[]) =>
+  events.flatMap((e) =>
+    e.type === 'message.quick_replies' ? e.payload.options.map((o) => o.id) : [],
+  );

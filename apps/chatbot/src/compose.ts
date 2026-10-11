@@ -67,6 +67,7 @@ export async function createChatbot(
       sinistro: client(config.SINISTRO_URL),
     });
 
+  // A custom provider bypasses the guard (timeout, input cap): tests only.
   const llm =
     overrides.llm ??
     new GuardedLlmProvider(new MockLlmProvider(), {
