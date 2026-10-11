@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { ChatClient, type ChatClientOptions, type Draft } from '../transport/chat-client';
+import { randomId } from '../transport/random-id';
 import { initialState, type ChatState, type UserContent, type UserItem } from './model';
 import { loadChat, saveChat } from './persistence';
 import { chatReducer } from './reducer';
@@ -161,7 +162,7 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     sendVoice: (blob, durationMs) => {
       const objectUrl = URL.createObjectURL(blob);
       queue(
-        { type: 'user.voice', payload: { mediaId: `local-${crypto.randomUUID()}`, durationMs } },
+        { type: 'user.voice', payload: { mediaId: `local-${randomId()}`, durationMs } },
         { type: 'voice', durationMs, objectUrl },
       );
     },

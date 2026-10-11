@@ -67,6 +67,7 @@
 ## Pendências e decisões
 
 - A web chama /v1 no mesmo origin (proxy do Vite em dev; nginx em produção).
+- Ids (`transport/random-id.ts`): usa `crypto.randomUUID` quando existe e, em http puro (sem contexto seguro), gera UUID v4 com `getRandomValues`; usado por `transport/chat-client.ts` e `chat/useChat.ts` (os Flows têm o próprio `newMediaId`).
 - Voz do usuário fica no navegador (sem upload; ver decisão 5 do Plano 4).
 - A web não envia user.typing.
 - E2E do web roda localmente com `pnpm --filter @seguradora/web e2e`; incluir no CI quando houver cache do Playwright.
@@ -79,7 +80,6 @@
   - Gateway: endpoint `/v1/media` para upload de voz e de mídia de Flows (hoje os ids são `local-*` e nenhum byte sai do navegador).
   - Validar os Flows de cotação e demo no Playground da Meta quando houver acesso; NavigationList, ChipsSelector e ImageCarousel seguem como decisões próprias até lá (incluindo o formato de `src` das imagens).
   - Plano de deploy (Cloud Run, `TRUST_PROXY_HOPS`, `resolver` do nginx, `docker build`/`nginx -t`) e teste de integração da pilha completa.
-  - `crypto.randomUUID` em `transport/chat-client.ts` e `chat/useChat.ts` (código do Plano 4) só existe em contexto seguro: funciona em https e em localhost/127.0.0.1, quebra em http puro por IP/hostname (o `newMediaId` dos Flows já tem fallback).
   - Escape com seletores nativos de data só foi verificado no Chromium; Firefox e Safari não foram testados.
   - O `cotacao.flow.json` do chatbot não declara `sensitive`, então CPF e data de nascimento aparecem em claro no resumo guardado no chat (sessionStorage). Adicionar `sensitive: ["cpf", "nascimento"]` no Flow do chatbot (fora desta frente) e uma checagem E2E do resumo guardado.
   - Valores de mídia (PhotoPicker/DocumentPicker) são aceitos em payloads de `navigate`, embora a Meta proíba; a web não rejeita.

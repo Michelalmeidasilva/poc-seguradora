@@ -1,5 +1,6 @@
 import { parseServerEvent, type ClientEvent, type ServerEvent } from '@seguradora/protocol';
 import { SseClient, type SseClientOptions } from './sse-client';
+import { randomId } from './random-id';
 import type { SseMessage } from './sse-parser';
 
 export type Draft =
@@ -78,7 +79,7 @@ export class ChatClient {
   }
 
   private newId(): string {
-    return (this.o.newId ?? (() => crypto.randomUUID()))();
+    return (this.o.newId ?? randomId)();
   }
 
   async start(initial?: { sessionId: string; lastSeq: number }): Promise<void> {

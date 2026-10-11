@@ -130,6 +130,25 @@ describe('useChat', () => {
     });
   });
 
+  it('creates local voice media ids when crypto.randomUUID is unavailable', async () => {
+    vi.stubGlobal('crypto', {
+      randomUUID: undefined,
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+    });
+    const f = fakeClient();
+    const original = URL.createObjectURL;
+    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/voice-2');
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+    await act(async () => {});
+    act(() => result.current.sendVoice(new Blob(['x'], { type: 'audio/webm' }), 1000));
+    URL.createObjectURL = original;
+    vi.unstubAllGlobals();
+    const mediaId = (f.sent[0] as Extract<Draft, { type: 'user.voice' }>).payload.mediaId;
+    expect(mediaId).toMatch(
+      /^local-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
   it('applies outgoing status updates from the client', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));

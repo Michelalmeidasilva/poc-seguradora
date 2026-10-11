@@ -176,6 +176,20 @@ describe('ChatClient: session and stream', () => {
 });
 
 describe('ChatClient: sending', () => {
+  it('sends without an injected newId when crypto.randomUUID is unavailable', async () => {
+    vi.stubGlobal('crypto', {
+      randomUUID: undefined,
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+    });
+    const { api, client } = setup({ newId: undefined });
+    await client.start();
+    await flush();
+    client.send({ type: 'user.text', payload: { text: 'oi' } });
+    await flush();
+    vi.unstubAllGlobals();
+    expect(postedEvent(api)).toMatchObject({ type: 'user.text', payload: { text: 'oi' } });
+  });
+
   it('posts a text event with the envelope and reports sent', async () => {
     const { api, client, outgoing } = setup();
     await client.start();
