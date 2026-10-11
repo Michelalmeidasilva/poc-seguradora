@@ -55,17 +55,35 @@ export function formatCents(cents: number): string {
 }
 
 export function formatDate(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso;
   const [year, month, day] = iso.slice(0, 10).split('-');
   return `${day}/${month}/${year}`;
 }
 
+/** Cuts `s` to at most `max` characters, ending with an ellipsis when it was cut. */
+const clip = (s: string, max: number): string =>
+  s.length <= max ? s : `${s.slice(0, Math.max(0, max - 1))}…`;
+
 const money = (m: Money) => formatCents(m.valorCentavos);
-const text = (t: string): ReplyBody => ({ type: 'message.text', payload: { text: t } });
+const text = (t: string): ReplyBody => ({ type: 'message.text', payload: { text: clip(t, 4096) } });
 const quick = (t: string, options: QuickOption[]): ReplyBody => ({
   type: 'message.quick_replies',
-  payload: { text: t, options },
+  payload: {
+    text: clip(t, 4096),
+    options: options.map((o) => ({ ...o, title: clip(o.title, 20) })),
+  },
 });
-const template = (payload: TemplatePayload): ReplyBody => ({ type: 'message.template', payload });
+const clipButton = (b: Button): Button => ({ ...b, title: clip(b.title, 20) });
+const template = (payload: TemplatePayload): ReplyBody => ({
+  type: 'message.template',
+  payload: {
+    ...payload,
+    header: payload.header === undefined ? undefined : clip(payload.header, 60),
+    body: clip(payload.body, 1024),
+    footer: payload.footer === undefined ? undefined : clip(payload.footer, 60),
+    buttons: payload.buttons.map(clipButton),
+  },
+});
 const MENU_BUTTON: Button = { type: 'quick_reply', id: 'menu', title: 'Menu principal' };
 const MENU_OPTION: QuickOption = { id: 'menu', title: 'Menu principal' };
 
@@ -162,7 +180,7 @@ export const quoteFlow = (): ReplyBody[] => [
       flowId: 'cotacao',
       body: 'Vamos fazer sua cotação. Toque no botão e preencha o formulário.',
       ctaLabel: 'Começar',
-      flowJson: quoteFlowJson,
+      flowJson: structuredClone(quoteFlowJson),
     },
   },
 ];
@@ -194,8 +212,8 @@ export function quoteResult(q: Quote): ReplyBody[] {
         cards: cards.map((c) => ({
           mediaUrl: `https://exemplo.invalid/coberturas/${encodeURIComponent(c.codigo.toLowerCase())}.png`,
           mediaType: 'image' as const,
-          title: c.nome.slice(0, 60),
-          body: `Limite: ${formatCents(c.limiteCentavos)}`,
+          title: clip(c.nome, 60),
+          body: clip(`Limite: ${formatCents(c.limiteCentavos)}`, 160),
           buttons: [],
         })),
       },
@@ -267,7 +285,7 @@ export const branchLocation = (): ReplyBody[] => [
 
 export const voiceReceived = (durationMs: number): ReplyBody[] => [
   text(
-    `Recebi seu áudio de ${Math.max(1, Math.round(durationMs / 1000))} s, mas por enquanto só entendo mensagens de texto.`,
+    `Recebi seu áudio de ${Number.isFinite(durationMs) ? Math.max(1, Math.round(durationMs / 1000)) : 1} s, mas por enquanto só entendo mensagens de texto.`,
   ),
   quick('Escolha uma opção:', [
     { id: 'menu.quote', title: 'Fazer cotação' },

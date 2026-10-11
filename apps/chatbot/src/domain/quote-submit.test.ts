@@ -58,6 +58,26 @@ describe('parseQuoteSubmit', () => {
       { ...base, produto: 'AUTO', marca: 'F', modelo: 'A', ano: '1500', cep: '01310100' },
     ],
     ['bad cep', { ...base, produto: 'AUTO', marca: 'F', modelo: 'A', ano: '2020', cep: '123' }],
+    [
+      'cpf with trailing letters',
+      { ...base, cpf: '12345678901abc', produto: 'VIDA', capital: '1000' },
+    ],
+    [
+      'cpf with interleaved letters',
+      { ...base, cpf: '1a2b3c4d5e6', produto: 'VIDA', capital: '1000' },
+    ],
+    [
+      'cep with a letter',
+      { ...base, produto: 'AUTO', marca: 'F', modelo: 'A', ano: '2020', cep: '01310-10a' },
+    ],
+    [
+      'impossible calendar date',
+      { ...base, nascimento: '2026-02-30', produto: 'VIDA', capital: '1000' },
+    ],
+    [
+      'nonsense calendar date',
+      { ...base, nascimento: '9999-99-99', produto: 'VIDA', capital: '1000' },
+    ],
     ['not an object', 'texto'],
     ['null', null],
   ])('rejects %s', (_name, input) => {
@@ -87,5 +107,7 @@ describe('parseQuoteSubmit', () => {
     expect(r.ok).toBe(true);
     expect(({} as { admin?: boolean }).admin).toBeUndefined();
     expect(r.ok && Object.keys(r.value)).toEqual(['produto', 'cliente', 'dados', 'coberturas']);
+    expect(r.ok && JSON.stringify(r.value)).not.toContain('admin');
+    expect(r.ok && Object.keys(r.value.cliente).sort()).toEqual(['cpf', 'dataNascimento', 'nome']);
   });
 });

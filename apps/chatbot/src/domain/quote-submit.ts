@@ -5,18 +5,28 @@ import type { QuoteRequest } from './models';
 const digits = (s: string) => s.replace(/\D/g, '');
 const cpf = z
   .string()
+  .regex(/^[\d.\-\s]{1,20}$/)
   .transform(digits)
   .refine((d) => d.length === 11, 'invalid');
 const cep = z
   .string()
+  .regex(/^[\d\-\s]{1,20}$/)
   .transform(digits)
   .refine((d) => d.length === 8, 'invalid');
 const reais = z.coerce.number().positive().max(1_000_000_000);
 
+const isCalendarDate = (s: string): boolean => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
+};
+
 const common = {
   nome: z.string().trim().min(3).max(100),
   cpf,
-  nascimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  nascimento: z.string().refine(isCalendarDate, 'invalid'),
 };
 
 const Submit = z.discriminatedUnion('produto', [

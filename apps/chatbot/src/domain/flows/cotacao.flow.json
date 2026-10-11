@@ -51,7 +51,7 @@
             "type": "TextInput",
             "name": "cpf",
             "label": "CPF",
-            "input-type": "number",
+            "input-type": "text",
             "required": true,
             "helper-text": "Somente números"
           },
@@ -91,7 +91,7 @@
                   "type": "TextInput",
                   "name": "cep",
                   "label": "CEP",
-                  "input-type": "number",
+                  "input-type": "text",
                   "required": true
                 },
                 {
@@ -117,7 +117,7 @@
                   "type": "TextInput",
                   "name": "cep",
                   "label": "CEP",
-                  "input-type": "number",
+                  "input-type": "text",
                   "required": true
                 },
                 {
@@ -158,7 +158,7 @@
                 {
                   "type": "TextInput",
                   "name": "capital",
-                  "label": "Capital segurado (R$)",
+                  "label": "Capital (R$)",
                   "input-type": "number",
                   "required": true
                 },
