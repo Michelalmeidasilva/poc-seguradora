@@ -1,0 +1,137 @@
+import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { ChatClient, type ChatClientOptions, type Draft } from '../transport/chat-client';
+import { initialState, type ChatState, type UserContent, type UserItem } from './model';
+import { loadChat, saveChat } from './persistence';
+import { chatReducer } from './reducer';
+import type { TabGuard, TabStatus } from './tab-lock';
+import { useTabGuard } from './useTabGuard';
+
+export interface ChatClientLike {
+  start(initial?: { sessionId: string; lastSeq: number }): Promise<void>;
+  stop(): void;
+  send(draft: Draft): string;
+  resend(id: string): void;
+}
+
+export interface UseChatOptions {
+  createClient?(o: ChatClientOptions): ChatClientLike;
+  storage?: Storage;
+  guard?: TabGuard;
+  now?(): number;
+}
+
+export interface ChatApi {
+  state: ChatState;
+  tab: TabStatus;
+  sendText(text: string): void;
+  sendChoice(optionId: string, title: string, replyToId: string): void;
+  sendVoice(blob: Blob, durationMs: number): void;
+  sendFlowSubmit(flowId: string, data: Record<string, unknown>, summary: string): void;
+  resend(id: string): void;
+  takeOver(): void;
+}
+
+const SAVE_DELAY_MS = 300;
+
+export function useChat(options: UseChatOptions = {}): ChatApi {
+  const storage =
+    options.storage ?? (typeof sessionStorage === 'undefined' ? undefined : sessionStorage);
+  const now = options.now ?? Date.now;
+  const [state, dispatch] = useReducer(
+    chatReducer,
+    undefined,
+    () => (storage && loadChat(storage)) || initialState(),
+  );
+  const guard = useTabGuard(options.guard);
+  const clientRef = useRef<ChatClientLike | undefined>(undefined);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // (Re)start the client while this tab owns the chat.
+  useEffect(() => {
+    if (guard.status !== 'active') return;
+    const create = options.createClient ?? ((o: ChatClientOptions) => new ChatClient(o));
+    const client = create({
+      onServerEvent: (event) => dispatch({ type: 'server_event', event }),
+      onConnection: (connection) => dispatch({ type: 'connection', connection }),
+      onOutgoing: (id, status) => dispatch({ type: 'user_status', id, status }),
+      onSession: (sessionId) => dispatch({ type: 'session', sessionId }),
+      onSessionReset: () => dispatch({ type: 'session_reset', ts: new Date(now()).toISOString() }),
+    });
+    clientRef.current = client;
+    // Defer start() to a microtask: React StrictMode runs effect -> cleanup -> effect
+    // synchronously in dev, and a cancelled first run must not fire a second POST /v1/session.
+    let cancelled = false;
+    let started = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      started = true;
+      const saved = stateRef.current;
+      void client.start(
+        saved.sessionId ? { sessionId: saved.sessionId, lastSeq: saved.lastSeq } : undefined,
+      );
+    });
+    return () => {
+      cancelled = true;
+      if (started) client.stop();
+      clientRef.current = undefined;
+    };
+    // The client is created once per ownership change; options are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guard.status]);
+
+  // Persist the conversation (debounced).
+  useEffect(() => {
+    if (!storage) return;
+    const timer = setTimeout(() => saveChat(storage, state), SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [state, storage]);
+
+  const queue = useCallback(
+    (draft: Draft, content: UserContent) => {
+      const client = clientRef.current;
+      if (!client) return;
+      const id = client.send(draft);
+      const item: UserItem = {
+        kind: 'user',
+        id,
+        ts: new Date(now()).toISOString(),
+        status: 'sending',
+        content,
+      };
+      dispatch({ type: 'user_queued', item });
+    },
+    [now],
+  );
+
+  return {
+    state,
+    tab: guard.status,
+    sendText: (text) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      queue({ type: 'user.text', payload: { text: trimmed } }, { type: 'text', text: trimmed });
+    },
+    sendChoice: (optionId, title, replyToId) =>
+      queue(
+        { type: 'user.quick_reply', payload: { optionId, replyToId } },
+        { type: 'quick_reply', optionId, title },
+      ),
+    sendVoice: (blob, durationMs) => {
+      const objectUrl = URL.createObjectURL(blob);
+      queue(
+        { type: 'user.voice', payload: { mediaId: `local-${crypto.randomUUID()}`, durationMs } },
+        { type: 'voice', durationMs, objectUrl },
+      );
+    },
+    sendFlowSubmit: (flowId, data, summary) =>
+      queue(
+        { type: 'user.flow_submit', payload: { flowId, data } },
+        { type: 'flow_submit', flowId, summary },
+      ),
+    resend: (id) => {
+      clientRef.current?.resend(id);
+    },
+    takeOver: guard.takeOver,
+  };
+}
