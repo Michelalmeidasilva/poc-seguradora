@@ -117,9 +117,3 @@ variable "github_repository" {
     error_message = "github_repository must be empty or owner/name."
   }
 }
-
-variable "tf_state_bucket" {
-  description = "Name of the existing private GCS bucket that holds the Terraform state. When set, the deployer service account gets objectAdmin on it (needed to run Terraform from CI). Empty = no grant."
-  type        = string
-  default     = ""
-}

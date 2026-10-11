@@ -10,7 +10,6 @@ image_tag  = "<IMAGE_TAG>" # commit SHA or release tag pushed to Artifact Regist
 
 # GitHub Actions deploy through Workload Identity Federation (empty = skip):
 # github_repository = "<OWNER>/<REPO>"
-# tf_state_bucket   = "<TF_STATE_BUCKET>"
 
 # Budget alert (empty billing_account_id = no budget):
 # billing_account_id = "<XXXXXX-XXXXXX-XXXXXX>"

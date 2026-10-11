@@ -107,6 +107,13 @@ expect google_artifact_registry_repository 1
 expect google_billing_budget 1
 expect google_iam_workload_identity_pool 1
 expect google_iam_workload_identity_pool_provider 1
+# The state bucket's IAM is bootstrap-only: a deployer with objectAdmin cannot read bucket IAM,
+# so managing it here would break CI refresh with 403.
+if grep -nE '^(resource|data) "google_storage_bucket_iam_' ./*.tf; then
+  fail "google_storage_bucket_iam_* must not be managed by this stack (lines above)"
+else
+  pass "no google_storage_bucket_iam_* resource"
+fi
 
 # Behavioural settings from the plan's Global Constraints, checked per service block.
 run_block() {

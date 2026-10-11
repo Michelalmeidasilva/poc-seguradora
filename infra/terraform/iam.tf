@@ -84,14 +84,9 @@ resource "google_service_account_iam_member" "deployer_act_as" {
   member             = "serviceAccount:${google_service_account.deployer.email}"
 }
 
-# Terraform state (the bucket itself is created by the bootstrap in the runbook, not here).
-resource "google_storage_bucket_iam_member" "deployer_state" {
-  count = var.tf_state_bucket == "" ? 0 : 1
-
-  bucket = var.tf_state_bucket
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.deployer.email}"
-}
+# The state bucket and the deployer's roles/storage.objectAdmin on it are granted in the
+# bootstrap (README / runbook), not here: with only objectAdmin the deployer cannot read the
+# bucket IAM policy, so a managed binding would fail the CI refresh with 403.
 
 # Workload Identity Federation for GitHub Actions (only when github_repository is set).
 resource "google_iam_workload_identity_pool" "github" {

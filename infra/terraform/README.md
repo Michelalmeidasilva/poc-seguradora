@@ -28,7 +28,19 @@ O backend é `gcs` com configuração parcial: o bucket não fica no repositóri
 terraform init -backend-config="bucket=<TF_STATE_BUCKET>" -backend-config="prefix=seguradora"
 ```
 
-O estado guarda o valor do `SESSION_SECRET` (é assim que o `random_password` funciona), então o bucket precisa ser privado, com versionamento e acesso uniforme. O bucket é criado no bootstrap do runbook, não por este Terraform.
+O estado guarda o valor do `SESSION_SECRET` (é assim que o `random_password` funciona), então o bucket precisa ser privado, com versionamento e acesso uniforme.
+
+O bucket e a permissão do deployer nele são criados no bootstrap, manualmente pelo operador, e **não** por este Terraform: com só `roles/storage.objectAdmin` o deployer não lê a política de IAM do bucket (`storage.buckets.getIamPolicy`), então um binding gerenciado aqui quebraria o refresh do `plan` no CI com 403 (`validate.sh` impede `google_storage_bucket_iam_*` na stack). Depois do primeiro apply (que cria a conta `seguradora-deployer`):
+
+```bash
+gcloud storage buckets create gs://<TF_STATE_BUCKET> --project=<PROJECT_ID> --location=<REGION> --uniform-bucket-level-access --public-access-prevention
+gcloud storage buckets update gs://<TF_STATE_BUCKET> --versioning
+gcloud storage buckets add-iam-policy-binding gs://<TF_STATE_BUCKET> \
+  --member="serviceAccount:seguradora-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+(O `create`/`update` do bucket vem antes do primeiro `terraform init`; o `add-iam-policy-binding`, depois do primeiro apply. O runbook `docs/deploy.md` repete esses passos.)
 
 ## Variáveis
 
@@ -44,7 +56,6 @@ O estado guarda o valor do `SESSION_SECRET` (é assim que o `random_password` fu
 | `deploy_fake_services` | `true` | Sobe o `fake-services` enquanto os `svc-*` reais não existem |
 | `service_urls` | `null` | `{ cotacao, apolice, sinistro }`: obrigatório com `deploy_fake_services = false`. Precisam ser alcançáveis pela VPC (não há NAT, logo não há saída para a internet) |
 | `github_repository` | `""` | `owner/nome` autorizado a fazer deploy via WIF. Vazio = sem WIF |
-| `tf_state_bucket` | `""` | Bucket do estado; quando preenchido, o deployer ganha `roles/storage.objectAdmin` nele |
 | `billing_account_id` | `""` | Conta de faturamento para o orçamento. Vazio = sem orçamento |
 | `budget_amount_brl` | `200` | Valor mensal (a moeda da conta de faturamento precisa ser BRL). Alertas em 50%, 90%, 100% e 100% previsto |
 | `budget_alert_email` | `""` | E-mail extra dos alertas (canal do Cloud Monitoring); os administradores da conta de faturamento recebem sempre |
@@ -88,7 +99,7 @@ As URLs usadas nas variáveis de ambiente são computadas no formato determinís
 |---|---|
 | `seguradora-web`, `seguradora-chatbot`, `seguradora-fake-services` | nenhum (o Cloud Run escreve logs do stdout e baixa imagens do mesmo projeto com o próprio service agent) |
 | `seguradora-gateway` | `roles/secretmanager.secretAccessor` só no secret `seguradora-session-secret` |
-| `seguradora-deployer` | no projeto: `roles/run.admin`, `roles/artifactregistry.admin`, `roles/secretmanager.admin`, `roles/compute.networkAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.workloadIdentityPoolAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/serviceusage.serviceUsageAdmin` e, com orçamento + e-mail, `roles/monitoring.notificationChannelEditor`; `roles/iam.serviceAccountUser` só nas quatro contas de runtime; `roles/storage.objectAdmin` no bucket do estado (com `tf_state_bucket`) |
+| `seguradora-deployer` | no projeto: `roles/run.admin`, `roles/artifactregistry.admin`, `roles/secretmanager.admin`, `roles/compute.networkAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.workloadIdentityPoolAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/serviceusage.serviceUsageAdmin` e, com orçamento + e-mail, `roles/monitoring.notificationChannelEditor`; `roles/iam.serviceAccountUser` só nas quatro contas de runtime; `roles/storage.objectAdmin` no bucket do estado, concedido no bootstrap (fora desta stack) |
 
 O deployer precisa de `projectIamAdmin` e `serviceAccountAdmin` porque este Terraform gerencia bindings de IAM; na prática isso permite escalar privilégios dentro do projeto. Por isso o WIF só aceita tokens deste repositório e de `main`, tags `v*` ou do environment `production` (com aprovação). Papéis na conta de faturamento (orçamento: `roles/billing.costsManager`) não são concedidos aqui: o operador concede manualmente se o deploy pelo CI tiver orçamento.
 
@@ -107,7 +118,6 @@ Não é possível rodar `terraform plan` sem credenciais, então a conferência 
 | `google_service_account` | 5 | 5 | |
 | `google_project_iam_member` | 8 | 9 | + `monitoring.notificationChannelEditor` |
 | `google_service_account_iam_member` | 4 | 5 | actAs ×4; + `workloadIdentityUser` |
-| `google_storage_bucket_iam_member` | 0 | 1 | |
 | `google_iam_workload_identity_pool` | 0 | 1 | |
 | `google_iam_workload_identity_pool_provider` | 0 | 1 | |
 | `random_password` | 1 | 1 | |
@@ -118,9 +128,9 @@ Não é possível rodar `terraform plan` sem credenciais, então a conferência 
 | `google_cloud_run_v2_service_iam_member` | 4 | 4 | |
 | `google_monitoring_notification_channel` | 0 | 1 | |
 | `google_billing_budget` | 0 | 1 | |
-| **Total** | **40** | **49** | |
+| **Total** | **40** | **48** | |
 
-¹ Só `project_id` e `image_tag`. ² `github_repository`, `tf_state_bucket`, `billing_account_id` e `budget_alert_email` preenchidos. Com `deploy_fake_services = false`, tire 2 (serviço `fake-services` e o invoker dele).
+¹ Só `project_id` e `image_tag`. ² `github_repository`, `billing_account_id` e `budget_alert_email` preenchidos. Com `deploy_fake_services = false`, tire 2 (serviço `fake-services` e o invoker dele).
 
 No primeiro plan, confira também: nenhum `destroy`; `random_password.session_secret` e `secret_data` aparecem como `(sensitive value)`; os `env` têm as URLs no formato `https://<serviço>-<número>.<região>.run.app`; `TRUST_PROXY_HOPS = "3"`; `ingress` interno em `chatbot` e `fake-services`.
 
@@ -145,6 +155,6 @@ Nenhum output contém o `SESSION_SECRET` ou outro valor sensível (`validate.sh`
 infra/terraform/validate.sh
 ```
 
-Roda `terraform fmt -check -recursive`, `terraform init -backend=false -input=false` e `terraform validate` (sem credenciais; baixa os providers do registry público) e confere: outputs sem referência a segredo; nenhum valor de segredo literal nos `.tf` e a versão do secret alimentada pelo `random_password`; `.gitignore` cobrindo `*.tfvars`, estado, `.terraform/` e crash logs (e não o exemplo nem o lock); descrição e tipo em toda variável; contagem de blocos por tipo; e as regras do plano por serviço (instâncias, afinidade, timeout, ingress, egress, `cpu_idle`, `secret_key_ref`, `trust_proxy_hops`, sub-rede). Compatível com o bash 3.2 do macOS.
+Roda `terraform fmt -check -recursive`, `terraform init -backend=false -input=false` e `terraform validate` (sem credenciais; baixa os providers do registry público) e confere: outputs sem referência a segredo; nenhum valor de segredo literal nos `.tf` e a versão do secret alimentada pelo `random_password`; `.gitignore` cobrindo `*.tfvars`, estado, `.terraform/` e crash logs (e não o exemplo nem o lock); descrição e tipo em toda variável; contagem de blocos por tipo; nenhum `google_storage_bucket_iam_*` na stack; e as regras do plano por serviço (instâncias, afinidade, timeout, ingress, egress, `cpu_idle`, `secret_key_ref`, `trust_proxy_hops`, sub-rede). Compatível com o bash 3.2 do macOS.
 
 O que não dá para verificar offline (fica para o primeiro apply + smoke): ingress interno com Direct VPC egress de fato roteando, `TRUST_PROXY_HOPS`, o formato de URL computado batendo com o servido, cold start, org policies do projeto.
