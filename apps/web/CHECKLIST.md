@@ -4,7 +4,7 @@
 
 ## Estrutura
 
-- [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows fica para o Plano 5)
+- [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows entregues no Plano 5)
 - [x] Configuração de ambiente (proxy do Vite) validada
 - [ ] Build Vite e imagem nginx para Cloud Run (com proxy /v1)
 - [x] Regras de dependência verificadas (dependency-cruiser)
@@ -63,7 +63,7 @@
 
 ## Plano 6 (pendências dos Flows)
 
-- [x] `randomId` com fallback para http sem contexto seguro (`getRandomValues`), usado por `chat-client` e `useChat`
+- [x] `randomId` com fallback para http sem contexto seguro (`getRandomValues`), usado por `chat-client` e `useChat`; em http o chat funciona, exceto voz e guarda de aba única (ver pendências)
 - [x] Campos `sensitive` mascarados no resumo do Flow (cotação: `cpf`, `nascimento`) e conferidos no E2E
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
@@ -84,6 +84,8 @@
 - GATEWAY_URL do nginx: o gateway precisa de `ALLOWED_ORIGIN` igual à origem pública da web e `TRUST_PROXY_HOPS` conforme o número de saltos (web -> gateway no Cloud Run); conferir no deploy.
 - Upload de áudio do usuário não existe: o áudio gravado fica no navegador.
 - Fluxo de pilha completa (web + gateway + chatbot + serviços) não tem teste automatizado.
+- Em http puro (sem contexto seguro) `navigator.locks` não existe: a guarda de aba única (Web Locks) fica inativa e toda aba se diz ativa. Uma aba duplicada (sessionStorage copiado = mesma sessão) pode disputar com a outra o stream único do gateway.
+- A gravação de voz precisa de `navigator.mediaDevices` (HTTPS ou localhost): em `http://<ip>` o Composer mostra "Não foi possível acessar o microfone.". O fix do randomId cobre só os ids, não o microfone.
 - Pendências dos Flows (o que resta depois do Plano 6):
   - Gateway: endpoint `/v1/media` para upload de voz e de mídia de Flows (hoje os ids são `local-*` e nenhum byte sai do navegador).
   - Protocolo: um evento para o servidor decidir a próxima tela depois de `data_exchange` (a web avança de forma otimista e o chatbot não responde nada).
