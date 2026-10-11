@@ -81,6 +81,9 @@ bad_case() {
     inputs-in-run)
       good_workflow | sed 's|echo "tag=$TAG"|echo "tag=${{ inputs.tag }}"|'
       ;;
+    boolean-input-in-run)
+      good_workflow | sed 's|echo "tag=$TAG"|if [ "${{ inputs.deploy_existing_tag }}" = true ]; then echo skip; fi|'
+      ;;
     event-in-inline-run)
       good_workflow | sed 's|run: echo "${{ github.sha }}"|run: echo "${{ github.event.head_commit.message }}"|'
       ;;
@@ -122,7 +125,7 @@ self_test() {
     fail "self-test: extra checks reject a good workflow: $out"
   fi
 
-  for name in inputs-in-run event-in-inline-run ref-name-in-run head-ref-in-folded-run \
+  for name in inputs-in-run boolean-input-in-run event-in-inline-run ref-name-in-run head-ref-in-folded-run \
     unpinned-main unpinned-none no-permissions id-token-without-environment top-level-id-token; do
     dir="$TMP/bad-$name"
     mkdir -p "$dir"

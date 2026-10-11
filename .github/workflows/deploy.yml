@@ -21,6 +21,14 @@
 # github_repository comes from github.repository. deploy_fake_services/service_urls are not wired:
 # the deploy always uses their defaults (fake-services on).
 #
+# Image tags are never overwritten (Artifact Registry tags are mutable, and Terraform would see no
+# change for a rebuilt image under the same tag):
+#   - build mode (default; tag pushes and workflow_dispatch with deploy_existing_tag=false): the job
+#     REFUSES to build when any of the four images already exists at the tag. Use a new tag.
+#   - deploy_existing_tag=true (workflow_dispatch only; the rollback path): no build or push; the
+#     job FIRST checks that web, gateway, chatbot and fake-services all exist at image_tag, then
+#     runs the CURRENT Terraform config with that image_tag (same approval gate).
+#
 # GitHub environment `production` (Settings > Environments), required:
 #   - Required reviewers: at least one person; "Prevent self-review" on.
 #   - Deployment branches and tags: "Selected branches and tags" limited to the deploy branch
@@ -41,6 +49,11 @@ on:
         type: string
         required: false
         default: ''
+      deploy_existing_tag:
+        description: Do not build; deploy images already in the registry at image_tag (rollback)
+        type: boolean
+        required: false
+        default: false
   push:
     tags:
       - 'v*'
@@ -130,9 +143,45 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      # Build mode refuses a tag that already exists (never overwrite a published tag);
+      # deploy_existing_tag mode requires all four images at the tag. A lookup error that is not
+      # "not found" stops the job either way (absence must be proven, not assumed).
+      - name: Check the image tag in the registry
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          DEPLOY_EXISTING_TAG: ${{ inputs.deploy_existing_tag }}
+        run: |
+          present=""
+          missing=""
+          for name in web gateway chatbot fake-services; do
+            ref="$REGISTRY/$name:$TAG"
+            if out="$(docker buildx imagetools inspect "$ref" 2>&1)"; then
+              present="$present $name"
+            elif grep -qiE 'not found|manifest unknown|name unknown' <<<"$out"; then
+              missing="$missing $name"
+            else
+              echo "::error::could not check $ref in the registry: $out"
+              exit 1
+            fi
+          done
+          if [ "$DEPLOY_EXISTING_TAG" = "true" ]; then
+            if [ -n "$missing" ]; then
+              echo "::error::deploy_existing_tag: images missing at tag $TAG:$missing (nothing is built in this mode)"
+              exit 1
+            fi
+            echo "Mode: deploy existing tag \`$TAG\` (no build)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ -n "$present" ]; then
+              echo "::error::tag $TAG already exists in the registry for:$present. Published tags are never overwritten: use a new tag, or deploy_existing_tag=true to deploy these images"
+              exit 1
+            fi
+            echo "Mode: build and push \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       # Same contexts as CI and infra/docker-compose.yml (repo root). Only the immutable tag is
       # pushed (no `latest`). provenance off: a plain single-platform image for Cloud Run.
       - name: web
+        if: ${{ inputs.deploy_existing_tag != true }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -144,6 +193,7 @@ jobs:
           cache-from: type=gha,scope=web
 
       - name: gateway
+        if: ${{ inputs.deploy_existing_tag != true }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -155,6 +205,7 @@ jobs:
           cache-from: type=gha,scope=gateway
 
       - name: chatbot
+        if: ${{ inputs.deploy_existing_tag != true }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -166,6 +217,7 @@ jobs:
           cache-from: type=gha,scope=chatbot
 
       - name: fake-services
+        if: ${{ inputs.deploy_existing_tag != true }}
         uses: docker/build-push-action@v6
         with:
           context: .
