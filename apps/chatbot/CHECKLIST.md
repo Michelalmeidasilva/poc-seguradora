@@ -16,8 +16,8 @@
 - [x] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro)
 - [x] TurnLog: replay idempotente por event.id (inclusive turno em andamento)
 - [x] HandleTurn (laço do diálogo, typing, tratamento de falhas)
-- [ ] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
-- [ ] Armazenamento de estado do diálogo em memória (TTL e capacidade)
+- [x] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
+- [x] Armazenamento de estado do diálogo em memória (TTL e capacidade)
 - [ ] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
 - [ ] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
 - [ ] /health e /ready
