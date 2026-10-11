@@ -457,6 +457,102 @@ describe('update_data', () => {
     expect(s.stack[1]?.data).toEqual({ produto: 'AUTO', saudacao: 'Oi Ana' });
     expect(s.stack[0]?.data).toEqual({});
   });
+
+  describe('undo by name (on-unselect-action)', () => {
+    const f = {
+      version: '6.2',
+      screens: [
+        screen('A', [{ type: 'TextInput', name: 'x', label: 'X' }], { data: {} }),
+        screen('B', [{ type: 'TextInput', name: 'y', label: 'Y' }], { terminal: true }),
+      ],
+    } as unknown as FlowJson;
+    const start = (data: Record<string, unknown>) => initRuntime(f, data);
+
+    it('restores the values a recorded patch replaced, and removes keys it added', () => {
+      const s = run(
+        f,
+        [
+          {
+            type: 'update_data',
+            patch: { preco: 20, extra: true },
+            undo: { name: 'chips', mode: 'record' },
+          },
+          { type: 'update_data', patch: {}, undo: { name: 'chips', mode: 'restore' } },
+        ],
+        start({ preco: 10 }),
+      );
+      expect(s.stack[0]?.data).toEqual({ preco: 10 });
+    });
+
+    it('keeps the first baseline when the same name records twice', () => {
+      const rec = { name: 'chips', mode: 'record' } as const;
+      const s = run(
+        f,
+        [
+          { type: 'update_data', patch: { preco: 20 }, undo: rec },
+          { type: 'update_data', patch: { preco: 30 }, undo: rec },
+          { type: 'update_data', patch: {}, undo: { name: 'chips', mode: 'restore' } },
+        ],
+        start({ preco: 10 }),
+      );
+      expect(s.stack[0]?.data).toEqual({ preco: 10 });
+    });
+
+    it('applies the unselect patch over the restored values', () => {
+      const s = run(
+        f,
+        [
+          { type: 'update_data', patch: { preco: 20 }, undo: { name: 'c', mode: 'record' } },
+          { type: 'update_data', patch: { msg: 'off' }, undo: { name: 'c', mode: 'restore' } },
+        ],
+        start({ preco: 10 }),
+      );
+      expect(s.stack[0]?.data).toEqual({ preco: 10, msg: 'off' });
+    });
+
+    it('a restore without a record only merges its patch; other names are independent', () => {
+      const s = run(
+        f,
+        [
+          { type: 'update_data', patch: { a: 1 }, undo: { name: 'one', mode: 'record' } },
+          { type: 'update_data', patch: { b: 2 }, undo: { name: 'two', mode: 'restore' } },
+        ],
+        start({}),
+      );
+      expect(s.stack[0]?.data).toEqual({ a: 1, b: 2 });
+    });
+
+    it('forgets the undo entries when the screen changes', () => {
+      const s = run(
+        f,
+        [
+          { type: 'update_data', patch: { a: 1 }, undo: { name: 'n', mode: 'record' } },
+          { type: 'navigate', screenId: 'B', payload: {} },
+          { type: 'back' },
+          { type: 'update_data', patch: {}, undo: { name: 'n', mode: 'restore' } },
+        ],
+        start({}),
+      );
+      expect(s.stack[0]?.data).toEqual({ a: 1 });
+    });
+
+    it('treats hostile names and keys as plain data', () => {
+      const s = run(
+        f,
+        [
+          {
+            type: 'update_data',
+            patch: JSON.parse('{"__proto__": {"polluted": 1}}') as Record<string, unknown>,
+            undo: { name: '__proto__', mode: 'record' },
+          },
+          { type: 'update_data', patch: {}, undo: { name: '__proto__', mode: 'restore' } },
+        ],
+        start({}),
+      );
+      expect(s.stack[0]?.data).toEqual({});
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+  });
 });
 
 describe('prototype safety', () => {

@@ -145,10 +145,10 @@ describe('ChipsSelector', () => {
     expect(roubo).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(roubo);
     expect(roubo).toHaveAttribute('aria-pressed', 'true');
-    expect(runAction).toHaveBeenLastCalledWith(onSelect);
+    expect(runAction).toHaveBeenLastCalledWith(onSelect, { name: 'tags', event: 'select' });
     await userEvent.click(roubo);
     expect(roubo).toHaveAttribute('aria-pressed', 'false');
-    expect(runAction).toHaveBeenLastCalledWith(onUnselect);
+    expect(runAction).toHaveBeenLastCalledWith(onUnselect, { name: 'tags', event: 'unselect' });
     expect(runAction).toHaveBeenCalledTimes(2);
   });
 

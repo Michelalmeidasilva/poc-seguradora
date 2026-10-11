@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext } from 'react';
 import type { Scope } from './expr';
+import type { ActionOrigin } from './actions';
 import type { RuntimeEvent, RuntimeState } from './runtime';
 import type { FlowAction, FlowJson } from './schema';
 
@@ -8,8 +9,8 @@ export interface FlowContextValue {
   state: RuntimeState;
   scope: Scope;
   dispatch: (event: RuntimeEvent) => void;
-  /** Wired to the action runner in a later task; a no-op until then. */
-  runAction: (action: FlowAction) => void;
+  /** Runs a component action; `origin` lets on-unselect-action undo its select. */
+  runAction: (action: FlowAction, origin?: ActionOrigin) => void;
   /** Sheet footer container; Footer portals into it when present, renders inline otherwise. */
   footerSlot: HTMLElement | null;
 }

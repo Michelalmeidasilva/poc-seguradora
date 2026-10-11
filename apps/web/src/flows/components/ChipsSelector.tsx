@@ -26,7 +26,7 @@ export function ChipsSelector({ c }: { c: C }) {
     // keep data-source order, like CheckboxGroup
     f.set(options.map((o) => o.id).filter((v) => (v === id ? !on : selected.includes(v))));
     const action = on ? onUnselect : onSelect;
-    if (action) runAction(action);
+    if (action) runAction(action, { name: f.name, event: on ? 'unselect' : 'select' });
   };
 
   return (

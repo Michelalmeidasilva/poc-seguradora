@@ -18,7 +18,17 @@ export interface RuntimeState {
   /** `exchange` while a data_exchange is in flight. */
   pending: 'idle' | 'exchange';
   outcome?: { kind: 'complete'; payload: Record<string, unknown> };
+  /**
+   * Per component name, the current-screen `data` values that a select `update_data` replaced
+   * (`had: false` = the key did not exist). Cleared on navigate and back.
+   */
+  undo?: Map<string, UndoEntry[]>;
 }
+
+export type UndoEntry = { key: string; had: boolean; value: unknown };
+
+/** `record` keeps the values a select patch replaces; `restore` puts them back (unselect). */
+export type UndoMode = { name: string; mode: 'record' | 'restore' };
 
 /**
  * `navigate.payload`, `complete.payload` and `update_data.patch` are the RAW action values from
@@ -34,7 +44,7 @@ export type RuntimeEvent =
   | { type: 'complete'; payload: Record<string, unknown> }
   | { type: 'exchange_start' }
   | { type: 'exchange_done' }
-  | { type: 'update_data'; patch: Record<string, unknown> };
+  | { type: 'update_data'; patch: Record<string, unknown>; undo?: UndoMode };
 
 const FIELD_TYPES = new Set([
   'TextInput',
@@ -193,6 +203,28 @@ export function resolvePayload(
   return isRecord(resolved) ? resolved : {};
 }
 
+function restore(data: Record<string, unknown>, prev: UndoEntry[]): Record<string, unknown> {
+  const out = { ...data };
+  for (const p of prev) {
+    if (p.had)
+      Object.defineProperty(out, p.key, {
+        value: p.value,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    else delete out[p.key];
+  }
+  return out;
+}
+
+const withoutUndo = (s: RuntimeState): RuntimeState => {
+  if (!s.undo) return s;
+  const next = { ...s };
+  delete next.undo;
+  return next;
+};
+
 function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
   if (s.outcome || !isRecord(e)) return s;
   switch (e.type) {
@@ -206,12 +238,12 @@ function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
     }
     case 'back':
       if (s.pending === 'exchange' || s.stack.length <= 1) return s;
-      return { ...s, stack: s.stack.slice(0, -1) };
+      return withoutUndo({ ...s, stack: s.stack.slice(0, -1) });
     case 'navigate': {
       if (typeof e.screenId !== 'string' || !screenById(flow, e.screenId)) return s;
       if (s.stack[s.stack.length - 1]?.screenId === e.screenId) return s;
       const data = resolvePayload(flow, s, e.payload);
-      return { ...s, stack: [...s.stack, { screenId: e.screenId, data }] };
+      return withoutUndo({ ...s, stack: [...s.stack, { screenId: e.screenId, data }] });
     }
     case 'complete':
       return {
@@ -226,8 +258,25 @@ function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
     case 'update_data': {
       const top = s.stack[s.stack.length - 1];
       if (!top || !isRecord(e.patch)) return s;
-      const data = { ...top.data, ...resolvePayload(flow, s, e.patch) };
-      return { ...s, stack: [...s.stack.slice(0, -1), { ...top, data }] };
+      const patch = resolvePayload(flow, s, e.patch);
+      let base = top.data;
+      let undo = s.undo;
+      const u = isRecord(e.undo) && typeof e.undo.name === 'string' ? e.undo : undefined;
+      if (u?.mode === 'record' && !undo?.has(u.name)) {
+        const prev = Object.keys(patch).map((key) =>
+          Object.hasOwn(base, key)
+            ? { key, had: true, value: base[key] }
+            : { key, had: false, value: undefined },
+        );
+        undo = new Map(undo).set(u.name, prev);
+      } else if (u?.mode === 'restore' && undo?.has(u.name)) {
+        base = restore(base, undo.get(u.name) ?? []);
+        undo = new Map(undo);
+        undo.delete(u.name);
+      }
+      const data = { ...base, ...patch };
+      const next = { ...s, stack: [...s.stack.slice(0, -1), { ...top, data }] };
+      return undo === s.undo ? next : { ...next, undo };
     }
     default:
       return s;
