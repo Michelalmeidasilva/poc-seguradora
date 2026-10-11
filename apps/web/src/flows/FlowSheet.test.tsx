@@ -1,0 +1,250 @@
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import cotacao from './fixtures/cotacao.flow.json';
+import { FlowSheet, type FlowSheetRequest } from './index';
+
+const request: FlowSheetRequest = { flowId: 'cotacao', flowJson: cotacao, header: 'Cotação' };
+
+function setup(overrides: Partial<FlowSheetRequest> = {}) {
+  const onClose = vi.fn();
+  const submit = vi.fn();
+  const exchange = vi.fn();
+  const utils = render(
+    <FlowSheet
+      request={{ ...request, ...overrides }}
+      onClose={onClose}
+      submit={submit}
+      exchange={exchange}
+    />,
+  );
+  return { ...utils, onClose, submit, exchange, user: userEvent.setup() };
+}
+
+const dialog = () => screen.getByRole('dialog');
+
+async function toDados(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('radio', { name: /Auto/ }));
+  await user.click(screen.getByRole('button', { name: 'Continuar' }));
+}
+
+afterEach(() => vi.restoreAllMocks());
+
+describe('FlowSheet', () => {
+  it('is a modal dialog labelled by the current screen title, focused on its heading', () => {
+    setup();
+    const d = dialog();
+    expect(d).toHaveAttribute('aria-modal', 'true');
+    expect(d).toHaveAccessibleName('Cotação');
+    expect(screen.getByRole('heading', { name: 'Cotação' })).toHaveFocus();
+    // entry screen: no Back
+    expect(screen.queryByRole('button', { name: 'Voltar' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
+  });
+
+  it('renders the Footer in the fixed slot, outside the scrollable body', () => {
+    const { container } = setup();
+    const button = screen.getByRole('button', { name: 'Continuar' });
+    const slot = container.ownerDocument.querySelector('.flow-sheet__footer');
+    const body = container.ownerDocument.querySelector('.flow-sheet__body');
+    expect(slot).toContainElement(button);
+    expect(body).not.toContainElement(button);
+  });
+
+  it('walks the cotação flow to exactly one submit and closes', async () => {
+    const { user, submit, onClose, exchange } = setup();
+    await toDados(user);
+    expect(dialog()).toHaveAccessibleName('Seus dados');
+    expect(screen.getByRole('heading', { name: 'Seus dados' })).toHaveFocus();
+    await user.type(screen.getByLabelText('Nome completo'), 'Ana Lima');
+    await user.type(screen.getByLabelText('CPF'), '12345678909');
+    await user.type(screen.getByLabelText('Data de nascimento'), '1990-05-20');
+    await user.type(screen.getByLabelText('Marca'), 'Fiat');
+    await user.type(screen.getByLabelText('Modelo'), 'Uno');
+    await user.type(screen.getByLabelText('Ano do veículo'), '2020');
+    await user.type(screen.getByLabelText('CEP'), '01001000');
+    await user.click(screen.getByRole('button', { name: 'Calcular cotação' }));
+
+    expect(submit).toHaveBeenCalledTimes(1);
+    const [flowId, data, summary] = submit.mock.calls[0]!;
+    expect(flowId).toBe('cotacao');
+    expect(data).toEqual({
+      produto: 'AUTO',
+      nome: 'Ana Lima',
+      cpf: '12345678909',
+      nascimento: '1990-05-20',
+      marca: 'Fiat',
+      modelo: 'Uno',
+      ano: '2020',
+      cep: '01001000',
+    });
+    expect(typeof summary).toBe('string');
+    expect(exchange).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('Back returns to the previous screen and keeps the values', async () => {
+    const { user } = setup();
+    await toDados(user);
+    await user.type(screen.getByLabelText('Nome completo'), 'Ana');
+    await user.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(dialog()).toHaveAccessibleName('Cotação');
+    expect(screen.getByRole('heading', { name: 'Cotação' })).toHaveFocus();
+    expect(screen.getByRole('radio', { name: /Auto/ })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Ana');
+  });
+
+  it('shows an error state for an invalid Flow and warns with paths/codes only', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { user, onClose } = setup({ flowJson: { version: '7.0', screens: 'SEGREDO' } });
+    expect(screen.getByText('Não foi possível abrir este formulário.')).toBeInTheDocument();
+    expect(dialog()).toHaveAttribute('aria-modal', 'true');
+    expect(warn).toHaveBeenCalled();
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain('screens_required');
+    expect(logged).not.toContain('SEGREDO');
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('traps Tab and Shift+Tab inside the sheet, including the footer', async () => {
+    const outside = document.createElement('button');
+    outside.textContent = 'fora';
+    document.body.append(outside);
+    const { user } = setup();
+    const close = screen.getByRole('button', { name: 'Fechar' });
+    const footer = screen.getByRole('button', { name: 'Continuar' });
+    close.focus();
+    await user.tab({ shift: true });
+    expect(footer).toHaveFocus();
+    await user.tab();
+    expect(close).toHaveFocus();
+    for (let i = 0; i < 8; i++) {
+      await user.tab();
+      expect(dialog()).toContainElement(document.activeElement as HTMLElement);
+    }
+    outside.remove();
+  });
+
+  it('Escape with no input closes at once', async () => {
+    const { user, onClose } = setup();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('Escape with input asks to discard; continue editing keeps the form', async () => {
+    const { user, onClose } = setup();
+    await user.click(screen.getByRole('radio', { name: /Auto/ }));
+    await user.keyboard('{Escape}');
+    const confirm = screen.getByRole('alertdialog', { name: 'Descartar o formulário?' });
+    expect(within(confirm).getByRole('button', { name: 'Continuar editando' })).toHaveFocus();
+    // Escape inside the confirm = continue editing
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('radio', { name: /Auto/ })).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar editando' }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('Close with input asks to discard; Descartar closes without submitting', async () => {
+    const { user, onClose, submit } = setup();
+    await user.click(screen.getByRole('radio', { name: /Auto/ }));
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    const confirm = screen.getByRole('alertdialog');
+    // the confirm traps the focus too
+    await user.tab();
+    expect(confirm).toContainElement(document.activeElement as HTMLElement);
+    await user.tab();
+    expect(confirm).toContainElement(document.activeElement as HTMLElement);
+    await user.click(within(confirm).getByRole('button', { name: 'Descartar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('returns the focus to the opener on close', () => {
+    const opener = document.createElement('button');
+    document.body.append(opener);
+    opener.focus();
+    const { unmount } = setup();
+    expect(opener).not.toHaveFocus();
+    unmount();
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+
+  it('opens URLs in a new tab without opener', () => {
+    // covered through the host contract: openUrl -> window.open(_blank, noopener)
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const flow = {
+      version: '7.0',
+      screens: [
+        {
+          id: 'A',
+          terminal: true,
+          layout: {
+            type: 'SingleColumnLayout',
+            children: [
+              {
+                type: 'Footer',
+                label: 'Abrir',
+                'on-click-action': { name: 'open_url', url: 'https://example.com/x' },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    setup({ flowJson: flow });
+    act(() => screen.getByRole('button', { name: 'Abrir' }).click());
+    expect(open).toHaveBeenCalledWith('https://example.com/x', '_blank', 'noopener,noreferrer');
+  });
+
+  it('falls back to the request header, then "Formulário", for the dialog name', () => {
+    const flow = {
+      version: '7.0',
+      screens: [
+        {
+          id: 'A',
+          terminal: true,
+          layout: {
+            type: 'SingleColumnLayout',
+            children: [
+              { type: 'TextBody', text: 'oi' },
+              { type: 'Footer', label: 'Ok', 'on-click-action': { name: 'complete', payload: {} } },
+            ],
+          },
+        },
+      ],
+    };
+    const a = setup({ flowJson: flow, header: 'Ajuda' });
+    expect(dialog()).toHaveAccessibleName('Ajuda');
+    expect(screen.getByText('oi')).toBeInTheDocument();
+    a.unmount();
+    setup({ flowJson: flow, header: undefined });
+    expect(dialog()).toHaveAccessibleName('Formulário');
+  });
+
+  it('marks reduced motion with a class when the user prefers it', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('prefers-reduced-motion'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    setup();
+    expect(document.querySelector('.flow-sheet')).toHaveClass('flow-sheet--reduced-motion');
+  });
+
+  it('animates by default (no reduced-motion class)', () => {
+    setup();
+    expect(document.querySelector('.flow-sheet')).not.toHaveClass('flow-sheet--reduced-motion');
+  });
+});

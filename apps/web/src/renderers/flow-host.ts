@@ -1,4 +1,4 @@
-/** What a Flow host (Plan 5) needs to open a Flow from a `message.flow`. */
+/** What the Flow host (flows/FlowSheet) needs to open a Flow from a `message.flow`. */
 export interface OpenFlowRequest {
   flowId: string;
   ctaLabel: string;

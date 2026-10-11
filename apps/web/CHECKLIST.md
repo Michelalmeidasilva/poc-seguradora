@@ -32,6 +32,7 @@
 - [x] Componentes de Flows: exibição, navegação e estruturais (Image, EmbeddedLink, ImageCarousel, NavigationList, ChipsSelector, If/Switch, Footer)
 - [x] Componentes de Flows: upload de mídia (PhotoPicker, DocumentPicker)
 - [x] Ações de Flows (navigate, complete, data_exchange, open_url, update_data)
+- [x] FlowSheet (bottom sheet) e integração
 
 ### Decisões próprias (Plano 5)
 
@@ -46,6 +47,7 @@
 - Resumo do envio (`buildSummary`): uma linha `rótulo: valor` por campo enviado (rótulo do componente com o mesmo `name`, senão a chave), Sim/Não, ids de opção trocados pelo título, arquivos pelo nome, até 500 caracteres. Campos `sensitive` (da tela, lista ou `true`, ou do componente) aparecem como `••••`, e qualquer valor que contenha o valor de um campo sensível também é mascarado (pode mascarar a mais). Payload vazio vira "Formulário enviado".
 - `update_data` com `on-unselect-action` (ChipsSelector): o select guarda, por `name` do componente, os valores de `data` que o patch substituiu (o primeiro registro vale até o unselect); o unselect os restaura e depois aplica o próprio patch. O registro some ao navegar ou voltar. Semântica a validar (só documentada no changelog).
 - `open_url` com URL que não é http(s) é descartada com um `console.warn` sem a URL.
+- FlowSheet substitui o placeholder do Plano 4: Fechar/Escape só pedem confirmação (diálogo dentro da folha, não `window.confirm`) quando há algum valor definido ou campo tocado; após `complete` fecha direto. Flow inválido mostra "Não foi possível abrir este formulário." e loga só caminho e código dos problemas. Se a aba fica passiva com a folha aberta, o App a fecha sem enviar; reabrir o mesmo Flow começa do zero (chave por abertura).
 
 ## Qualidade
 

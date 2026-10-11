@@ -158,21 +158,3 @@
   font-weight: 600;
   cursor: pointer;
 }
-
-.flow-sheet {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  align-items: end;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 10;
-}
-.flow-sheet__panel {
-  max-width: 480px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 20px;
-  border-radius: 16px 16px 0 0;
-  background: var(--wa-card-bg);
-  color: var(--wa-text);
-}
