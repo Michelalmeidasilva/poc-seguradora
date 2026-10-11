@@ -6,7 +6,7 @@
 
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
 - [x] Configuração por variáveis de ambiente validada na subida
-- [ ] Dockerfile e execução local
+- [x] Dockerfile e execução local
 - [x] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades
@@ -54,6 +54,6 @@
 - Valores de mídia são aceitos em payloads de `navigate` (a Meta proíbe); Escape e seletores nativos só verificados no Chromium (web).
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
 - Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
-- Dockerfile não verificado com Docker real (daemon indisponível). Verificado sem Docker: build tsup (bundle ESM com @seguradora/* e Flow JSON embutidos), smoke test do `dist/main.js` (/health ok, SIGTERM com exit 0) e o layout de `pnpm deploy --legacy --prod` montado como na imagem. Rodar `docker build -f apps/chatbot/Dockerfile .` quando houver Docker.
+- Dockerfile (verificado no Plano 7): a imagem é construída no compose (`infra/docker-compose.yml`, contexto na raiz), fica saudável pelo `/health` e passa no smoke de ponta a ponta contra o `fake-services` (`node infra/smoke.mjs http://localhost:8080`: `chatbot`, `demo-flow` e `quote` provam gateway → chatbot → serviços). O deploy no Cloud Run (ingress interno + Direct VPC egress) está no runbook `docs/deploy.md` e ainda não foi aplicado.
 - Botão 'tentar de novo' e entrada 'status do sinistro' no menu não implementados (o menu aceita no máximo 3 quick replies).
 - A mensagem da segunda via mostra só a data de validade do link.

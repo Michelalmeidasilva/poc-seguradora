@@ -1,11 +1,11 @@
 # Checklist: gateway
 
-Última atualização: 2026-10-10
+Última atualização: 2026-10-11
 
 ## Estrutura
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
 - [x] Configuração por variáveis de ambiente validada na subida
-- [ ] Dockerfile e execução local
+- [x] Dockerfile e execução local
 - [x] Regras de dependência verificadas (dependency-cruiser)
 
 ## Funcionalidades
@@ -35,7 +35,7 @@
 - Em reconexão com lacuna no buffer, o gateway reenvia o que resta e registra um aviso; a web detecta o salto de seq.
 - A política de resiliência (bulkhead, circuit breaker, retry, timeout de conexão) cobre apenas o estabelecimento da conexão com o chatbot; o consumo do stream é limitado só pelo timeout do turno. Um chatbot que responde 200 e trava no meio do stream não abre o circuito nem ocupa vaga do bulkhead. Revisar no Plano 3 se for necessário.
 - No encerramento (SIGTERM/SIGINT) turnos do chatbot ainda em andamento são interrompidos; o estado vive em memória e o cliente reenvia com o mesmo id (idempotência).
-- Dockerfile: `pnpm deploy --legacy --prod` e o layout da imagem (node_modules + dist + package.json de tipo) foram verificados localmente sem Docker; `docker build` em si não foi executado (daemon indisponível).
+- Dockerfile (verificado no Plano 7): a imagem é construída no compose (`infra/docker-compose.yml`, contexto na raiz), fica saudável pelo `/health` e passa no smoke de ponta a ponta (`node infra/smoke.mjs http://localhost:8080`, sete passos `ok`), também depois de recriada com outro IP (`infra/test-nginx.sh`). O deploy no Cloud Run (`TRUST_PROXY_HOPS`, Origin/cookies reais) está no runbook `docs/deploy.md` e ainda não foi aplicado.
 - Falha no meio do stream (depois de `status.delivered`): o `error` sai sem `messageId` e o id continua registrado; o usuário envia uma nova mensagem. Falha antes da entrega mantém `messageId` e permite reenviar o mesmo id.
 - Contrato com o chatbot: `docs/superpowers/specs/2026-10-10-gateway-chatbot-contract.md`.
 - `TRUST_PROXY_HOPS` é aplicado como função (`i < hops`) porque o Fastify instalado trata o número como "não confiar em ninguém".
