@@ -7,7 +7,7 @@ import { interpolate } from '../expr';
 import type { TextComponent } from '../schema';
 
 /** Bold, italic, strike and links only; code markers and everything else stay plain text. */
-function renderInline(nodes: TextNode[]): ReactNode[] {
+function renderInline(nodes: TextNode[], prefix: string): ReactNode[] {
   return nodes.map((node, i) => {
     switch (node.type) {
       case 'text':
@@ -16,15 +16,17 @@ function renderInline(nodes: TextNode[]): ReactNode[] {
       case 'block':
         return node.value;
       case 'bold':
-        return <strong key={i}>{renderInline(node.children)}</strong>;
+        return (
+          <strong key={`${prefix}-${i}`}>{renderInline(node.children, `${prefix}-${i}`)}</strong>
+        );
       case 'italic':
-        return <em key={i}>{renderInline(node.children)}</em>;
+        return <em key={`${prefix}-${i}`}>{renderInline(node.children, `${prefix}-${i}`)}</em>;
       case 'strike':
-        return <del key={i}>{renderInline(node.children)}</del>;
+        return <del key={`${prefix}-${i}`}>{renderInline(node.children, `${prefix}-${i}`)}</del>;
       case 'link': {
         const href = safeHttpUrl(node.href);
         return href ? (
-          <a key={i} href={href} target="_blank" rel="noopener noreferrer">
+          <a key={`${prefix}-${i}`} href={href} target="_blank" rel="noopener noreferrer">
             {node.label}
           </a>
         ) : (
@@ -35,18 +37,20 @@ function renderInline(nodes: TextNode[]): ReactNode[] {
   });
 }
 
-const MD_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/gu;
+const MD_LINK = /\[([^\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/gu;
 
 /** Inline markup plus `[label](url)`; an unsafe url leaves just the label. */
 function Inline({ text }: { text: string }) {
   const out: ReactNode[] = [];
   let last = 0;
+  let seg = 0;
   for (const m of text.matchAll(MD_LINK)) {
-    if (m.index > last) out.push(...renderInline(parseFormatting(text.slice(last, m.index))));
+    if (m.index > last)
+      out.push(...renderInline(parseFormatting(text.slice(last, m.index)), `s${seg++}`));
     const href = safeHttpUrl(m[2] ?? '');
     out.push(
       href ? (
-        <a key={m.index} href={href} target="_blank" rel="noopener noreferrer">
+        <a key={`l${seg++}`} href={href} target="_blank" rel="noopener noreferrer">
           {m[1]}
         </a>
       ) : (
@@ -55,7 +59,7 @@ function Inline({ text }: { text: string }) {
     );
     last = m.index + m[0].length;
   }
-  if (last < text.length) out.push(...renderInline(parseFormatting(text.slice(last))));
+  if (last < text.length) out.push(...renderInline(parseFormatting(text.slice(last)), `s${seg++}`));
   return <>{out}</>;
 }
 

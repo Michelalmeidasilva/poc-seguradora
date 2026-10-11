@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { flowOf, renderInFlow } from '../test-utils';
 import { RichText, TextBody, TextCaption, TextHeading, TextSubheading } from './text';
 
@@ -82,6 +82,28 @@ describe('text components', () => {
       flow,
     );
     expect(screen.queryByRole('link')).toBeNull();
-    expect(container).toHaveTextContent('click');
+    expect(container.querySelector('.flow-rich__p')?.textContent).toBe('click');
+  });
+
+  it('gives inline siblings unique keys and the right structure', () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = renderInFlow(
+      <RichText
+        c={{
+          type: 'RichText',
+          text: ['*a*[x](https://y.com)*b*', '*a*[x](https://y.com)_b_[z](https://z.com)'],
+        }}
+      />,
+      flow,
+    );
+    const [p1, p2] = Array.from(container.querySelectorAll('.flow-rich__p'));
+    expect(p1?.textContent).toBe('axb');
+    expect(p1?.querySelectorAll('strong')).toHaveLength(2);
+    expect(p1?.querySelectorAll('a')).toHaveLength(1);
+    expect(p2?.textContent).toBe('axbz');
+    expect(p2?.querySelectorAll('a')).toHaveLength(2);
+    expect(p2?.querySelector('em')).toHaveTextContent('b');
+    expect(err).not.toHaveBeenCalled();
+    err.mockRestore();
   });
 });
