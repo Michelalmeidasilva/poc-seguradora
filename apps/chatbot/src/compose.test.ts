@@ -44,6 +44,7 @@ describe('request logging', () => {
     expect(all).not.toContain('"headers"');
     expect(all).not.toContain('cookie-secret-xyz');
     expect(all).not.toContain('token-secret-xyz');
+    expect(all).not.toContain('corr-distinctive-7f3a');
     expect(all).not.toContain('123.456.789-01');
     expect(all).not.toContain('12345678901');
     expect(all).not.toContain(userText);
