@@ -21,13 +21,13 @@
 - [x] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
 - [x] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
 - [x] /health e /ready
-- [ ] Encerramento gracioso
+- [x] Encerramento gracioso
 
 ## Qualidade
 
 - [ ] Testes unitários (domain e application)
 - [x] Testes de contrato com serviços fake
-- [ ] Testes E2E da API
+- [x] Testes E2E da API
 - [ ] Lint, formatação e tsconfig estrito sem erros
 
 ## Pendências e decisões
