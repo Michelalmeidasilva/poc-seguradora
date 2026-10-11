@@ -1,0 +1,186 @@
+{
+  "version": "6.2",
+  "screens": [
+    {
+      "id": "PRODUTO",
+      "title": "Cotação",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "Qual seguro você quer cotar?" },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "produto",
+            "label": "Produto",
+            "required": true,
+            "data-source": [
+              { "id": "AUTO", "title": "Auto" },
+              { "id": "RESIDENCIAL", "title": "Residencial" },
+              { "id": "VIDA", "title": "Vida" }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "navigate",
+              "next": { "type": "screen", "name": "DADOS" },
+              "payload": { "produto": "${form.produto}" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "DADOS",
+      "title": "Seus dados",
+      "terminal": true,
+      "success": true,
+      "data": { "produto": { "type": "string", "__example__": "AUTO" } },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextInput",
+            "name": "nome",
+            "label": "Nome completo",
+            "input-type": "text",
+            "required": true
+          },
+          {
+            "type": "TextInput",
+            "name": "cpf",
+            "label": "CPF",
+            "input-type": "text",
+            "required": true,
+            "helper-text": "Somente números"
+          },
+          {
+            "type": "DatePicker",
+            "name": "nascimento",
+            "label": "Data de nascimento",
+            "required": true
+          },
+          {
+            "type": "Switch",
+            "value": "${data.produto}",
+            "cases": {
+              "AUTO": [
+                {
+                  "type": "TextInput",
+                  "name": "marca",
+                  "label": "Marca",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "name": "modelo",
+                  "label": "Modelo",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "name": "ano",
+                  "label": "Ano do veículo",
+                  "input-type": "number",
+                  "required": true
+                },
+                {
+                  "type": "TextInput",
+                  "name": "cep",
+                  "label": "CEP",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Calcular cotação",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "produto": "${data.produto}",
+                      "nome": "${form.nome}",
+                      "cpf": "${form.cpf}",
+                      "nascimento": "${form.nascimento}",
+                      "marca": "${form.marca}",
+                      "modelo": "${form.modelo}",
+                      "ano": "${form.ano}",
+                      "cep": "${form.cep}"
+                    }
+                  }
+                }
+              ],
+              "RESIDENCIAL": [
+                {
+                  "type": "TextInput",
+                  "name": "cep",
+                  "label": "CEP",
+                  "input-type": "text",
+                  "required": true
+                },
+                {
+                  "type": "RadioButtonsGroup",
+                  "name": "tipoImovel",
+                  "label": "Tipo de imóvel",
+                  "required": true,
+                  "data-source": [
+                    { "id": "CASA", "title": "Casa" },
+                    { "id": "APARTAMENTO", "title": "Apartamento" }
+                  ]
+                },
+                {
+                  "type": "TextInput",
+                  "name": "valorImovel",
+                  "label": "Valor do imóvel (R$)",
+                  "input-type": "number",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Calcular cotação",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "produto": "${data.produto}",
+                      "nome": "${form.nome}",
+                      "cpf": "${form.cpf}",
+                      "nascimento": "${form.nascimento}",
+                      "cep": "${form.cep}",
+                      "tipoImovel": "${form.tipoImovel}",
+                      "valorImovel": "${form.valorImovel}"
+                    }
+                  }
+                }
+              ],
+              "VIDA": [
+                {
+                  "type": "TextInput",
+                  "name": "capital",
+                  "label": "Capital (R$)",
+                  "input-type": "number",
+                  "required": true
+                },
+                {
+                  "type": "Footer",
+                  "label": "Calcular cotação",
+                  "on-click-action": {
+                    "name": "complete",
+                    "payload": {
+                      "produto": "${data.produto}",
+                      "nome": "${form.nome}",
+                      "cpf": "${form.cpf}",
+                      "nascimento": "${form.nascimento}",
+                      "capital": "${form.capital}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

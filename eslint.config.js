@@ -19,6 +19,53 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/web/src/flows/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/chat/*', '**/app/*', '**/transport/*'],
+              message: 'flows/ must not import chat, app or transport.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/flows/{schema,expr,runtime}.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['react', 'react-dom', 'react/*', 'react-dom/*'], message: 'No React here.' },
+            { group: ['../*'], message: 'Core flow modules import nothing outside flows/.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/{chat,app}/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/flows/*', '!**/flows/index'],
+              message: 'Import flows only through flows/index.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/web/e2e/**/*.mjs'],
     languageOptions: {
       globals: {

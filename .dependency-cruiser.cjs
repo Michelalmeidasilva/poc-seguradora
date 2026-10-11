@@ -51,6 +51,31 @@ module.exports = {
       to: { path: '^apps/web/src/(chat|renderers|ui)/' },
     },
     {
+      name: 'web-flows-core-is-framework-free',
+      severity: 'error',
+      comment: 'flow schema, expressions and runtime are plain TypeScript: no React',
+      from: { path: '^apps/web/src/flows/(schema|expr|runtime)\\.ts$' },
+      to: { path: 'node_modules/(react|react-dom)/' },
+    },
+    {
+      name: 'web-flows-is-self-contained',
+      severity: 'error',
+      comment:
+        'flows may use ui, renderers/format-text and renderers/safe-urls; nothing else outside flows',
+      from: { path: '^apps/web/src/flows/', pathNot: '\\.test\\.tsx?$' },
+      to: {
+        path: '^apps/web/src/(chat|app|transport|renderers)/',
+        pathNot: '^apps/web/src/renderers/(format-text|safe-urls)\\.ts$',
+      },
+    },
+    {
+      name: 'web-flows-only-through-index',
+      severity: 'error',
+      comment: 'chat and app reach flows only through flows/index.ts',
+      from: { path: '^apps/web/src/(chat|app)/' },
+      to: { path: '^apps/web/src/flows/', pathNot: '^apps/web/src/flows/index\\.ts$' },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       from: {},
