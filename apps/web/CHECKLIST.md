@@ -15,7 +15,7 @@
 - [x] ChatClient (sessão, fila de saída com reenvio idempotente, user.ack)
 - [x] Estado do chat (reducer)
 - [x] Persistência do chat em sessionStorage e aba única (Web Locks)
-- [ ] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
+- [x] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
 - [ ] Tela de chat, composer e gravação de voz
 - [ ] Tema claro e escuro, acessibilidade
 - [ ] E2E (Playwright) com gateway simulado
