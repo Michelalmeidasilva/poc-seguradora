@@ -6,7 +6,8 @@
 # (1) actionlint (rhysd/actionlint:latest through Docker, includes shellcheck) on
 #     .github/workflows/*.yml;
 # (2) extra checks (infra/lint-workflows.mjs): no untrusted `${{ ... }}` inside `run:`, every
-#     `uses:` pinned to a major tag or SHA, top-level `permissions:`, required workflows and jobs.
+#     `uses:` pinned to a major tag or SHA, top-level `permissions:`, `id-token: write` only in
+#     jobs with `environment:` (never top-level), required workflows and jobs.
 # Never runs a workflow and never talks to GitHub or GCP. Written for bash 3.2 (macOS /bin/bash):
 # no mapfile and no expansion of a possibly empty array under `set -u`.
 set -euo pipefail
@@ -63,6 +64,14 @@ jobs:
         run: |
           echo "tag=$TAG"
       - run: echo "${{ github.sha }}"
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - run: echo deploy
 EOF
 }
 
@@ -92,6 +101,13 @@ bad_case() {
     no-permissions)
       good_workflow | sed '/^permissions:/d; /^  contents: read/d'
       ;;
+    id-token-without-environment)
+      good_workflow | sed '/^    environment: production$/d'
+      ;;
+    top-level-id-token)
+      good_workflow | sed 's|^  contents: read$|  contents: read\
+  id-token: write|'
+      ;;
   esac
 }
 
@@ -107,7 +123,7 @@ self_test() {
   fi
 
   for name in inputs-in-run event-in-inline-run ref-name-in-run head-ref-in-folded-run \
-    unpinned-main unpinned-none no-permissions; do
+    unpinned-main unpinned-none no-permissions id-token-without-environment top-level-id-token; do
     dir="$TMP/bad-$name"
     mkdir -p "$dir"
     bad_case "$name" >"$dir/bad.yml"
@@ -184,7 +200,7 @@ fi
 if node "$CHECKS" \
   --require ci.yml,deploy.yml \
   --require-jobs ci.yml=verify,docker \
-  --require-jobs deploy.yml=images,terraform,smoke \
+  --require-jobs deploy.yml=deploy,smoke \
   "$ROOT/.github/workflows"; then
   pass "extra workflow checks"
 else

@@ -19,6 +19,13 @@
 # github_repository comes from github.repository. deploy_fake_services/service_urls are not wired:
 # the deploy always uses their defaults (fake-services on).
 #
+# GitHub environment `production` (Settings > Environments), required:
+#   - Required reviewers: at least one person; "Prevent self-review" on.
+#   - Deployment branches and tags: "Selected branches and tags" limited to the deploy branch
+#     (Terraform var github_deploy_branch, default master) and the tag pattern `v*`.
+# Only the `deploy` job uses this environment and only it gets an OIDC token (id-token: write);
+# the WIF attribute condition requires environment == production plus that branch or a v* tag.
+#
 # Action pinning policy: third-party actions are pinned to a MAJOR tag (e.g. @v4), never a branch;
 # bump them deliberately. infra/lint-workflows.sh enforces it.
 # Untrusted values (inputs.*, github.ref_name, github.event.*) reach shell steps only through env:.
@@ -51,14 +58,22 @@ env:
   REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.TF_VAR_ARTIFACT_REGISTRY_REPO || 'seguradora' }}
 
 jobs:
-  images:
+  # ONE job holds the deployer credentials, and only after a reviewer approves the `production`
+  # environment: images, then Terraform. The WIF condition (infra/terraform/iam.tf) also requires
+  # the environment claim, so an edited workflow without `environment:` gets no credentials.
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    environment: production
     permissions:
       contents: read
       id-token: write
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      web_url: ${{ steps.tf.outputs.web_url }}
+    env:
+      TF_IN_AUTOMATION: '1'
+      TF_INPUT: '0'
     steps:
       - name: Resolve and validate the image tag
         id: tag
@@ -101,6 +116,8 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOYER_SA }}
+          # Access token for the Docker login; the credentials file it also writes is what
+          # Terraform uses (ADC) further down.
           token_format: access_token
 
       - uses: docker/login-action@v3
@@ -157,31 +174,6 @@ jobs:
           tags: ${{ env.REGISTRY }}/fake-services:${{ steps.tag.outputs.tag }}
           cache-from: type=gha,scope=fake-services
 
-  terraform:
-    needs: images
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # A required reviewer on this environment approves every apply.
-    environment: production
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      web_url: ${{ steps.tf.outputs.web_url }}
-    defaults:
-      run:
-        working-directory: infra/terraform
-    env:
-      TF_IN_AUTOMATION: '1'
-      TF_INPUT: '0'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOYER_SA }}
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '~1.10'
@@ -189,15 +181,17 @@ jobs:
           terraform_wrapper: false
 
       - name: terraform init
+        working-directory: infra/terraform
         env:
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
         run: terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="prefix=seguradora"
 
       - name: terraform plan
+        working-directory: infra/terraform
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
           GCP_REGION: ${{ vars.GCP_REGION }}
-          IMAGE_TAG: ${{ needs.images.outputs.tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           OPT_ARTIFACT_REGISTRY_REPO: ${{ vars.TF_VAR_ARTIFACT_REGISTRY_REPO }}
           OPT_TRUST_PROXY_HOPS: ${{ vars.TF_VAR_TRUST_PROXY_HOPS }}
           OPT_WEB_CUSTOM_DOMAIN_URL: ${{ vars.TF_VAR_WEB_CUSTOM_DOMAIN_URL }}
@@ -221,19 +215,24 @@ jobs:
             -var "github_repository=$GITHUB_REPOSITORY"
 
       - name: terraform apply
+        working-directory: infra/terraform
         run: terraform apply -input=false -lock-timeout=5m tfplan
 
       # Outputs hold only URLs and resource names (infra/terraform/outputs.tf), no secret.
       - name: terraform output
         id: tf
+        working-directory: infra/terraform
         run: |
           web_url="$(terraform output -raw web_url)"
           echo "web_url=$web_url" >> "$GITHUB_OUTPUT"
           echo "Web URL: $web_url" >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
-    needs: terraform
+    needs: deploy
+    # No cloud credentials here: no id-token permission and no environment.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -244,7 +243,7 @@ jobs:
 
       - name: smoke test
         env:
-          WEB_URL: ${{ needs.terraform.outputs.web_url }}
+          WEB_URL: ${{ needs.deploy.outputs.web_url }}
         run: node infra/smoke.mjs "$WEB_URL" 2>&1 | tee "$RUNNER_TEMP/smoke.log"
 
       - name: report the failed hop

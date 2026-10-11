@@ -108,19 +108,22 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_provider_id = "github-actions"
   display_name                       = "GitHub Actions OIDC"
 
+  # Jobs without an environment have no `environment` claim: map it to "" instead of failing.
   attribute_mapping = {
     "google.subject"        = "assertion.sub"
     "attribute.repository"  = "assertion.repository"
     "attribute.ref"         = "assertion.ref"
-    "attribute.environment" = "assertion.environment"
+    "attribute.environment" = "has(assertion.environment) ? assertion.environment : \"\""
   }
 
-  # Only this repository, and only from main, a v* tag or the protected `production`
-  # environment (the deploy workflow's approval gate). Tokens from forks, other branches or
-  # other repositories are rejected before any impersonation.
+  # Only this repository, only a job running in the `production` environment (the deploy
+  # workflow's approval gate) AND only for the deploy branch or a v* tag. A workflow edited on
+  # any branch or tag to drop `environment:` gets no token, so every use of the deployer
+  # credentials passes the environment's required reviewers.
   attribute_condition = join(" && ", [
     "assertion.repository == \"${var.github_repository}\"",
-    "(assertion.ref == \"refs/heads/main\" || assertion.ref.startsWith(\"refs/tags/v\") || assertion.environment == \"production\")",
+    "attribute.environment == \"production\"",
+    "(assertion.ref == \"refs/heads/${var.github_deploy_branch}\" || assertion.ref.startsWith(\"refs/tags/v\"))",
   ])
 
   oidc {

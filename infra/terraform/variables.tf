@@ -117,3 +117,14 @@ variable "github_repository" {
     error_message = "github_repository must be empty or owner/name."
   }
 }
+
+variable "github_deploy_branch" {
+  description = "Branch allowed to deploy through Workload Identity Federation (besides v* tags), always together with the GitHub environment production. Plain branch name, no wildcard."
+  type        = string
+  default     = "master"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$", var.github_deploy_branch)) && !strcontains(var.github_deploy_branch, "..") && !endswith(var.github_deploy_branch, "/") && !endswith(var.github_deploy_branch, ".lock")
+    error_message = "github_deploy_branch must be a plain branch name (letters, digits, . _ / -; no wildcard, no .., no trailing / or .lock)."
+  }
+}

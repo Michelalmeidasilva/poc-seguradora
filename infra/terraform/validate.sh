@@ -160,6 +160,19 @@ if grep -qE 'private_ip_google_access[[:space:]]*=[[:space:]]*true' network.tf 2
 if grep -qE '"10\.10\.0\.0/24"' network.tf 2>/dev/null; then pass "subnet 10.10.0.0/24"; else fail "subnet range is not 10.10.0.0/24"; fi
 if grep -qE 'backend "gcs" \{\}' versions.tf 2>/dev/null; then pass "partial gcs backend"; else fail 'versions.tf needs backend "gcs" {}'; fi
 
+# WIF: the deployer credentials only for a job in the `production` environment (approval gate),
+# as its own && term, on the deploy branch or a v* tag. An `||` with the environment would let
+# any branch or tag run skip the reviewers.
+wif_condition="$(awk '/attribute_condition/,/\]\)/' iam.tf 2>/dev/null || true)"
+if printf '%s\n' "$wif_condition" | grep -qE '^[[:space:]]*"attribute\.environment == \\"production\\"",$'; then
+  pass "WIF condition requires environment production (own && term)"
+else
+  fail "WIF attribute_condition must have \"attribute.environment == \\\"production\\\"\" as its own term"
+fi
+if printf '%s\n' "$wif_condition" | grep -q 'refs/heads/${var.github_deploy_branch}'; then pass "WIF condition uses github_deploy_branch"; else fail "WIF condition must use refs/heads/\${var.github_deploy_branch}"; fi
+if printf '%s\n' "$wif_condition" | grep -qE 'environment[^&]*\|\||\|\|[^&]*environment'; then fail "WIF condition ORs the environment (bypass)"; else pass "WIF condition does not OR the environment"; fi
+if grep -qE '"attribute\.environment"[[:space:]]*=[[:space:]]*"has\(assertion\.environment\)' iam.tf 2>/dev/null; then pass "WIF maps a missing environment claim safely"; else fail "WIF attribute.environment mapping must guard with has(assertion.environment)"; fi
+
 echo "== resource counts by type (blocks in the .tf files; see README 'O que o plan deve mostrar')"
 { cat ./*.tf | grep -E '^resource "' || true; } | awk '{ gsub(/"/, "", $2); print $2 }' | sort | uniq -c
 

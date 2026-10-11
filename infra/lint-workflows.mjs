@@ -5,7 +5,9 @@
 //      (script injection);
 //   2. every `uses:` pinned to a major tag (`@v4`, `@v4.1.0`) or a full commit SHA, never a branch;
 //   3. top-level `permissions:` in every workflow;
-//   4. optional presence checks: --require <file,...> and --require-jobs <file>=<job,...>.
+//   4. every job with `id-token: write` declares `environment:` (no OIDC token outside the
+//      approval gate) and the top-level permissions never grant id-token;
+//   5. optional presence checks: --require <file,...> and --require-jobs <file>=<job,...>.
 // Line-based on purpose: the `yaml` package is not a dependency of this repo. A `run:` key at
 // column c owns every following line that is blank or indented deeper than c, which covers
 // block scalars (`|`, `>`), multi-line plain/quoted scalars and `- run:` list items.
@@ -25,6 +27,25 @@ function checkWorkflow(name, text) {
 
   if (!lines.some((l) => /^permissions:/.test(l))) {
     errors.push(`${name}: no top-level permissions:`);
+  }
+
+  // OIDC tokens (cloud credentials) only for jobs gated by a deployment environment: the cloud
+  // side (WIF attribute condition) also requires the environment claim. Top-level id-token
+  // would hand a token to every job.
+  const idTokenWrite = /^\s+id-token:\s*['"]?write['"]?\s*(#.*)?$/;
+  let topLevelPermissions = false;
+  for (const line of lines) {
+    if (/^\S/.test(line) && !line.startsWith('#')) topLevelPermissions = /^permissions:/.test(line);
+    else if (topLevelPermissions && idTokenWrite.test(line)) {
+      errors.push(`${name}: top-level permissions grant id-token: write (grant it per job)`);
+    }
+  }
+  for (const job of jobBlocksOf(text)) {
+    const wantsToken = job.lines.some((l) => idTokenWrite.test(l));
+    const hasEnvironment = job.lines.some((l) => /^ {4}environment:/.test(l));
+    if (wantsToken && !hasEnvironment) {
+      errors.push(`${name}: job "${job.name}" requests id-token: write without environment:`);
+    }
   }
 
   for (let i = 0; i < lines.length; i++) {
@@ -63,16 +84,24 @@ function checkWorkflow(name, text) {
   return errors;
 }
 
-function jobsOf(text) {
+// Jobs as { name, lines } (job keys at two spaces under a top-level `jobs:`, as prettier writes them).
+function jobBlocksOf(text) {
   const jobs = [];
   let inJobs = false;
   for (const line of text.split('\n')) {
-    if (/^\S/.test(line) && !line.startsWith('#')) inJobs = /^jobs:\s*$/.test(line);
-    const job = inJobs && /^ {2}([A-Za-z0-9_-]+):/.exec(line);
-    if (job) jobs.push(job[1]);
+    if (/^\S/.test(line) && !line.startsWith('#')) {
+      inJobs = /^jobs:\s*$/.test(line);
+      continue;
+    }
+    if (!inJobs) continue;
+    const job = /^ {2}([A-Za-z0-9_-]+):/.exec(line);
+    if (job) jobs.push({ name: job[1], lines: [] });
+    else if (jobs.length > 0) jobs[jobs.length - 1].lines.push(line);
   }
   return jobs;
 }
+
+const jobsOf = (text) => jobBlocksOf(text).map((j) => j.name);
 
 function main(argv) {
   const required = [];

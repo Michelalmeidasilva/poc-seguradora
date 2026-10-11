@@ -10,6 +10,8 @@ image_tag  = "<IMAGE_TAG>" # commit SHA or release tag pushed to Artifact Regist
 
 # GitHub Actions deploy through Workload Identity Federation (empty = skip):
 # github_repository = "<OWNER>/<REPO>"
+# github_deploy_branch = "master" # branch allowed to deploy (plus v* tags), only from the
+#                                 # GitHub environment `production`
 
 # Budget alert (empty billing_account_id = no budget):
 # billing_account_id = "<XXXXXX-XXXXXX-XXXXXX>"
