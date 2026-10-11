@@ -12,7 +12,7 @@ export function formatTime(iso: string, locale = 'pt-BR', timeZone?: string): st
   return new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }

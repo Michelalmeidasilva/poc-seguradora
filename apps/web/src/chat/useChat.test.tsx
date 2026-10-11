@@ -266,6 +266,57 @@ describe('useChat', () => {
       await act(async () => {});
       act(() => result.current.resend(uuid(50)));
       expect(f.drafts).toEqual([undefined]);
+      expect(result.current.canResend(uuid(50))).toBe(false);
+    });
+
+    it('can resend a text restored after a reload', async () => {
+      stored({ type: 'text', text: 'oi' });
+      const f = fakeClient();
+      const { result } = renderHook(() =>
+        useChat({ createClient: f.create, guard: activeGuard() }),
+      );
+      await act(async () => {});
+      expect(result.current.canResend(uuid(50))).toBe(true);
+    });
+
+    it('resends a voice sent in this page lifetime with its original draft, across client re-creation', async () => {
+      const originalCreate = URL.createObjectURL;
+      URL.createObjectURL = () => 'blob:x';
+      const f = fakeClient();
+      let status: 'active' | 'other-tab' = 'active';
+      const listeners = new Set<(s: 'active' | 'other-tab') => void>();
+      const guard = {
+        status: () => status,
+        subscribe: (fn: (s: 'active' | 'other-tab') => void) => {
+          listeners.add(fn);
+          fn(status);
+          return () => listeners.delete(fn);
+        },
+        takeOver: vi.fn(),
+        dispose: vi.fn(),
+      };
+      const { result } = renderHook(() => useChat({ createClient: f.create, guard }));
+      await act(async () => {});
+      act(() => result.current.sendVoice(new Blob(['a']), 1500));
+      const id = result.current.state.items.find((i) => i.kind === 'user')?.id ?? '';
+      const voiceDraft = f.sent[0];
+      expect(voiceDraft).toMatchObject({ type: 'user.voice', payload: { durationMs: 1500 } });
+      // demote then take over again: a new client is created in the same page
+      act(() => {
+        status = 'other-tab';
+        listeners.forEach((l) => l(status));
+      });
+      await act(async () => {});
+      act(() => {
+        status = 'active';
+        listeners.forEach((l) => l(status));
+      });
+      await act(async () => {});
+      expect(result.current.canResend(id)).toBe(true);
+      act(() => result.current.resend(id));
+      expect(f.resent).toEqual([id]);
+      expect(f.drafts[0]).toEqual(voiceDraft);
+      URL.createObjectURL = originalCreate;
     });
   });
 

@@ -28,15 +28,19 @@ export interface ChatApi {
   sendVoice(blob: Blob, durationMs: number): void;
   sendFlowSubmit(flowId: string, data: Record<string, unknown>, summary: string): void;
   resend(id: string): void;
+  /** Whether a failed message can be redelivered (voice restored after a reload cannot). */
+  canResend(id: string): boolean;
   takeOver(): void;
 }
 
 const SAVE_DELAY_MS = 300;
+const DRAFT_MEMORY_LIMIT = 100;
 
 /**
  * Rebuilds the outgoing draft from a bubble, so a message restored after a reload can be resent
  * with its original id. Known limit: voice (the blob does not survive a reload) and legacy items
- * without replyToId/data have no draft, so resending them is a no-op.
+ * without replyToId/data have no draft; a voice sent in this page lifetime is covered by the
+ * in-memory draft map of useChat instead.
  */
 function draftFor(content: UserContent): Draft | undefined {
   switch (content.type) {
@@ -69,6 +73,9 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
   );
   const guard = useTabGuard(options.guard);
   const clientRef = useRef<ChatClientLike | undefined>(undefined);
+  // Drafts of messages sent in this page lifetime; survives client re-creation (e.g. a tab
+  // demotion and takeover) and covers what draftFor() cannot rebuild (voice).
+  const draftsRef = useRef(new Map<string, Draft>());
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -117,6 +124,11 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       const client = clientRef.current;
       if (!client) return;
       const id = client.send(draft);
+      draftsRef.current.set(id, draft);
+      if (draftsRef.current.size > DRAFT_MEMORY_LIMIT) {
+        const oldest = draftsRef.current.keys().next().value;
+        if (oldest !== undefined) draftsRef.current.delete(oldest);
+      }
       const item: UserItem = {
         kind: 'user',
         id,
@@ -156,8 +168,14 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       ),
     resend: (id) => {
       const item = stateRef.current.items.find((i) => i.kind === 'user' && i.id === id);
-      const draft = item?.kind === 'user' ? draftFor(item.content) : undefined;
+      const draft =
+        draftsRef.current.get(id) ?? (item?.kind === 'user' ? draftFor(item.content) : undefined);
       clientRef.current?.resend(id, draft);
+    },
+    canResend: (id) => {
+      if (draftsRef.current.has(id)) return true;
+      const item = state.items.find((i) => i.kind === 'user' && i.id === id);
+      return item?.kind === 'user' && draftFor(item.content) !== undefined;
     },
     takeOver: guard.takeOver,
   };

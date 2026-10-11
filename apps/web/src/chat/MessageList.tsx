@@ -14,6 +14,7 @@ export interface MessageListProps {
   sendChoice(optionId: string, title: string, replyToId: string): void;
   openFlow: OpenFlow;
   resend(id: string): void;
+  canResend(id: string): boolean;
   now?: Date;
   timeZone?: string;
 }
@@ -37,6 +38,7 @@ export function MessageList({
   sendChoice,
   openFlow,
   resend,
+  canResend,
   now,
   timeZone,
 }: MessageListProps) {
@@ -92,7 +94,7 @@ export function MessageList({
                 >
                   <UserContent item={item} />
                 </Bubble>
-                {item.status === 'failed' ? (
+                {item.status === 'failed' && canResend(item.id) ? (
                   <button type="button" className="retry" onClick={() => resend(item.id)}>
                     Tentar de novo
                   </button>

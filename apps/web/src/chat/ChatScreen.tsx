@@ -34,6 +34,7 @@ export function ChatScreen({ chat, openFlow = ignoreFlow }: ChatScreenProps) {
         sendChoice={chat.sendChoice}
         openFlow={openFlow}
         resend={chat.resend}
+        canResend={chat.canResend}
       />
       {chat.tab === 'other-tab' ? (
         <div className="chat__other-tab" role="status">

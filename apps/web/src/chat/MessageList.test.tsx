@@ -6,7 +6,12 @@ import { initialState, type ChatState, type UserItem } from './model';
 import { MessageList } from './MessageList';
 import { chatReducer } from './reducer';
 
-const ctx = () => ({ sendChoice: vi.fn(), openFlow: vi.fn(), resend: vi.fn() });
+const ctx = () => ({
+  sendChoice: vi.fn(),
+  openFlow: vi.fn(),
+  resend: vi.fn(),
+  canResend: vi.fn(() => true),
+});
 const user = (
   n: number,
   status: UserItem['status'] = 'sent',
@@ -70,6 +75,14 @@ describe('MessageList', () => {
     render(<MessageList state={state} {...c} />);
     await userEvent.click(screen.getByRole('button', { name: /tentar de novo/i }));
     expect(c.resend).toHaveBeenCalledWith(uuid(1001));
+  });
+
+  it('hides the retry button of a failed message that cannot be rebuilt', () => {
+    const c = { ...ctx(), canResend: vi.fn(() => false) };
+    const state = build({ type: 'user_queued', item: user(1, 'failed') });
+    render(<MessageList state={state} {...c} />);
+    expect(c.canResend).toHaveBeenCalledWith(uuid(1001));
+    expect(screen.queryByRole('button', { name: /tentar de novo/i })).toBeNull();
   });
 
   it('does not show a retry button for messages that were sent', () => {

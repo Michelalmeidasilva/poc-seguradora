@@ -11,6 +11,7 @@ vi.mock('../chat/useChat', () => ({
     sendVoice: vi.fn(),
     sendFlowSubmit: vi.fn(),
     resend: vi.fn(),
+    canResend: vi.fn(() => true),
     takeOver: vi.fn(),
   }),
 }));
