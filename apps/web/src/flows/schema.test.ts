@@ -255,6 +255,43 @@ describe('parseFlow', () => {
     );
   });
 
+  it.each(['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'])(
+    'keeps a component of type %s as unknown',
+    (type) => {
+      const odd = JSON.parse(`{"type":"${type}"}`) as Json;
+      const top = flow([screen('END', [odd, footer()], { terminal: true })]);
+      expect(parseFlow(top).ok).toBe(true);
+      const inIf = flow([screen('END', [ifOf([odd, footer()], [footer()])], { terminal: true })]);
+      expect(parseFlow(inIf).ok).toBe(true);
+    },
+  );
+
+  it('rejects Switch cases whose Footers do not match', () => {
+    const sw = { type: 'Switch', value: '${form.a}', cases: { x: [footer()], y: body(1) } };
+    expect(codes(flow([screen('END', [sw], { terminal: true })]))).toContain(
+      'switch_footer_mismatch',
+    );
+  });
+
+  it('counts If and Switch together towards nesting', () => {
+    const sw = (inner: Json): Json => ({
+      type: 'Switch',
+      value: '${form.a}',
+      cases: { x: [inner] },
+    });
+    const deep = ifOf([sw(ifOf([sw(body(1)[0]!)]))]);
+    expect(codes(flow([screen('END', [deep, footer()], { terminal: true })]))).toContain(
+      'nesting_too_deep',
+    );
+  });
+
+  it('rejects a routing_model that is not an object', () => {
+    expect(codes(flow([end()], { routing_model: [] }))).toContain('invalid_routing_model');
+    expect(codes(flow([end()], { routing_model: { END: 'x' } }))).toContain(
+      'invalid_routing_model',
+    );
+  });
+
   it('rejects malformed actions', () => {
     const bad = flow([screen('END', [footer({ name: 'teleport' })], { terminal: true })]);
     expect(codes(bad)).toContain('invalid_action');

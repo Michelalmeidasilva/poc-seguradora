@@ -113,6 +113,10 @@ export const RESERVED_SCREEN_ID = 'SUCCESS';
 // Stub: Task 2 replaces this with the expression engine's own check.
 const hasDynamicValue = (src: string): boolean => /\$\{(data|form)\./.test(src);
 
+/** Own-property lookup: untrusted keys such as `constructor` must never hit the prototype. */
+const own = <T>(table: Record<string, T>, key: string): T | undefined =>
+  Object.hasOwn(table, key) ? table[key] : undefined;
+
 const TEXT_LIMITS: Record<string, number> = {
   TextHeading: 80,
   TextSubheading: 80,
@@ -259,7 +263,7 @@ function walkList(
       return;
     }
     const type = node.type;
-    const shape = COMPONENT_SHAPES[type];
+    const shape = own(COMPONENT_SHAPES, type);
     if (shape) {
       const r = shape.safeParse(node);
       if (!r.success) {
@@ -279,20 +283,13 @@ function walkList(
     }
     ctx.leaves += 1;
     ctx.perType.set(type, (ctx.perType.get(type) ?? 0) + 1);
+    const textLimit = own(TEXT_LIMITS, type);
     if (type === 'Footer') direct += 1;
     if (type === 'PhotoPicker' || type === 'DocumentPicker') ctx.pickers += 1;
-    if (
-      type in TEXT_LIMITS &&
-      typeof node.text === 'string' &&
-      node.text.length > TEXT_LIMITS[type]!
-    ) {
-      issues.add(
-        `${p}.text`,
-        'text_too_long',
-        `${type} aceita até ${TEXT_LIMITS[type]} caracteres.`,
-      );
+    if (textLimit !== undefined && typeof node.text === 'string' && node.text.length > textLimit) {
+      issues.add(`${p}.text`, 'text_too_long', `${type} aceita até ${textLimit} caracteres.`);
     }
-    const limits = OPTION_LIMITS[type];
+    const limits = own(OPTION_LIMITS, type);
     const source = node['data-source'];
     if (
       limits &&
