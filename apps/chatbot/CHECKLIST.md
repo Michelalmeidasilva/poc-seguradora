@@ -11,7 +11,7 @@
 ## Funcionalidades
 - [x] Modelos, identificadores e validação de entradas (domínio)
 - [x] Catálogo de mensagens (texto, quick-reply, template, carousel, código, location) e Flow de cotação
-- [ ] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro)
+- [x] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro)
 - [ ] TurnLog: replay idempotente por event.id (inclusive turno em andamento)
 - [ ] HandleTurn (laço do diálogo, typing, tratamento de falhas)
 - [ ] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
