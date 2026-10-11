@@ -1,0 +1,267 @@
+# Deploy to Cloud Run (Plan 7). Runbook: docs/deploy.md. No long-lived credentials: Google auth is
+# Workload Identity Federation only (infra/terraform/iam.tf).
+#
+# Repository variables (Settings > Secrets and variables > Actions > Variables; none is a secret):
+#   GCP_WIF_PROVIDER   required  terraform output wif_provider
+#   GCP_DEPLOYER_SA    required  terraform output deployer_service_account
+#   GCP_PROJECT_ID     required  Terraform var project_id
+#   GCP_REGION         required  Terraform var region (also the Artifact Registry host <region>-docker.pkg.dev)
+#   TF_STATE_BUCKET    required  private GCS bucket of the Terraform state (prefix "seguradora")
+# Optional, named TF_VAR_<TERRAFORM VARIABLE IN UPPERCASE>; leave unset for the Terraform default.
+# Set them to the same values used in the first manual apply, or the deploy reverts them:
+#   TF_VAR_ARTIFACT_REGISTRY_REPO  artifact_registry_repo (default seguradora; also the image path)
+#   TF_VAR_TRUST_PROXY_HOPS        trust_proxy_hops
+#   TF_VAR_WEB_CUSTOM_DOMAIN_URL   web_custom_domain_url
+#   TF_VAR_LOG_LEVEL               log_level
+#   TF_VAR_BILLING_ACCOUNT_ID      billing_account_id
+#   TF_VAR_BUDGET_AMOUNT_BRL       budget_amount_brl
+#   TF_VAR_BUDGET_ALERT_EMAIL      budget_alert_email
+# github_repository comes from github.repository. deploy_fake_services/service_urls are not wired:
+# the deploy always uses their defaults (fake-services on).
+#
+# Action pinning policy: third-party actions are pinned to a MAJOR tag (e.g. @v4), never a branch;
+# bump them deliberately. infra/lint-workflows.sh enforces it.
+# Untrusted values (inputs.*, github.ref_name, github.event.*) reach shell steps only through env:.
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to build, push and deploy (empty = the commit SHA)
+        type: string
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.TF_VAR_ARTIFACT_REGISTRY_REPO || 'seguradora' }}
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Resolve and validate the image tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.image_tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            tag="$REF_NAME"
+          else
+            tag="$GITHUB_SHA"
+          fi
+          # Docker tags cannot start with "." or "-"; Terraform's image_tag validation agrees.
+          if ! [[ "$tag" =~ ^[A-Za-z0-9._-]{1,64}$ ]] || [[ "$tag" =~ ^[.-] ]]; then
+            echo "::error::invalid image tag (allowed: ^[A-Za-z0-9._-]{1,64}$, not starting with . or -)"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Image tag: \`$tag\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Only deploy commits reachable from the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git fetch --no-tags origin "+refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"; then
+            echo "::error::$GITHUB_SHA is not reachable from $DEFAULT_BRANCH; only merged commits are deployed"
+            exit 1
+          fi
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+          token_format: access_token
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.GCP_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Same contexts as CI and infra/docker-compose.yml (repo root). Only the immutable tag is
+      # pushed (no `latest`). provenance off: a plain single-platform image for Cloud Run.
+      - name: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/web:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha,scope=web
+
+      - name: gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/gateway/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/gateway:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha,scope=gateway
+
+      - name: chatbot
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/chatbot/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/chatbot:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha,scope=chatbot
+
+      - name: fake-services
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/fake-services/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/fake-services:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha,scope=fake-services
+
+  terraform:
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # A required reviewer on this environment approves every apply.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      web_url: ${{ steps.tf.outputs.web_url }}
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      TF_IN_AUTOMATION: '1'
+      TF_INPUT: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.10'
+          # Raw stdout for `terraform output -raw` (the wrapper adds its own lines).
+          terraform_wrapper: false
+
+      - name: terraform init
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="prefix=seguradora"
+
+      - name: terraform plan
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          IMAGE_TAG: ${{ needs.images.outputs.tag }}
+          OPT_ARTIFACT_REGISTRY_REPO: ${{ vars.TF_VAR_ARTIFACT_REGISTRY_REPO }}
+          OPT_TRUST_PROXY_HOPS: ${{ vars.TF_VAR_TRUST_PROXY_HOPS }}
+          OPT_WEB_CUSTOM_DOMAIN_URL: ${{ vars.TF_VAR_WEB_CUSTOM_DOMAIN_URL }}
+          OPT_LOG_LEVEL: ${{ vars.TF_VAR_LOG_LEVEL }}
+          OPT_BILLING_ACCOUNT_ID: ${{ vars.TF_VAR_BILLING_ACCOUNT_ID }}
+          OPT_BUDGET_AMOUNT_BRL: ${{ vars.TF_VAR_BUDGET_AMOUNT_BRL }}
+          OPT_BUDGET_ALERT_EMAIL: ${{ vars.TF_VAR_BUDGET_ALERT_EMAIL }}
+        run: |
+          # Optional variables are exported only when set, so unset ones keep the Terraform default.
+          [ -n "$OPT_ARTIFACT_REGISTRY_REPO" ] && export TF_VAR_artifact_registry_repo="$OPT_ARTIFACT_REGISTRY_REPO"
+          [ -n "$OPT_TRUST_PROXY_HOPS" ] && export TF_VAR_trust_proxy_hops="$OPT_TRUST_PROXY_HOPS"
+          [ -n "$OPT_WEB_CUSTOM_DOMAIN_URL" ] && export TF_VAR_web_custom_domain_url="$OPT_WEB_CUSTOM_DOMAIN_URL"
+          [ -n "$OPT_LOG_LEVEL" ] && export TF_VAR_log_level="$OPT_LOG_LEVEL"
+          [ -n "$OPT_BILLING_ACCOUNT_ID" ] && export TF_VAR_billing_account_id="$OPT_BILLING_ACCOUNT_ID"
+          [ -n "$OPT_BUDGET_AMOUNT_BRL" ] && export TF_VAR_budget_amount_brl="$OPT_BUDGET_AMOUNT_BRL"
+          [ -n "$OPT_BUDGET_ALERT_EMAIL" ] && export TF_VAR_budget_alert_email="$OPT_BUDGET_ALERT_EMAIL"
+          terraform plan -input=false -lock-timeout=5m -out=tfplan \
+            -var "project_id=$GCP_PROJECT_ID" \
+            -var "region=$GCP_REGION" \
+            -var "image_tag=$IMAGE_TAG" \
+            -var "github_repository=$GITHUB_REPOSITORY"
+
+      - name: terraform apply
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+
+      # Outputs hold only URLs and resource names (infra/terraform/outputs.tf), no secret.
+      - name: terraform output
+        id: tf
+        run: |
+          web_url="$(terraform output -raw web_url)"
+          echo "web_url=$web_url" >> "$GITHUB_OUTPUT"
+          echo "Web URL: $web_url" >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    needs: terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: smoke test
+        env:
+          WEB_URL: ${{ needs.terraform.outputs.web_url }}
+        run: node infra/smoke.mjs "$WEB_URL" 2>&1 | tee "$RUNNER_TEMP/smoke.log"
+
+      - name: report the failed hop
+        if: failure()
+        run: |
+          {
+            echo "## Smoke test failed"
+            if grep -q '^FAIL ' "$RUNNER_TEMP/smoke.log" 2>/dev/null; then
+              echo "Failed hop (\`FAIL <hop>: <reason>\`; hops: web, session, sse, chatbot, services):"
+              echo '```'
+              grep '^FAIL ' "$RUNNER_TEMP/smoke.log"
+              echo '```'
+            else
+              echo "No \`FAIL <hop>\` line: the smoke script did not run to a step failure (see the log)."
+            fi
+            echo "Steps that passed:"
+            echo '```'
+            grep '^ok ' "$RUNNER_TEMP/smoke.log" 2>/dev/null || echo "(none)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -17,7 +17,8 @@
     "compose:up": "docker compose -f infra/docker-compose.yml up -d --build --wait",
     "compose:down": "docker compose -f infra/docker-compose.yml down -v",
     "smoke": "node infra/smoke.mjs",
-    "test:infra": "bash infra/test-nginx.sh"
+    "test:infra": "bash infra/test-nginx.sh",
+    "lint:workflows": "bash infra/lint-workflows.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -30,3 +30,34 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check:workboard
+
+  # Builds the four deploy images (never pushed) so a broken Dockerfile fails CI, not the deploy.
+  # Same build contexts as infra/docker-compose.yml: the repo root for all four.
+  # Third-party actions are pinned to a MAJOR tag (policy: docs/deploy.md); bump deliberately.
+  docker:
+    name: docker (${{ matrix.image.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: web
+            dockerfile: apps/web/Dockerfile
+          - name: gateway
+            dockerfile: apps/gateway/Dockerfile
+          - name: chatbot
+            dockerfile: apps/chatbot/Dockerfile
+          - name: fake-services
+            dockerfile: infra/fake-services/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.image.dockerfile }}
+          push: false
+          tags: seguradora-ci-${{ matrix.image.name }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
