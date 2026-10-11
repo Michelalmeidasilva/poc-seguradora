@@ -20,7 +20,12 @@ export interface RuntimeState {
   outcome?: { kind: 'complete'; payload: Record<string, unknown> };
 }
 
-/** Payloads and patches are the raw action values: the reducer resolves them once. */
+/**
+ * `navigate.payload`, `complete.payload` and `update_data.patch` are the RAW action values from
+ * the Flow JSON, never pre-resolved: the reducer resolves them exactly once, via
+ * `resolvePayload`. To get the value for the host (submit, data_exchange), call
+ * `resolvePayload(flow, state, raw)` yourself; do not dispatch its result.
+ */
 export type RuntimeEvent =
   | { type: 'set'; name: string; value: unknown }
   | { type: 'touch'; name: string }
@@ -140,17 +145,35 @@ const visibleFieldNames = (screen: FlowScreen, scope: Scope): Set<string> => {
   return names;
 };
 
-/** Fields of the current screen that are declared but hidden right now. */
-const hiddenFieldNames = (screen: FlowScreen, scope: Scope): Set<string> => {
-  const declared = new Set<string>();
-  walkDeclared(children(screen), 0, declared);
-  const visible = visibleFieldNames(screen, scope);
-  return new Set([...declared].filter((n) => !visible.has(n)));
+/**
+ * Field names that may be submitted: visible on some frame of the stack, each frame evaluated
+ * with its own `data` and the current `form`. Everything else known to the stack or `form` is
+ * hidden (an unchosen branch, a stale value from a branch left behind).
+ */
+const fieldVisibility = (flow: FlowJson, s: RuntimeState) => {
+  const submittable = new Set<string>();
+  const known = new Set<string>(Object.keys(s.form));
+  for (const frame of s.stack) {
+    const screen = screenById(flow, frame.screenId);
+    if (!screen) continue;
+    walkDeclared(children(screen), 0, known);
+    for (const n of visibleFieldNames(screen, { data: frame.data, form: s.form })) {
+      submittable.add(n);
+    }
+  }
+  const hidden = new Set([...known].filter((n) => !submittable.has(n)));
+  return { submittable, hidden };
 };
 
 /**
- * Resolves an action payload against the current screen. Hidden fields of this screen are not
- * submitted: a key that is exactly `${form.hidden}` is dropped, other references see null.
+ * The single place where action payloads are resolved: `reduce` uses it for `navigate`,
+ * `complete` and `update_data`, and callers use it for the value they hand to the host (for
+ * example a `data_exchange` payload). Always pass the RAW action payload from the Flow JSON;
+ * passing an already resolved one would expand `${...}` text typed by the user.
+ *
+ * Hidden fields are not submitted: a key whose raw value is exactly `${form.hidden}` is
+ * dropped, other references to a hidden field see null / "". Missing values never render
+ * as "undefined".
  */
 export function resolvePayload(
   flow: FlowJson,
@@ -158,16 +181,15 @@ export function resolvePayload(
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
   if (!isRecord(payload)) return {};
-  const scope = scopeOf(s);
-  const hidden = hiddenFieldNames(currentScreen(flow, s), scope);
-  const form = Object.fromEntries(Object.entries(s.form).filter(([k]) => !hidden.has(k)));
+  const { submittable, hidden } = fieldVisibility(flow, s);
+  const form = Object.fromEntries(Object.entries(s.form).filter(([k]) => submittable.has(k)));
   const kept = Object.fromEntries(
     Object.entries(payload).filter(([, raw]) => {
       const m = typeof raw === 'string' ? EXACT_FORM_REF.exec(raw) : null;
       return !(m && hidden.has(m[1] as string));
     }),
   );
-  const resolved = resolveValue(kept, { data: scope.data, form });
+  const resolved = resolveValue(kept, { data: scopeOf(s).data, form });
   return isRecord(resolved) ? resolved : {};
 }
 

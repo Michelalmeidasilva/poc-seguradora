@@ -341,6 +341,110 @@ describe('complete', () => {
     ]);
     expect(s.outcome?.payload).toEqual({ nome: '${data.produto}' });
   });
+
+  it('resolves a raw payload exactly once, matching resolvePayload', () => {
+    const raw = { nome: 'Sr. ${form.nome}', cpf: '${form.cpf}', p: '${data.produto}' };
+    const s = run(flow, [
+      ...toDados,
+      { type: 'set', name: 'nome', value: '${form.cpf} ${data.produto}' },
+      { type: 'set', name: 'cpf', value: '${data.x}' },
+    ]);
+    const expected = { nome: 'Sr. ${form.cpf} ${data.produto}', cpf: '${data.x}', p: 'AUTO' };
+    expect(resolvePayload(flow, s, raw)).toEqual(expected);
+    expect(reduce(flow, s, { type: 'complete', payload: raw }).outcome?.payload).toEqual(expected);
+    const s2 = reduce(flow, s, { type: 'update_data', patch: { eco: '${form.cpf}' } });
+    expect(s2.stack[1]?.data).toEqual({ produto: 'AUTO', eco: '${data.x}' });
+  });
+});
+
+describe('hidden fields across screens', () => {
+  const f = {
+    version: '6.2',
+    screens: [
+      screen('A', [
+        {
+          type: 'RadioButtonsGroup',
+          name: 'produto',
+          label: 'P',
+          'data-source': [
+            { id: 'AUTO', title: 'Auto' },
+            { id: 'VIDA', title: 'Vida' },
+          ],
+        },
+        { type: 'TextInput', name: 'obs', label: 'Obs' },
+        {
+          type: 'Footer',
+          label: 'Ok',
+          'on-click-action': {
+            name: 'navigate',
+            next: { type: 'screen', name: 'B' },
+            payload: { produto: '${form.produto}' },
+          },
+        },
+      ]),
+      screen('B', [
+        {
+          type: 'Switch',
+          value: '${data.produto}',
+          cases: {
+            AUTO: [{ type: 'TextInput', name: 'marca', label: 'Marca' }],
+            VIDA: [{ type: 'TextInput', name: 'capital', label: 'Capital' }],
+          },
+        },
+        {
+          type: 'Footer',
+          label: 'Ok',
+          'on-click-action': { name: 'navigate', next: { type: 'screen', name: 'C' }, payload: {} },
+        },
+      ]),
+      screen(
+        'C',
+        [
+          { type: 'TextInput', name: 'obs', label: 'Obs', visible: false },
+          {
+            type: 'Footer',
+            label: 'Ok',
+            'on-click-action': { name: 'complete', payload: {} },
+          },
+        ],
+        { terminal: true },
+      ),
+    ],
+  } as unknown as FlowJson;
+  const toB: RuntimeEvent = {
+    type: 'navigate',
+    screenId: 'B',
+    payload: { produto: '${form.produto}' },
+  };
+  const toC: RuntimeEvent = { type: 'navigate', screenId: 'C', payload: {} };
+  const payload = { capital: '${form.capital}', marca: '${form.marca}', obs: '${form.obs}' };
+
+  it('a stale value from a branch left behind on an earlier screen is not submitted', () => {
+    const s = run(f, [
+      { type: 'set', name: 'produto', value: 'VIDA' },
+      toB,
+      { type: 'set', name: 'capital', value: '100' },
+      { type: 'back' },
+      { type: 'set', name: 'produto', value: 'AUTO' },
+      toB,
+      { type: 'set', name: 'marca', value: 'Fiat' },
+      toC,
+      { type: 'complete', payload: { ...payload, txt: 'c=${form.capital}' } },
+    ]);
+    expect(s.form).toHaveProperty('capital', '100');
+    expect(s.outcome?.payload).toEqual({ marca: 'Fiat', obs: null, txt: 'c=' });
+  });
+
+  it('a field hidden on the current screen but visible on an earlier one is submitted', () => {
+    const s = run(f, [
+      { type: 'set', name: 'produto', value: 'AUTO' },
+      { type: 'set', name: 'obs', value: 'nota' },
+      toB,
+      toC,
+      { type: 'complete', payload },
+    ]);
+    expect(s.outcome?.payload).toEqual({ marca: null, obs: 'nota' });
+  });
 });
 
 describe('update_data', () => {
