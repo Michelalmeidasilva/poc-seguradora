@@ -1,8 +1,16 @@
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { clearInterval, setInterval } from 'node:timers';
 
 const PORT = Number(process.env.MOCK_GATEWAY_PORT ?? 8099);
 const sessions = new Map(); // sid -> { seq, buffer: [], stream: res | null, valid: true, seen: Set }
+
+// Read at start, so the mock always serves the Flows the web ships with.
+const fixture = (name) =>
+  JSON.parse(readFileSync(new URL(`../src/flows/fixtures/${name}`, import.meta.url), 'utf8'));
+const COTACAO_FLOW = fixture('cotacao.flow.json');
+const DEMO_FLOW = fixture('demo-componentes.flow.json');
+const FLOW_EVENTS = new Set(['user.flow_submit', 'user.flow_data_exchange']);
 
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -60,6 +68,10 @@ function reply(session, event) {
   publish(session, { type: 'status.typing', payload: { state: 'start' } });
   setTimeout(() => {
     publish(session, { type: 'status.typing', payload: { state: 'stop' } });
+    if (event.type === 'user.flow_submit') {
+      publish(session, text('Recebemos o seu formulário.'));
+      return;
+    }
     if (event.type === 'user.quick_reply') {
       if (event.payload.optionId === 'menu.quote') {
         publish(session, {
@@ -145,6 +157,27 @@ function reply(session, event) {
           flowJson: { screens: [] },
         },
       });
+    } else if (said === 'cotacao flow') {
+      publish(session, {
+        type: 'message.flow',
+        payload: {
+          flowId: 'cotacao',
+          header: 'Cotação',
+          body: 'Vamos calcular a sua cotação.',
+          ctaLabel: 'Abrir cotação',
+          flowJson: COTACAO_FLOW,
+        },
+      });
+    } else if (said === 'demo flow') {
+      publish(session, {
+        type: 'message.flow',
+        payload: {
+          flowId: 'demo',
+          body: 'Conheça todos os componentes.',
+          ctaLabel: 'Abrir demonstração',
+          flowJson: DEMO_FLOW,
+        },
+      });
     } else if (said === 'erro') {
       publish(session, {
         type: 'error',
@@ -184,6 +217,7 @@ const server = createServer(async (req, res) => {
       valid: true,
       seen: new Set(),
       failedOnce: new Set(),
+      flowEvents: [],
     });
     return json(
       res,
@@ -229,6 +263,10 @@ const server = createServer(async (req, res) => {
     // Test hook: every accepted event is recorded so the tests can assert ids and order.
     session.posted = session.posted ?? [];
     session.posted.push(event);
+    // Flow events: only the type and payload are kept (no ids, cookies or headers).
+    if (FLOW_EVENTS.has(event.type)) {
+      session.flowEvents.push({ type: event.type, payload: event.payload });
+    }
     if (event.type === 'user.ack') return json(res, 202, { status: 'accepted' });
     // Intentional deviation from the real gateway: a retried id that failed ('erro') is reprocessed
     // as accepted, whereas the real gateway would answer 200 duplicate.
@@ -239,13 +277,18 @@ const server = createServer(async (req, res) => {
     session.seen.add(event.id);
     json(res, 202, { status: 'accepted' });
     publish(session, { type: 'status.delivered', payload: { messageId: event.id } });
-    reply(session, event);
+    // Like the chatbot today: a data exchange gets no answer.
+    if (event.type !== 'user.flow_data_exchange') reply(session, event);
     return undefined;
   }
 
   // Test hooks (not part of the gateway contract)
   if (req.method === 'GET' && url.pathname === '/__posted') {
     return json(res, 200, { posted: (session?.posted ?? []).filter((e) => e.type !== 'user.ack') });
+  }
+
+  if (req.method === 'GET' && url.pathname === '/__events') {
+    return json(res, 200, { events: session?.flowEvents ?? [] });
   }
 
   return json(res, 404, { error: { code: 'invalid_schema', message: 'Rota não encontrada.' } });
