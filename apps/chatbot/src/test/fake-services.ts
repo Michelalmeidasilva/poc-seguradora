@@ -148,7 +148,17 @@ function route(method: string, path: string, query: URLSearchParams, body: Loose
   return error(404, 'not_found');
 }
 
-export async function startFakeServices(): Promise<FakeServices> {
+export interface FakeServicesOptions {
+  /** Port to listen on; 0 (default) picks an ephemeral port. */
+  port?: number;
+  /** Interface to bind; default 127.0.0.1 (the standalone image binds 0.0.0.0). */
+  host?: string;
+  /** Keep every request in `requests` (default true; a long-running server turns it off). */
+  record?: boolean;
+}
+
+export async function startFakeServices(options: FakeServicesOptions = {}): Promise<FakeServices> {
+  const { port = 0, host = '127.0.0.1', record = true } = options;
   let failures: { status: number; left: number } | undefined;
   const fake: FakeServices = {
     url: '',
@@ -174,13 +184,15 @@ export async function startFakeServices(): Promise<FakeServices> {
       } catch {
         body = undefined;
       }
-      fake.requests.push({
-        method: req.method ?? 'GET',
-        path: url.pathname,
-        query: url.searchParams,
-        headers: req.headers,
-        body,
-      });
+      if (record) {
+        fake.requests.push({
+          method: req.method ?? 'GET',
+          path: url.pathname,
+          query: url.searchParams,
+          headers: req.headers,
+          body,
+        });
+      }
       const reply = () => {
         const injected = failures && failures.left > 0 ? failures : undefined;
         const out = injected
@@ -195,8 +207,8 @@ export async function startFakeServices(): Promise<FakeServices> {
     });
   });
 
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  fake.url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  await new Promise<void>((resolve) => server.listen(port, host, resolve));
+  fake.url = `http://${host}:${(server.address() as AddressInfo).port}`;
   fake.close = () =>
     new Promise<void>((resolve) => {
       server.closeAllConnections();

@@ -11,6 +11,21 @@ export default tseslint.config(
     languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
   },
   {
+    // Node 22 scripts under infra/ (smoke test): runtime globals they use.
+    files: ['infra/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        fetch: 'readonly',
+        URL: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        TextDecoder: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+  },
+  {
     files: ['apps/web/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {

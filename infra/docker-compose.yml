@@ -1,0 +1,90 @@
+# Local stack of the whole product: web (nginx) -> gateway -> chatbot -> fake-services.
+#   docker compose -f infra/docker-compose.yml up -d --build --wait
+#   node infra/smoke.mjs http://localhost:8080
+#   docker compose -f infra/docker-compose.yml down -v
+# Only `web` is published on the host; the others talk over the compose network.
+name: seguradora
+
+x-node-health: &node-health # node:22-slim has no curl/wget: probe /health with Node's fetch.
+  test:
+    - CMD
+    - node
+    - -e
+    - "fetch('http://127.0.0.1:8080/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+  interval: 5s
+  timeout: 3s
+  retries: 12
+  start_period: 5s
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      PORT: '8080'
+      GATEWAY_URL: http://gateway:8080
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      # nginx:alpine ships busybox wget.
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: apps/gateway/Dockerfile
+    environment:
+      PORT: '8080'
+      CHATBOT_URL: http://chatbot:8080
+      # DEV ONLY: public placeholder for local runs. Never use it outside docker-compose;
+      # in Cloud Run the secret comes from Secret Manager.
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-insecure-session-secret-change-me-00000}
+      ALLOWED_ORIGIN: http://localhost:${WEB_PORT:-8080}
+      COOKIE_SECURE: 'false'
+      COOKIE_SAME_SITE: lax
+      # One trusted proxy in front of the gateway: the web nginx.
+      TRUST_PROXY_HOPS: '1'
+    depends_on:
+      chatbot:
+        condition: service_healthy
+    healthcheck: *node-health
+
+  chatbot:
+    build:
+      context: ..
+      dockerfile: apps/chatbot/Dockerfile
+    environment:
+      PORT: '8080'
+      COTACAO_URL: http://fake-services:8080
+      APOLICE_URL: http://fake-services:8080
+      SINISTRO_URL: http://fake-services:8080
+    depends_on:
+      fake-services:
+        condition: service_healthy
+    healthcheck: *node-health
+
+  fake-services:
+    build:
+      context: ..
+      dockerfile: infra/fake-services/Dockerfile
+    environment:
+      PORT: '8080'
+    healthcheck:
+      # The fake has no /health (it only serves the services contract): probe a known claim.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8080/v1/sinistros/SN-2001').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 3s
