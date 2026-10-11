@@ -228,6 +228,7 @@ test.describe('flows', () => {
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect.poll(async () => (await flowEvents(page)).length).toBe(1);
+    // the gateway receives the real cpf and nascimento
     expect(await flowEvents(page)).toEqual([
       {
         type: 'user.flow_submit',
@@ -250,6 +251,12 @@ test.describe('flows', () => {
     await expect(summary).toBeVisible();
     await expect(summary).toContainText('Produto: Auto');
     await expect(summary).toContainText('Ano do veículo: 2020');
+    // cpf and nascimento are sensitive: masked in the bubble, sent in clear to the gateway only
+    await expect(summary).toContainText('CPF: ••••');
+    await expect(summary).toContainText('Data de nascimento: ••••');
+    const secrets = ['12345678909', '123.456.789-09', '1990-05-20', '20/05/1990', '20051990'];
+    const bubble = await summary.innerText();
+    for (const s of secrets) expect(bubble, s).not.toContain(s);
     await expect(page.getByText('Recebemos o seu formulário.')).toBeVisible();
     await expect(opener).toBeFocused();
 
@@ -257,6 +264,12 @@ test.describe('flows', () => {
     await expect
       .poll(() => page.evaluate(() => JSON.stringify({ ...sessionStorage })))
       .toContain('Recebemos o seu formulário.');
+    const stored = await page.evaluate(() =>
+      Object.keys(sessionStorage)
+        .map((k) => `${k}\n${sessionStorage.getItem(k) ?? ''}`)
+        .join('\n'),
+    );
+    for (const s of secrets) expect(stored, s).not.toContain(s);
     await page.reload();
     await expect(page.getByText('online')).toBeVisible();
     await expect(page.getByText('Nome completo: Maria Silva', { exact: false })).toHaveCount(1);

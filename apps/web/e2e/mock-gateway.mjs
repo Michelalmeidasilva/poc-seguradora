@@ -1,13 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { clearInterval, setInterval } from 'node:timers';
 
 const PORT = Number(process.env.MOCK_GATEWAY_PORT ?? 8099);
 const sessions = new Map(); // sid -> { seq, buffer: [], stream: res | null, valid: true, seen: Set }
 
-// Read at start, so the mock always serves the Flows the web ships with.
-const fixture = (name) =>
-  JSON.parse(readFileSync(new URL(`../src/flows/fixtures/${name}`, import.meta.url), 'utf8'));
+// Read at start from the chatbot's canonical copies, so the mock serves what the chatbot sends.
+const FLOWS_DIR = new URL('../../chatbot/src/domain/flows/', import.meta.url);
+const fixture = (name) => {
+  const file = new URL(name, FLOWS_DIR);
+  if (!existsSync(file)) throw new Error(`mock gateway: Flow JSON not found: ${file.pathname}`);
+  return JSON.parse(readFileSync(file, 'utf8'));
+};
 const COTACAO_FLOW = fixture('cotacao.flow.json');
 const DEMO_FLOW = fixture('demo-componentes.flow.json');
 const FLOW_EVENTS = new Set(['user.flow_submit', 'user.flow_data_exchange']);

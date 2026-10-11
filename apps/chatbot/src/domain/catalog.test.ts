@@ -213,6 +213,17 @@ describe('quote flow limits', () => {
     expect(names).toContain('cpf');
   });
 
+  it('marks cpf and nascimento as sensitive on the DADOS screen', () => {
+    const flow = catalog.quoteFlow().find((r) => r.type === 'message.flow');
+    if (flow?.type !== 'message.flow') throw new Error('no flow');
+    const screens = flow.payload.flowJson.screens as Array<{ id: string; sensitive?: unknown }>;
+    const dados = screens.find((s) => s.id === 'DADOS');
+    expect(Array.isArray(dados?.sensitive) && [...dados.sensitive].sort()).toEqual([
+      'cpf',
+      'nascimento',
+    ]);
+  });
+
   it('returns a fresh copy of the flow on every call', () => {
     const first = catalog.quoteFlow().find((r) => r.type === 'message.flow');
     if (first?.type !== 'message.flow') throw new Error('no flow');

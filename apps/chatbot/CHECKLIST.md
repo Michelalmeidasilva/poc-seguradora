@@ -1,6 +1,6 @@
 # Checklist: chatbot
 
-Última atualização: 2026-10-10
+Última atualização: 2026-10-11
 
 ## Estrutura
 
@@ -13,6 +13,8 @@
 
 - [x] Modelos, identificadores e validação de entradas (domínio)
 - [x] Catálogo de mensagens (texto, quick-reply, template, carousel, código, location) e Flow de cotação
+- [x] Flow de cotação declara `sensitive: ["cpf", "nascimento"]` na tela `DADOS` (a web mascara esses campos no resumo)
+- [x] Fonte única dos Flows: `src/domain/flows/` (cotação e `demo-componentes.flow.json`) é a cópia canônica; `src/domain/flows-sync.test.ts` falha se as cópias de teste da web (`apps/web/src/flows/fixtures/`) divergirem, e o gateway simulado do E2E da web lê daqui
 - [x] Máquina de estados do diálogo (menu, cotação, apólices, segunda via, sinistro, status do sinistro); a descrição do sinistro só é interrompida pela palavra exata "cancelar"; número de apólice, tipo de sinistro, CPF e protocolo digitados respondem a etapa atual; o Flow de cotação é aceito em qualquer estado
 - [x] TurnLog: replay idempotente por sessão + event.id (inclusive turno em andamento); Idempotency-Key dos serviços = sha256(sessão + event.id)
 - [x] HandleTurn (laço do diálogo, typing, tratamento de falhas, validação de cada evento enviado contra o protocolo, data de hoje no fuso de São Paulo)

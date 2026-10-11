@@ -34,6 +34,7 @@
     {
       "id": "DADOS",
       "title": "Seus dados",
+      "sensitive": ["cpf", "nascimento"],
       "terminal": true,
       "success": true,
       "data": { "produto": { "type": "string", "__example__": "AUTO" } },
