@@ -18,7 +18,7 @@
 - [x] HandleTurn (laço do diálogo, typing, tratamento de falhas)
 - [x] LlmProvider (interface), mock determinístico e guardas (timeout, truncamento, fallback)
 - [x] Armazenamento de estado do diálogo em memória (TTL e capacidade)
-- [ ] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
+- [x] Clientes HTTP dos serviços internos com resiliência e camada anticorrupção
 - [ ] POST /v1/chat/events em NDJSON com cabeçalhos primeiro
 - [ ] /health e /ready
 - [ ] Encerramento gracioso
@@ -26,7 +26,7 @@
 ## Qualidade
 
 - [ ] Testes unitários (domain e application)
-- [ ] Testes de contrato com serviços fake
+- [x] Testes de contrato com serviços fake
 - [ ] Testes E2E da API
 - [ ] Lint, formatação e tsconfig estrito sem erros
 
@@ -37,3 +37,4 @@
 - A validação de CPF verifica só o formato (11 dígitos), porque os fixtures dos serviços usam CPFs fictícios sem dígito verificador válido.
 - O JSON do Flow de cotação é uma proposta; o schema de Flow JSON do Plano 5 deve validá-lo.
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
+- Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
