@@ -15,4 +15,4 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 | gateway | apps/gateway | done | claude | feat/chatbot | 2026-10-10 | 2026-10-10 | Dockerfile não verificado (sem Docker) |
 | web-chat | apps/web/src/chat, apps/web/src/renderers, apps/web/src/transport | not_started | - | - | - | - | |
 | web-flows | apps/web/src/flows | not_started | - | - | - | - | |
-| ux-whatsapp-prototype | docs/prototypes/whatsapp-experience | done | codex | feat/whatsapp-experience-prototype | 2026-10-10 | 2026-10-11 | HTML independente: 24 jornadas, 284 estados e 34 referências legadas; catálogo, lint e inspeções desktop/mobile verificados |
+| ux-whatsapp-prototype | docs/prototypes/whatsapp-experience | in_progress | codex | feat/whatsapp-experience-prototype | 2026-10-10 | 2026-10-11 | Retomada para adicionar tela de inclusão conversacional em mensagem única conforme slide do usuário |
