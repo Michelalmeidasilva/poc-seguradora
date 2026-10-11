@@ -1,3 +1,4 @@
+import './renderers.css';
 import type { ReactNode } from 'react';
 import { parseFormatting, type TextNode } from './format-text';
 
