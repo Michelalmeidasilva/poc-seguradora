@@ -5,10 +5,14 @@
 # (b) the gateway is recreated with a DIFFERENT IP while `web` keeps running, then smoke again
 #     (nginx must resolve the gateway at request time, not once at start);
 # (c) rendered config of the web image for http/https GATEWAY_URL, IPv6 nameserver, bad input;
-# (d) response headers of /, /assets/<file>, /healthz;
+# (d) response headers of /, /assets/<file>, /health;
 # (e) Host, Origin, X-Forwarded-Proto, path and query reach the upstream unchanged (throwaway
 #     echo server on the compose network, removed at the end).
-# Everything started here is removed by the EXIT trap.
+# (0) first, the EXIT trap itself: a child run that fails right after `compose up` must leave no
+#     container, network or volume of the compose project behind.
+# Everything started here is removed by the EXIT trap. Written for bash 3.2 (macOS /bin/bash):
+# no mapfile, associative arrays, ${var,,} or [[ -v ]], and no bare "${arr[@]}" of a possibly
+# empty array under `set -u` (bash 3.2 treats it as unbound).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +31,7 @@ ECHO_WEB_NAME="${PROJECT}-test-echo-web"
 
 cleanup() {
   local status=$?
-  docker rm -f "$ECHO_NAME" "$ECHO_WEB_NAME" "${SQUATTERS[@]}" >/dev/null 2>&1 || true
+  docker rm -f "$ECHO_NAME" "$ECHO_WEB_NAME" ${SQUATTERS[@]+"${SQUATTERS[@]}"} >/dev/null 2>&1 || true
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$TMP"
   if [ "$status" -eq 0 ]; then echo "PASS test-nginx"; else echo "FAIL test-nginx (exit $status)"; fi
@@ -50,9 +54,34 @@ container_ip() {
   docker inspect -f "{{(index .NetworkSettings.Networks \"$NETWORK\").IPAddress}}" "$1"
 }
 
+project_leftovers() { # prints containers, networks and volumes of the compose project, if any
+  local label="label=com.docker.compose.project=$PROJECT"
+  docker ps -aq --filter "$label"
+  docker network ls -q --filter "$label"
+  docker volume ls -q --filter "$label"
+}
+
+# --- (0) the cleanup trap works even when the run fails early ---------------------------------
+if [ -z "${TEST_NGINX_FAIL_EARLY:-}" ]; then
+  echo "== (0) cleanup trap on an early failure"
+  # Child run under the system bash (3.2 on macOS) that fails right after `compose up`.
+  if TEST_NGINX_FAIL_EARLY=1 /bin/bash "${BASH_SOURCE[0]}" >"$TMP/early.log" 2>&1; then
+    cat "$TMP/early.log" >&2
+    fail "the early-failure child run should have failed"
+  fi
+  grep -q 'FAIL test-nginx' "$TMP/early.log" || {
+    cat "$TMP/early.log" >&2
+    fail "the cleanup trap did not finish in the early-failure run"
+  }
+  leftovers="$(project_leftovers)"
+  [ -z "$leftovers" ] || fail "early failure left compose resources behind: $(echo $leftovers)"
+  ok "early failure: trap ran, no container/network/volume of project $PROJECT left"
+fi
+
 # --- (a) stack + smoke -------------------------------------------------------------------------
 echo "== (a) compose up + smoke"
 "${COMPOSE[@]}" up -d --build --wait
+[ -z "${TEST_NGINX_FAIL_EARLY:-}" ] || fail "TEST_NGINX_FAIL_EARLY set: failing on purpose after compose up"
 node "$ROOT/infra/smoke.mjs" "$BASE_URL"
 ok "smoke before the gateway IP change"
 
@@ -207,13 +236,20 @@ headers /assets/does-not-exist.js >"$TMP/h"
 expect_header /assets/does-not-exist.js 'HTTP/1.1 404'
 ok "/assets/$asset headers (missing asset is 404, not index.html)"
 
-headers /healthz >"$TMP/h"
-expect_header /healthz 'HTTP/1.1 200'
-security_headers /healthz
-expect_header /healthz 'Cache-Control: no-store'
-[ "$(curl -sS "$BASE_URL/healthz")" = "ok" ] || fail "/healthz body is not 'ok'"
-if "${COMPOSE[@]}" logs web 2>/dev/null | grep -q 'GET /healthz'; then fail "/healthz is access-logged"; fi
-ok "/healthz: 200 ok, security headers, no-store, not logged"
+headers /health >"$TMP/h"
+expect_header /health 'HTTP/1.1 200'
+security_headers /health
+expect_header /health 'Cache-Control: no-store'
+[ "$(curl -sS "$BASE_URL/health")" = "ok" ] || fail "/health body is not 'ok'"
+# Logs go to a file first: `logs | grep -q` under pipefail can fail by SIGPIPE and hide a match.
+access_logged() { # access_logged <path>: true when the web access log has a GET of exactly <path>
+  "${COMPOSE[@]}" logs web >"$TMP/web.log" 2>&1
+  grep -qF "\"GET $1 HTTP/" "$TMP/web.log"
+}
+curl -fsS -o /dev/null "$BASE_URL/"
+access_logged / || fail "positive control: GET / should be in the access log (check is blind)"
+if access_logged /health; then fail "/health is access-logged"; fi
+ok "/health: 200 ok, security headers, no-store, not logged (positive control: / is logged)"
 
 "${COMPOSE[@]}" exec -T web grep -qF 'resolver 127.0.0.11 valid=10s ipv6=off;' /etc/nginx/conf.d/default.conf ||
   fail "compose web: resolver is not Docker's embedded DNS"
@@ -236,7 +272,7 @@ docker run -d --name "$ECHO_NAME" --network "$NETWORK" --network-alias echo-gw \
 docker run -d --name "$ECHO_WEB_NAME" --network "$NETWORK" -p "127.0.0.1:${ECHO_PORT}:8080" \
   -e GATEWAY_URL=http://echo-gw:9000 "$WEB_IMAGE" >/dev/null
 for _ in $(seq 1 30); do
-  curl -fsS "http://127.0.0.1:${ECHO_PORT}/healthz" >/dev/null 2>&1 && break
+  curl -fsS "http://127.0.0.1:${ECHO_PORT}/health" >/dev/null 2>&1 && break
   sleep 1
 done
 
