@@ -7,3 +7,4 @@
 - [x] Layout desktop e mobile inspecionado no navegador.
 - [x] IDs, destinos, sintaxe e formatação verificados.
 - [x] Entrega e atualização do WORKBOARD registradas em commit.
+- [x] Tela de inclusão em mensagem única do slide, com continuidade dos dados na revisão.

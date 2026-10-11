@@ -1,6 +1,8 @@
 # Atlas da experiência no WhatsApp
 
-Protótipo HTML independente com **24 jornadas e 284 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+Protótipo HTML independente com **24 jornadas e 285 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+
+A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. Os dados são aproveitados na revisão seguinte, sem um questionário sequencial. Sexo/gênero não são inferidos.
 
 ## Navegação
 

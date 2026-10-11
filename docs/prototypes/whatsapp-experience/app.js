@@ -10,6 +10,8 @@
   const memory = {
     name: 'Maria Silva',
     birth: '12/03/2014',
+    maskedDocument: '•••.•••.•••-09',
+    relationship: 'Filha',
     postal: '01000-000',
     address: 'Rua Exemplo, 100',
     city: 'São Paulo / SP',
@@ -77,6 +79,7 @@
       index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
+    if (index[id].seed) Object.assign(memory, index[id].seed);
     additions = [];
     if (location.hash !== `#${id}`) history.replaceState(null, '', `#${id}`);
     render();

@@ -28,8 +28,8 @@
   const person = [
     ['Nome', '{{name}}'],
     ['Nascimento', '{{birth}}'],
-    ['CPF', '•••.•••.•••-09'],
-    ['Parentesco', 'Filha'],
+    ['CPF', '{{maskedDocument}}'],
+    ['Parentesco', '{{relationship}}'],
   ];
   const dependentFields = [
     { name: 'name', label: 'Nome completo', value: 'Maria Silva', required: true },
@@ -1037,9 +1037,27 @@
         'Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
         {
           actions: [
-            action('Informar na conversa', 'DEP-04'),
+            action('Informar na conversa', 'DEP-33'),
             action('Preencher formulário', 'DEP-05'),
           ],
+        },
+      ),
+      screen(
+        'DEP-33',
+        'Mensagem única · dados compreendidos',
+        'Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.',
+        'Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nVou verificar as condições do seu contrato. Antes de incluir, você poderá revisar os dados e confirmar.',
+        {
+          seed: {
+            name: 'João da Silva',
+            birth: '12/03/2004',
+            maskedDocument: '•••.•••.•••-10',
+            relationship: 'Filho',
+          },
+          actions: [action('Revisar inclusão', 'DEP-06'), action('Corrigir dados', 'DEP-14')],
+          behavior:
+            'Uma única mensagem fornece nome, CPF, nascimento e parentesco. O assistente aproveita os dados, verifica as regras e pergunta apenas campos obrigatórios que faltarem. A inclusão exige revisão e confirmação.',
+          rule: 'Exemplo demonstrativo baseado no slide fornecido. Parentesco foi declarado como filho; sexo ou gênero não são inferidos do nome ou parentesco. Campos obrigatórios e elegibilidade dependem do produto.',
         },
       ),
       screen(
