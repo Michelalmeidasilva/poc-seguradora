@@ -16,6 +16,8 @@
 #   TF_VAR_BILLING_ACCOUNT_ID      billing_account_id
 #   TF_VAR_BUDGET_AMOUNT_BRL       budget_amount_brl
 #   TF_VAR_BUDGET_ALERT_EMAIL      budget_alert_email
+#   TF_VAR_GITHUB_DEPLOY_BRANCH    github_deploy_branch (default master; must match the environment's
+#                                  deployment branch rule below)
 # github_repository comes from github.repository. deploy_fake_services/service_urls are not wired:
 # the deploy always uses their defaults (fake-services on).
 #
@@ -199,6 +201,7 @@ jobs:
           OPT_BILLING_ACCOUNT_ID: ${{ vars.TF_VAR_BILLING_ACCOUNT_ID }}
           OPT_BUDGET_AMOUNT_BRL: ${{ vars.TF_VAR_BUDGET_AMOUNT_BRL }}
           OPT_BUDGET_ALERT_EMAIL: ${{ vars.TF_VAR_BUDGET_ALERT_EMAIL }}
+          OPT_GITHUB_DEPLOY_BRANCH: ${{ vars.TF_VAR_GITHUB_DEPLOY_BRANCH }}
         run: |
           # Optional variables are exported only when set, so unset ones keep the Terraform default.
           [ -n "$OPT_ARTIFACT_REGISTRY_REPO" ] && export TF_VAR_artifact_registry_repo="$OPT_ARTIFACT_REGISTRY_REPO"
@@ -208,6 +211,7 @@ jobs:
           [ -n "$OPT_BILLING_ACCOUNT_ID" ] && export TF_VAR_billing_account_id="$OPT_BILLING_ACCOUNT_ID"
           [ -n "$OPT_BUDGET_AMOUNT_BRL" ] && export TF_VAR_budget_amount_brl="$OPT_BUDGET_AMOUNT_BRL"
           [ -n "$OPT_BUDGET_ALERT_EMAIL" ] && export TF_VAR_budget_alert_email="$OPT_BUDGET_ALERT_EMAIL"
+          [ -n "$OPT_GITHUB_DEPLOY_BRANCH" ] && export TF_VAR_github_deploy_branch="$OPT_GITHUB_DEPLOY_BRANCH"
           terraform plan -input=false -lock-timeout=5m -out=tfplan \
             -var "project_id=$GCP_PROJECT_ID" \
             -var "region=$GCP_REGION" \
