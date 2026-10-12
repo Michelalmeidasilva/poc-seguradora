@@ -244,7 +244,9 @@ Confira o projeto no arquivo e leia o alvo exibido. O operador substitui o id ab
 bash infra/deploy.sh destroy --confirm-project SEU_PROJECT_ID
 ```
 
-Exige a flag igual ao PROJECT_ID **e** id digitado; `--yes` nunca elimina essa confirmação. Remove a stack Terraform (serviços, rede, registry/imagens, contas, secret e orçamento opcional); APIs não são desabilitadas. Bucket de estado criado pelo bootstrap fica, com versões que contêm segredo. Só depois de confirmar destruição e necessidade de retenção, o operador pode remover separadamente o bucket pelo console. Agentes nunca iniciam destroy por conta própria; autorização explícita do pedido atual é necessária para flags de confirmação.
+Exige a flag igual ao PROJECT_ID **e** id digitado; `--yes` nunca elimina essa confirmação. Remove a stack Terraform (serviços, rede, registry/imagens, contas, secret e orçamento opcional); APIs não são desabilitadas. Bucket de estado criado pelo bootstrap fica, com versões que contêm segredo. Só depois de confirmar destruição e necessidade de retenção, o operador pode remover separadamente o bucket pelo console. Agentes nunca executam destroy: o operador roda o comando e digita o id no próprio terminal; autorização explícita do pedido atual é necessária para flags de confirmação.
+
+**Não verificado:** com Direct VPC egress, depois que os serviços do Cloud Run são apagados o GCP pode manter por um tempo os IPs serverless reservados na sub-rede; nesse caso o `destroy` falha ao apagar a sub-rede (ou a rede). Nada foi perdido: espere um pouco (pode levar horas) e simplesmente rode o mesmo comando de novo, que remove o que restou.
 
 ## Pendências
 

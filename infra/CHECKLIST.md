@@ -14,7 +14,7 @@
 - [x] Verificação final de tipos, lint, formato, arquitetura, testes e build (suíte inteira sem mudar assertions; depcruise com Node suportado)
 - [x] Terraform validado offline (fmt/init sem backend/validate + estrutura) e workflow de CI validado com self-tests/actionlint
 - [x] Compose com smoke e testes do nginx (evidência do controlador: infra/test-nginx.sh exit 0, /private/tmp/plan8-nginx.log; nenhuma mudança em app/compose/nginx depois)
-- [ ] Revisão final e atualização do workboard
+- [x] Revisão final e atualização do workboard (revisão final do controlador em 2026-10-12; correções aplicadas e verificadas; linha deploy = done)
 
 ## Pendências e decisões
 
