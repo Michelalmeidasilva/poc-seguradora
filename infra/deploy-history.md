@@ -13,3 +13,4 @@ o script não faz commit: versione o arquivo depois de um deploy). Tempos em seg
 | 2026-10-12T23:16:00Z | chatbot | deploy | 8575712 | 8575712 | master | - | própria | - | - | chatbot-00002-vvg | ok (primeiro deploy, anterior ao histórico; tempos não medidos) | seguradora-poc-846744 | southamerica-east1 | user |
 | 2026-10-12T23:16:00Z | gateway | deploy | 8575712 | 8575712 | master | - | própria | - | - | gateway-00002-lxx | ok (primeiro deploy, anterior ao histórico; tempos não medidos) | seguradora-poc-846744 | southamerica-east1 | user |
 | 2026-10-12T23:16:00Z | web | deploy | 8575712 | 8575712 | master | - | própria | - | - | web-00002-knv | ok (primeiro deploy, anterior ao histórico; tempos não medidos) | seguradora-poc-846744 | southamerica-east1 | user |
+| 2026-10-12T23:56:06Z | web | deploy | 82a40a4 | 82a40a4 | HEAD | 0.0.0 | própria | 33 | 12 | web-00003-gpm | ok | seguradora-poc-846744 | southamerica-east1 | user |
