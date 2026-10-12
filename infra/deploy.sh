@@ -7,7 +7,10 @@
 # never Terraform), so deploying one service never touches another. Infrastructure changes go
 # through `infra plan|apply`, which always applies a saved plan kept in a private temp dir.
 # Configuration comes only from infra/.env (see infra/.env.example) or --env-file; it reaches
-# Terraform only as the TF_VAR_* variables exported by export_tf_vars.
+# Terraform only as the TF_VAR_* variables exported by export_tf_vars. Enforced: other inherited
+# TF_VAR_* are unset, and refuse_tf_overrides stops every Terraform command (exit 3) when an
+# auto-loaded variable file (terraform.tfvars[.json], *.auto.tfvars[.json]) exists in
+# infra/terraform or TF_WORKSPACE / TF_CLI_ARGS* are inherited.
 # Offline tests: infra/deploy.test.sh (fake gcloud/docker/terraform/git/node).
 # Written for bash 3.2 (macOS /bin/bash): no mapfile, associative arrays, ${var,,} or eval, and
 # no bare "${arr[@]}" of a possibly empty array under `set -u`.
@@ -325,7 +328,8 @@ require_state_bucket() {
 }
 
 # The only way configuration reaches Terraform: exactly these TF_VAR_* names. Any other TF_VAR_*
-# inherited from the operator's shell is dropped so it cannot change the plan silently.
+# inherited from the operator's shell is dropped so it cannot change the plan silently; the
+# auto-loaded variable files and TF_WORKSPACE / TF_CLI_ARGS* are refused by refuse_tf_overrides.
 export_tf_vars() {
   local v
   for v in $(env | sed -n 's/^\(TF_VAR_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "$v"; done
@@ -362,7 +366,23 @@ confirm_sim() { # confirm_sim <what>: typed exact "sim" unless --yes
   [ "$answer" = "sim" ] || die "$EXIT_ABORTED" "abortado: confirmação diferente de \"sim\"; nada foi alterado"
 }
 
-tf() { terraform -chdir="$TF_DIR" "$@"; }
+# Terraform auto-loads terraform.tfvars, terraform.tfvars.json and *.auto.tfvars(.json) from its
+# working dir, and those beat TF_VAR_*; TF_WORKSPACE selects another state and TF_CLI_ARGS* can
+# inject -var/-var-file. Any of them would silently override infra/.env, so every command that
+# uses Terraform refuses them before its first terraform call (and tf() checks again).
+refuse_tf_overrides() {
+  local f found="" v vars=""
+  for f in "$TF_DIR/terraform.tfvars" "$TF_DIR/terraform.tfvars.json" "$TF_DIR"/*.auto.tfvars "$TF_DIR"/*.auto.tfvars.json; do
+    if [ -e "$f" ]; then found="$found infra/terraform/${f##*/}"; fi
+  done
+  [ -z "$found" ] || die "$EXIT_PRECONDITION" "arquivo(s) de variáveis que o Terraform carrega automaticamente e que têm precedência sobre infra/.env:$found. Remova ou renomeie (ex.: para *.bak); terraform.tfvars.example é permitido. A configuração vem só de $ENV_FILE."
+  for v in $(env | sed -n -e 's/^\(TF_WORKSPACE\)=.*/\1/p' -e 's/^\(TF_CLI_ARGS[A-Za-z0-9_]*\)=.*/\1/p'); do vars="$vars $v"; done
+  [ -z "$vars" ] || die "$EXIT_PRECONDITION" "variável(is) de ambiente do Terraform herdada(s) do shell:$vars. Elas trocam o workspace ou injetam -var/-var-file por fora de infra/.env; rode sem elas (unset$vars)."
+}
+tf() {
+  refuse_tf_overrides
+  terraform -chdir="$TF_DIR" "$@"
+}
 tf_init() {
   require_state_bucket
   tf init -input=false -backend-config="bucket=$CFG_TF_STATE_BUCKET" -backend-config="prefix=$TF_STATE_PREFIX" >/dev/null
@@ -471,6 +491,7 @@ cmd_bootstrap() {
   load_config
   require_state_bucket
   require_tools gcloud terraform docker
+  refuse_tf_overrides
   bucket="gs://$CFG_TF_STATE_BUCKET"
   info "bootstrap do projeto $CFG_PROJECT_ID ($CFG_REGION):"
   info "  - habilitar cloudresourcemanager e serviceusage"
@@ -500,6 +521,7 @@ cmd_infra() { # cmd_infra plan|apply
   load_config
   require_state_bucket
   require_tools terraform
+  refuse_tf_overrides
   export_tf_vars
   warn_scaling
   make_plan_dir
@@ -654,6 +676,7 @@ cmd_smoke() {
   else
     load_config
     require_tools terraform node
+    refuse_tf_overrides
     export_tf_vars
     tf_init
     url="$(tf output -raw web_url)" || die 1 "não foi possível ler o output web_url (use --url)"
@@ -666,6 +689,7 @@ cmd_status() {
   local svc failed=0
   load_config
   require_tools gcloud
+  refuse_tf_overrides
   for svc in $(sort_services "$@"); do
     info "== $svc (imagem, URL, revisão)"
     gcloud run services describe "$(run_name_for "$svc")" --region "$CFG_REGION" --project "$CFG_PROJECT_ID" \
@@ -693,6 +717,7 @@ cmd_destroy() {
   load_config
   require_state_bucket
   require_tools terraform
+  refuse_tf_overrides
   [ "$OPT_CONFIRM_PROJECT" = "$CFG_PROJECT_ID" ] ||
     die "$EXIT_ABORTED" "--confirm-project não confere com PROJECT_ID de $ENV_FILE; nada foi alterado"
   info "DESTRUIR toda a infraestrutura do projeto $CFG_PROJECT_ID (serviços, registro e imagens, segredo, rede, contas)."

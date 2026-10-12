@@ -4,7 +4,7 @@ Terraform do deploy local do POC no Google Cloud Run (Plano 8). Em um projeto ex
 
 ## Configuração e estado
 
-A configuração vem de `infra/.env`; `infra/deploy.sh` exporta `TF_VAR_*`. `terraform.tfvars.example` é somente uma referência dos tipos. As variáveis são `project_id` (obrigatória), `region` (`southamerica-east1`), `artifact_registry_repo` (`seguradora`), `trust_proxy_hops` (3), `log_level` (`info`), `web_custom_domain_url` (vazia), `billing_account_id` (vazia), `budget_amount_brl` (200), `budget_alert_email` (vazia) e `service_scaling`.
+A configuração vem de `infra/.env`; `infra/deploy.sh` exporta `TF_VAR_*`. `terraform.tfvars.example` é somente uma referência dos tipos; um `terraform.tfvars`, `terraform.tfvars.json` ou `*.auto.tfvars(.json)` neste diretório faz o `deploy.sh` parar (exit 3) antes de chamar o Terraform, porque esses arquivos são carregados automaticamente e têm precedência sobre os `TF_VAR_*`. As variáveis são `project_id` (obrigatória), `region` (`southamerica-east1`), `artifact_registry_repo` (`seguradora`), `trust_proxy_hops` (3), `log_level` (`info`), `web_custom_domain_url` (vazia), `billing_account_id` (vazia), `budget_amount_brl` (200), `budget_alert_email` (vazia) e `service_scaling`.
 
 `service_scaling` é um mapa de objetos `{ min_instances, max_instances, memory }` com exatamente as chaves `web`, `gateway`, `chatbot`, `svc_cotacao`, `svc_apolice`, `svc_sinistro`. Padrão: mínimo 0 em todos; máximo 2 e memória 256Mi no web; máximo 1 e memória 512Mi nos demais. Gateway, chatbot e os serviços internos têm afinidade de sessão; estado em memória torna o limite de uma instância relevante. Alterar esse máximo exige avaliar a perda/divisão de sessões.
 

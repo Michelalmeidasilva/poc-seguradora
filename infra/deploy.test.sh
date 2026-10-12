@@ -690,6 +690,56 @@ t_infra_apply_refuses_tmpdir_in_repo() {
   refute_log '^terraform .* (plan|apply)'
 }
 
+# Terraform auto-loads these files from its working dir and they beat TF_VAR_*: refuse them
+# before ANY terraform call, in every command that uses terraform.
+TF_COMMANDS_STDIN="$PROJECT"
+t_tf_autoloaded_var_files_refused() {
+  local file args
+  for file in terraform.tfvars terraform.tfvars.json local.auto.tfvars local.auto.tfvars.json; do
+    echo 'project_id = "other-project"' >"$REPO/infra/terraform/$file"
+    for args in "infra plan" "infra apply --yes" "status" "status gateway" "smoke" "bootstrap --yes" "destroy --confirm-project $PROJECT"; do
+      : >"$LOG"
+      # shellcheck disable=SC2086 # intentional validated argument list splitting
+      run_deploy "$TF_COMMANDS_STDIN" $args
+      assert_rc 3
+      assert_out "infra/terraform/$file"
+      assert_out "terraform.tfvars.example"
+      refute_log '^terraform'
+      no_mutation
+    done
+    # Commands that never call terraform are not affected.
+    : >"$LOG"
+    run_deploy "<EOF>" smoke --url https://x.example.com
+    assert_rc 0
+    run_deploy "<EOF>" deploy gateway --yes --no-smoke
+    assert_rc 0
+    refute_log '^terraform'
+    rm -f "$REPO/infra/terraform/$file"
+  done
+}
+
+t_tf_example_var_file_allowed() {
+  echo 'project_id = "example"' >"$REPO/infra/terraform/terraform.tfvars.example"
+  run_deploy "<EOF>" infra plan
+  assert_rc 0
+  assert_log '^terraform .* plan '
+}
+
+t_tf_inherited_workspace_and_cli_args_refused() {
+  local var args
+  for var in TF_WORKSPACE=other TF_CLI_ARGS=-var-file=/x.tfvars TF_CLI_ARGS_plan=-var=project_id=x; do
+    EXTRA_ENV=("$var")
+    for args in "infra plan" "status gateway" "destroy --confirm-project $PROJECT"; do
+      : >"$LOG"
+      # shellcheck disable=SC2086 # intentional validated argument list splitting
+      run_deploy "$TF_COMMANDS_STDIN" $args
+      assert_rc 3
+      assert_out "${var%%=*}"
+      refute_log '^terraform'
+    done
+  done
+}
+
 t_destroy_requires_matching_id() {
   run_deploy "$PROJECT" destroy
   assert_rc 2
