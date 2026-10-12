@@ -13,3 +13,5 @@ Vale para qualquer chatbot, agente de código ou pessoa que trabalhe neste repos
 9. Rode `node scripts/workboard-check.mjs` antes de cada commit que altere o `WORKBOARD.md`.
 
 Regras de código (seção 14 do spec): arquitetura hexagonal `domain` / `application` / `infra` / `main.ts` nos serviços, com dependências só em `infra → application → domain`; validação Zod nas bordas; erros esperados como valores (Result); commits convencionais.
+
+Agentes de qualquer ferramenta: use `.agents/skills/monorepo-services/SKILL.md` para localizar a frente e `.agents/skills/deploy-service/SKILL.md` para deploy local por serviço.

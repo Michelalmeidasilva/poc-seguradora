@@ -188,7 +188,10 @@ const makeRepo = (root, { workboard } = {}) => {
   ]) {
     write(p, 'See AGENTS.md\n');
   }
-  write('.agents/skills/workboard-protocol/SKILL.md', '---\nname: workboard-protocol\n---\n');
+  write(
+    '.agents/skills/workboard-protocol/SKILL.md',
+    '---\nname: workboard-protocol\ndescription: Repository ownership protocol.\n---\n',
+  );
   for (const l of ['.claude/skills/workboard-protocol', '.agent/skills/workboard-protocol']) {
     mkdirSync(dirname(join(root, l)), { recursive: true });
     symlinkSync('../../.agents/skills/workboard-protocol', join(root, l));
@@ -330,4 +333,69 @@ test('validateRows requires started and updated dates for in_progress, blocked a
 
 test('validateRows accepts a done row with owner and real dates', () => {
   assert.deepEqual(validateRows(parse(active({ status: 'done' }))), []);
+});
+
+const addSkill = (
+  root,
+  name = 'second-skill',
+  frontmatter = `name: ${name}\ndescription: Another skill.`,
+) => {
+  const real = join(root, '.agents/skills', name);
+  mkdirSync(real, { recursive: true });
+  writeFileSync(join(real, 'SKILL.md'), `---\n${frontmatter}\n---\n# Skill\n`);
+  for (const tool of ['.claude', '.agent']) {
+    symlinkSync(`../../.agents/skills/${name}`, join(root, tool, 'skills', name));
+  }
+};
+
+for (const kind of ['missing', 'wrong', 'copy', 'absolute', 'name', 'description', 'file']) {
+  test(`checkRepo validates every skill: ${kind}`, (t) => {
+    const root = mkdtempSync(join(tmpdir(), 'wb-second-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    makeRepo(root);
+    addSkill(root);
+    const link = join(root, '.claude/skills/second-skill');
+    const real = join(root, '.agents/skills/second-skill');
+    if (['missing', 'wrong', 'copy', 'absolute'].includes(kind)) rmSync(link);
+    if (kind === 'wrong') symlinkSync('../../.agents/skills/workboard-protocol', link);
+    if (kind === 'copy') {
+      mkdirSync(link);
+      writeFileSync(join(link, 'SKILL.md'), 'copy');
+    }
+    if (kind === 'absolute') symlinkSync(real, link);
+    if (kind === 'name')
+      writeFileSync(join(real, 'SKILL.md'), '---\nname: wrong\ndescription: Valid.\n---\n');
+    if (kind === 'description')
+      writeFileSync(join(real, 'SKILL.md'), '---\nname: second-skill\ndescription: ""\n---\n');
+    if (kind === 'file') rmSync(join(real, 'SKILL.md'));
+    const errors = checkRepo(root);
+    assert.ok(
+      errors.some((e) => e.includes('second-skill')),
+      errors.join('; '),
+    );
+    assert.ok(
+      errors.some((e) =>
+        new RegExp(
+          {
+            missing: 'missing',
+            wrong: 'must resolve',
+            copy: 'relative symlink',
+            absolute: 'relative symlink',
+            name: 'name',
+            description: 'description',
+            file: 'SKILL.md.*not found',
+          }[kind],
+        ).test(e),
+      ),
+      errors.join('; '),
+    );
+  });
+}
+
+test('checkRepo accepts a second consistent skill', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'wb-second-ok-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  makeRepo(root);
+  addSkill(root);
+  assert.deepEqual(checkRepo(root), []);
 });

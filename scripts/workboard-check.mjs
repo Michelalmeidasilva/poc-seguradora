@@ -1,5 +1,12 @@
-import { readFileSync, existsSync, realpathSync } from 'node:fs';
-import { posix, join, resolve } from 'node:path';
+import {
+  readFileSync,
+  existsSync,
+  realpathSync,
+  readdirSync,
+  lstatSync,
+  readlinkSync,
+} from 'node:fs';
+import { posix, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const STATUSES = ['not_started', 'in_progress', 'blocked', 'done'];
@@ -183,14 +190,37 @@ export function checkRepo(root) {
     }
   }
 
-  const real = join(root, SKILL_REAL);
-  if (!existsSync(real)) errors.push(`${SKILL_REAL} not found`);
-  for (const l of SKILL_LINKS) {
-    const f = join(root, l);
-    if (!existsSync(f)) {
-      errors.push(`${l} missing`);
-    } else if (!existsSync(real) || realpathSync(f) !== realpathSync(real)) {
-      errors.push(`${l} must resolve to ${SKILL_REAL}`);
+  const skillRoot = join(root, '.agents/skills');
+  if (!existsSync(join(root, SKILL_REAL))) errors.push(`${SKILL_REAL} not found`);
+  const names = existsSync(skillRoot)
+    ? readdirSync(skillRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+    : [];
+  for (const name of names) {
+    const path = `.agents/skills/${name}`;
+    const real = join(root, path);
+    const skillFile = join(real, 'SKILL.md');
+    if (!existsSync(skillFile)) errors.push(`${path}/SKILL.md not found`);
+    else {
+      const body = readFileSync(skillFile, 'utf8');
+      const frontmatter = body.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+      const field = (key) =>
+        frontmatter
+          ?.match(new RegExp(`^${key}:\\s*(.*?)\\s*$`, 'm'))?.[1]
+          .replace(/^['"]|['"]$/g, '')
+          .trim();
+      if (field('name') !== name) errors.push(`${path}/SKILL.md name must be ${name}`);
+      if (!field('description')) errors.push(`${path}/SKILL.md description must be non-empty`);
+    }
+    for (const tool of ['.claude', '.agent']) {
+      const link = `${tool}/skills/${name}`;
+      const file = join(root, link);
+      if (!existsSync(file)) errors.push(`${link} missing`);
+      else if (!lstatSync(file).isSymbolicLink() || isAbsolute(readlinkSync(file))) {
+        errors.push(`${link} must be a relative symlink to ${path}`);
+      } else if (realpathSync(file) !== realpathSync(real))
+        errors.push(`${link} must resolve to ${path}`);
     }
   }
   return errors;

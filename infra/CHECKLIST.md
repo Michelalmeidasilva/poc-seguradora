@@ -6,7 +6,7 @@
 
 - [x] CLI local por serviço, configuração validada e testes offline; revisão concluída em cda5c75
 - [x] Terraform com seis serviços, imagens independentes e sem identidades de CI
-- [ ] Skills deploy-service e monorepo-services, links e verificadores
+- [x] Skills deploy-service e monorepo-services, links e verificadores (72 fixtures locais e verificadores reais passando)
 - [ ] Runbook local consistente e workflow de deploy removido
 
 ## Qualidade
