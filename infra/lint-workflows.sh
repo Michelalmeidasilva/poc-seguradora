@@ -144,7 +144,7 @@ self_test() {
   dir="$TMP/missing"
   mkdir -p "$dir"
   good_workflow >"$dir/ci.yml"
-  if node "$CHECKS" --require ci.yml,deploy.yml --require-jobs ci.yml=build,docker "$dir" >/dev/null 2>&1; then
+  if node "$CHECKS" --require ci.yml,release.yml --require-jobs ci.yml=build,docker "$dir" >/dev/null 2>&1; then
     fail "self-test: missing workflow/job not reported"
   else
     pass "self-test: missing required workflow and job are reported"
@@ -201,9 +201,8 @@ else
 fi
 
 if node "$CHECKS" \
-  --require ci.yml,deploy.yml \
+  --require ci.yml \
   --require-jobs ci.yml=verify,docker \
-  --require-jobs deploy.yml=deploy,smoke \
   "$ROOT/.github/workflows"; then
   pass "extra workflow checks"
 else

@@ -30,7 +30,7 @@ function checkWorkflow(name, text) {
   }
 
   // OIDC tokens (cloud credentials) only for jobs gated by a deployment environment: the cloud
-  // side (WIF attribute condition) also requires the environment claim. Top-level id-token
+  // side may also require the environment claim. Top-level id-token
   // would hand a token to every job.
   const idTokenWrite = /^\s+id-token:\s*['"]?write['"]?\s*(#.*)?$/;
   let topLevelPermissions = false;
