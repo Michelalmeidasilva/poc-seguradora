@@ -9,6 +9,10 @@ coverage
 .env
 .env.*
 !.env.example
+# Docker patterns are anchored at the context root: the deploy config needs its own lines.
+infra/.env
+infra/.env.*
+!infra/.env.example
 
 infra/terraform/.terraform
 **/*.tfvars

@@ -10,7 +10,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "pnpm -r test && node --test scripts/workboard-check.test.mjs infra/smoke.test.mjs infra/check-runbook.test.mjs",
+    "test": "pnpm -r test && node --test scripts/workboard-check.test.mjs infra/smoke.test.mjs infra/check-runbook.test.mjs && bash infra/deploy.test.sh",
     "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
     "build": "pnpm -r --if-present build",
     "check:workboard": "node scripts/workboard-check.mjs",
@@ -19,7 +19,9 @@
     "compose:down": "docker compose -f infra/docker-compose.yml down -v",
     "smoke": "node infra/smoke.mjs",
     "test:infra": "bash infra/test-nginx.sh",
-    "lint:workflows": "bash infra/lint-workflows.sh"
+    "lint:workflows": "bash infra/lint-workflows.sh",
+    "deploy": "bash infra/deploy.sh",
+    "test:deploy": "bash infra/deploy.test.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
