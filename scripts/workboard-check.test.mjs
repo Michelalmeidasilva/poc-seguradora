@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { parseWorkboard, validateRows, overlaps, checkRepo } from './workboard-check.mjs';
@@ -219,7 +219,7 @@ test('checkRepo reports a pointer that does not mention AGENTS.md', () => {
 test('checkRepo reports a skill symlink that is missing', () => {
   const root = mkdtempSync(join(tmpdir(), 'wb-skill-missing-'));
   makeRepo(root);
-  rmSync(join(root, '.agent/skills/workboard-protocol'), { recursive: true });
+  unlinkSync(join(root, '.agent/skills/workboard-protocol'));
   assert.ok(checkRepo(root).some((e) => /\.agent\/skills\/workboard-protocol missing/.test(e)));
 });
 
@@ -227,7 +227,7 @@ test('checkRepo reports a skill symlink that points to the wrong place', () => {
   const root = mkdtempSync(join(tmpdir(), 'wb-skill-wrong-'));
   makeRepo(root);
   mkdirSync(join(root, 'elsewhere'), { recursive: true });
-  rmSync(join(root, '.claude/skills/workboard-protocol'), { recursive: true });
+  unlinkSync(join(root, '.claude/skills/workboard-protocol'));
   symlinkSync('../../elsewhere', join(root, '.claude/skills/workboard-protocol'));
   assert.ok(
     checkRepo(root).some((e) => /\.claude\/skills\/workboard-protocol must resolve/.test(e)),
@@ -356,7 +356,7 @@ for (const kind of ['missing', 'wrong', 'copy', 'absolute', 'name', 'description
     addSkill(root);
     const link = join(root, '.claude/skills/second-skill');
     const real = join(root, '.agents/skills/second-skill');
-    if (['missing', 'wrong', 'copy', 'absolute'].includes(kind)) rmSync(link);
+    if (['missing', 'wrong', 'copy', 'absolute'].includes(kind)) unlinkSync(link);
     if (kind === 'wrong') symlinkSync('../../.agents/skills/workboard-protocol', link);
     if (kind === 'copy') {
       mkdirSync(link);
