@@ -20,7 +20,7 @@
     "smoke": "node infra/smoke.mjs",
     "test:infra": "bash infra/test-nginx.sh",
     "lint:workflows": "bash infra/lint-workflows.sh",
-    "deploy": "bash infra/deploy.sh",
+    "infra:deploy": "bash infra/deploy.sh",
     "test:deploy": "bash infra/deploy.test.sh"
   },
   "devDependencies": {

@@ -74,7 +74,7 @@ case "$tool" in
     case "$args" in
       *" buildx imagetools inspect "*)
         if [ "${FAKE_IMAGE_EXISTS:-0}" = 1 ]; then exit 0; fi
-        echo "ERROR: fake: not found" >&2
+        printf '%s\n' "${FAKE_INSPECT_ERROR:-ERROR: $4: not found}" >&2
         exit 1
         ;;
       *" buildx build "*) exit "${FAKE_DOCKER_BUILD_EXIT:-0}" ;;
@@ -93,6 +93,7 @@ case "$tool" in
         ;;
       *" run services describe "*)
         svc="$(after describe "$@")"
+        if [ "$svc" = "${FAKE_DESCRIBE_FAIL_SERVICE:-}" ]; then echo "ERROR: describe failed" >&2; exit 1; fi
         printf '%s-00002-fak\thttps://%s-fake.a.run.app\n' "$svc" "$svc"
         ;;
       *" projects describe "*) echo "123456789012" ;;
@@ -119,7 +120,7 @@ case "$tool" in
     env | grep '^TF_VAR_' | sort >"$FAKE_STATE/tfvars.$sub" || true
     case "$sub" in
       version) echo "Terraform v1.10.0" ;;
-      init) echo "Terraform has been successfully initialized!" ;;
+      init) echo "Terraform has been successfully initialized!"; exit "${FAKE_TF_INIT_EXIT:-0}" ;;
       plan)
         out=""
         for a in "$@"; do case "$a" in -out=*) out="${a#-out=}" ;; esac; done
@@ -148,6 +149,7 @@ case "$tool" in
         exit "${FAKE_TF_APPLY_EXIT:-0}"
         ;;
       output)
+        if [ "${FAKE_TF_OUTPUT_EXIT:-0}" != 0 ]; then echo "ERROR: output failed" >&2; exit "$FAKE_TF_OUTPUT_EXIT"; fi
         case "$args" in
           *" -raw web_url "*) printf '%s' "https://web-from-tf.example.run.app" ;;
           *) echo 'web_url = "https://web-from-tf.example.run.app"' ;;
@@ -411,6 +413,32 @@ t_build_existing_tag_refused() {
   assert_log '^docker buildx imagetools inspect southamerica-east1-docker.pkg.dev/'"$PROJECT"'/seguradora/gateway:abc1234$'
   refute_log '^docker buildx build'
   run_deploy "<EOF>" deploy gateway --yes
+  assert_rc 3
+  no_mutation
+}
+
+# A registry outage must never become permission to overwrite a tag.
+t_registry_errors_fail_closed() {
+  local error args
+  for error in 'ERROR: unexpected status from HEAD request: 401 Unauthorized' 'ERROR: failed to authorize: failed to fetch oauth token: 403 Forbidden' 'ERROR: failed to do request: dial tcp: lookup registry: no such host' 'ERROR: unexpected status: 500 Internal Server Error' 'ERROR: proxy: not found'; do
+    EXTRA_ENV=("FAKE_INSPECT_ERROR=$error")
+    for args in 'build gateway --yes' 'deploy all --yes --no-smoke' 'rollback gateway --tag old --yes --no-smoke'; do
+      : >"$LOG"
+      # shellcheck disable=SC2086 # intentional validated argument list splitting
+      run_deploy "<EOF>" $args
+      assert_rc 3
+      no_mutation
+    done
+  done
+}
+
+t_recognized_manifest_missing_allows_build() {
+  EXTRA_ENV=("FAKE_INSPECT_ERROR=ERROR: manifest unknown: Requested entity was not found.")
+  run_deploy "<EOF>" build gateway --yes
+  assert_rc 0
+  assert_count 1 '^docker buildx build '
+  : >"$LOG"
+  run_deploy "<EOF>" deploy gateway --existing-tag old --yes --no-smoke
   assert_rc 3
   no_mutation
 }
@@ -712,6 +740,32 @@ t_status() {
   run_deploy "<EOF>" status
   assert_rc 0
   assert_count 6 '^gcloud run services describe '
+  no_mutation
+}
+
+# Failures must affect exit status while other readable results remain available.
+t_status_describe_failure_retains_partial_results() {
+  EXTRA_ENV=("FAKE_DESCRIBE_FAIL_SERVICE=chatbot")
+  run_deploy "<EOF>" status
+  assert_rc 1
+  assert_count 6 '^gcloud run services describe '
+  assert_out 'https://gateway-fake.a.run.app'
+  assert_out 'web_url'
+  no_mutation
+}
+
+t_status_tf_failures() {
+  EXTRA_ENV=("FAKE_TF_INIT_EXIT=1")
+  run_deploy "<EOF>" status gateway
+  assert_rc 1
+  assert_out 'https://gateway-fake.a.run.app'
+  refute_log '^terraform .* output'
+  : >"$LOG"
+  EXTRA_ENV=("FAKE_TF_OUTPUT_EXIT=1")
+  run_deploy "<EOF>" status gateway
+  assert_rc 1
+  assert_out 'https://gateway-fake.a.run.app'
+  assert_log '^terraform .* output'
   no_mutation
 }
 

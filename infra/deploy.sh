@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local, per-service deploy of the POC to Cloud Run (Plan 8). Run from anywhere:
-#   bash infra/deploy.sh help          (or: pnpm run deploy help; plain `pnpm deploy` is a pnpm builtin)
+#   bash infra/deploy.sh help          (or: pnpm infra:deploy help)
 # Terraform owns the shape of the platform (services, env, scaling, IAM); this script owns the
 # container IMAGE of each Cloud Run service: `build` pushes an image, `deploy <service>` points
 # that one service at it with `gcloud run services update --image` (never `gcloud run deploy`,
@@ -396,7 +396,16 @@ git_tag() { # default image tag: <short-sha>, or <short-sha>-dirty-<yyyymmddHHMM
   fi
 }
 
-image_exists() { docker buildx imagetools inspect "$1" >/dev/null 2>&1; }
+# Docker has no documented distinct exit code for missing manifests. Recognize only
+# explicit manifest absence; every other failure stops the entire preflight.
+image_exists() {
+  local error
+  if error="$(docker buildx imagetools inspect "$1" 2>&1 >/dev/null)"; then return 0; fi
+  case "$error" in
+    "ERROR: $1: not found"|"ERROR: $1: manifest unknown"|"ERROR: manifest unknown: "*) return 1 ;;
+    *) die "$EXIT_PRECONDITION" "não foi possível verificar a imagem no registro: $1 (autenticação, rede ou registro; nenhuma imagem foi publicada)" ;;
+  esac
+}
 
 # --- commands ------------------------------------------------------------------------------------
 cmd_check() {
@@ -654,22 +663,28 @@ cmd_smoke() {
 }
 
 cmd_status() {
-  local svc
+  local svc failed=0
   load_config
   require_tools gcloud
   for svc in $(sort_services "$@"); do
     info "== $svc (imagem, URL, revisão)"
     gcloud run services describe "$(run_name_for "$svc")" --region "$CFG_REGION" --project "$CFG_PROJECT_ID" \
       --format='value(spec.template.spec.containers[0].image,status.url,status.latestReadyRevisionName)' ||
-      warn "não foi possível descrever $svc"
+      { warn "não foi possível descrever $svc"; failed=1; }
   done
   if [ -n "$CFG_TF_STATE_BUCKET" ] && ! looks_placeholder "$CFG_TF_STATE_BUCKET" && command -v terraform >/dev/null 2>&1; then
     info "== outputs do Terraform"
     export_tf_vars
-    if tf_init; then tf output || warn "terraform output falhou"; else warn "terraform init falhou"; fi
+    if tf_init; then
+      tf output || { warn "terraform output falhou"; failed=1; }
+    else
+      warn "terraform init falhou"
+      failed=1
+    fi
   else
     info "(outputs do Terraform omitidos: falta TF_STATE_BUCKET ou terraform)"
   fi
+  return "$failed"
 }
 
 cmd_destroy() {
