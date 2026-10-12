@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b141a" />
+    <link rel="icon" href="data:," />
+    <title>Digio · Atlas da experiência no WhatsApp</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="catalog.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Catálogo de jornadas">
+        <a class="brand" href="#DEP-01"
+          ><span class="brand-symbol">d</span
+          ><span>Digio <small>Assistências</small></span></a
+        >
+        <div class="project-name">
+          <h1>Atlas da experiência</h1>
+          <p>WhatsApp · revisão de produto</p>
+        </div>
+        <label class="search"
+          ><span aria-hidden="true">⌕</span
+          ><input
+            id="search"
+            type="search"
+            placeholder="Buscar jornada ou estado"
+            aria-label="Buscar jornada ou estado"
+          /><kbd>/</kbd></label
+        >
+        <nav id="journeys"></nav>
+        <footer class="sidebar-footer">
+          <span class="live-dot"></span> Proposta em evolução <small id="catalog-count"></small>
+        </footer>
+      </aside>
+      <main>
+        <header class="toolbar">
+          <div class="breadcrumb">
+            <span>Experiência do cliente</span><span aria-hidden="true">/</span
+            ><strong id="breadcrumb-title"></strong>
+          </div>
+          <div class="toolbar-actions">
+            <button id="theme" class="quiet-button" aria-label="Alternar tema do WhatsApp">
+              Tema claro</button
+            ><button id="gallery-toggle" class="quiet-button" aria-pressed="false">
+              Todas as telas</button
+            ><button id="print" class="quiet-button">Imprimir catálogo</button>
+          </div>
+        </header>
+        <section class="heading">
+          <div>
+            <div class="category-line">
+              <span id="journey-code"></span><span id="journey-stage"></span>
+            </div>
+            <h2 id="journey-title"></h2>
+            <p id="journey-description"></p>
+          </div>
+          <span class="scope-label">Protótipo UX · dados fictícios</span>
+        </section>
+        <div id="explorer" class="explorer">
+          <section class="state-panel" aria-label="Estados da jornada">
+            <div class="panel-heading">
+              <h3>Telas e interações</h3>
+              <span id="state-count"></span>
+            </div>
+            <div class="state-filters">
+              <button data-filter="all" class="selected" aria-pressed="true">Todos</button
+              ><button data-filter="main" aria-pressed="false">Principal</button
+              ><button data-filter="alternative" aria-pressed="false">Variações</button>
+            </div>
+            <div id="states"></div>
+          </section>
+          <section class="preview-column" aria-label="Prévia da experiência">
+            <div class="preview-heading">
+              <span id="screen-id"></span><span id="screen-type"></span>
+            </div>
+            <div id="phone" class="phone">
+              <div class="status-bar">
+                <span>9:41</span>
+                <div class="island"></div>
+                <span class="device-status">▮▮▮ ◔ ▰</span>
+              </div>
+              <header class="wa-header">
+                <button id="phone-back" aria-label="Estado anterior">‹</button>
+                <div class="wa-avatar">d</div>
+                <div class="wa-contact">
+                  <strong
+                    >Digio Assistências
+                    <span class="verified" aria-label="Perfil verificado">✓</span></strong
+                  ><small>Conta comercial</small>
+                </div>
+                <button id="phone-help" aria-label="Abrir atendimento humano">⋮</button>
+              </header>
+              <div id="chat" class="chat" aria-label="Conversa simulada"></div>
+              <form id="composer" class="composer">
+                <button type="button" id="attach" aria-label="Simular envio de documento">＋</button
+                ><input
+                  id="message-input"
+                  aria-label="Mensagem de demonstração"
+                  placeholder="Mensagem"
+                  autocomplete="off"
+                /><button type="submit" aria-label="Enviar mensagem">➤</button>
+              </form>
+              <div class="home-indicator"></div>
+              <div id="overlay" class="overlay" hidden></div>
+            </div>
+            <div class="playback">
+              <button id="previous" class="quiet-button">← Anterior</button
+              ><span id="position"></span
+              ><button id="next" class="primary-button">Próxima tela →</button>
+            </div>
+            <p class="preview-caption">
+              Clique nos botões para percorrer a jornada. Texto livre usa respostas demonstrativas.
+            </p>
+          </section>
+          <aside class="inspector" aria-label="Especificação da tela">
+            <div class="panel-heading"><h3>Detalhe da interação</h3></div>
+            <h4 id="screen-title"></h4>
+            <div id="screen-status"></div>
+            <dl>
+              <dt>Intenção do cliente</dt>
+              <dd id="screen-intent"></dd>
+              <dt>Comportamento</dt>
+              <dd id="screen-behavior"></dd>
+              <dt>Componente</dt>
+              <dd id="screen-component"></dd>
+              <dt>Condição a validar</dt>
+              <dd id="screen-rule"></dd>
+            </dl>
+            <div class="decision-box">
+              <h4>Decisão de experiência</h4>
+              <p id="journey-decision"></p>
+            </div>
+            <div id="transitions" class="transitions"></div>
+            <button id="copy-link" class="quiet-button">Copiar link desta tela</button>
+            <p class="prototype-note">
+              Representação de UX. Interface nativa, autenticação, pagamentos e integrações dependem
+              do provedor e da validação do produto.
+            </p>
+          </aside>
+        </div>
+        <section
+          id="gallery"
+          class="gallery"
+          aria-label="Catálogo de todas as telas"
+          hidden
+        ></section>
+        <section class="coverage">
+          <div>
+            <h3>Mapa do ciclo do cliente</h3>
+            <p>Uma experiência contínua, com contexto e confirmação em cada mudança.</p>
+          </div>
+          <div id="lifecycle"></div>
+        </section>
+      </main>
+    </div>
+    <dialog id="document-dialog">
+      <div class="document-header">
+        <h2 id="document-title">Documento de demonstração</h2>
+        <button id="close-document" aria-label="Fechar documento">✕</button>
+      </div>
+      <div id="document-content"></div>
+      <p class="document-disclaimer">
+        Exemplo visual. Não é um documento contratual ou comprovante válido.
+      </p>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
