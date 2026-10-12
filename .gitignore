@@ -12,3 +12,6 @@ infra/.env.*
 !infra/.env.example
 playwright-report/
 test-results/
+
+# Worktrees locais
+.worktrees/
