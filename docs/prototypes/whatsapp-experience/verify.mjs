@@ -30,6 +30,10 @@ for (const group of groups) {
   }
 }
 assert.equal(ids.size, total);
+for (const step of Object.values(index)) assert.equal(typeof step.requiresAuth, 'boolean');
+for (const id of ['DEP-33', 'CON-02', 'PAG-01', 'CAN-01', 'FUN-01', 'UTI-01', 'SOL-01', 'LEG-142'])
+  assert.equal(index[id].requiresAuth, true, `${id} must require authentication`);
+assert.equal(index['DES-03'].requiresAuth, false);
 assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escopo');
 assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
 const benefits = index['UTI-01'].flow.choices.map((item) => item.label);

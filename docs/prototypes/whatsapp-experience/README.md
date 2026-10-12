@@ -1,6 +1,14 @@
 # Atlas da experiência no WhatsApp
 
-Protótipo HTML independente com **23 jornadas e 267 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+Protótipo HTML independente com **23 jornadas e 268 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+
+## Autenticação obrigatória
+
+Nenhuma jornada pessoal abre sem autenticação: contratação, contrato, dependentes, pagamentos, documentos, solicitações e uso de assistências vinculadas. A regra cobre links diretos, catálogo, galeria e referências legadas. Conteúdo informativo público e orientação inicial permanecem livres.
+
+O CPF localiza o cadastro, mas não autentica sozinho. Use **529.982.247-25**, exclusivamente fictício, em `IDE-08`; depois confirme com o código demonstrativo **123456** em `IDE-02`. “Já tenho código” representa um cadastro previamente identificado. Navegar para a tela de sucesso não libera acesso. Após validar, o pedido original é retomado; a sessão demonstrativa dura 15 minutos e recarregar exige autenticação novamente.
+
+Esta é uma simulação UX, não segurança real: dados e código estão no HTML. Em produção, validação, vínculo do código, envio por canal cadastrado, expiração, limite de tentativas e autorização de cada operação devem ser impostos no servidor. Nunca use dados reais aqui.
 
 ## Serviços fornecidos
 
@@ -30,9 +38,9 @@ O catálogo registra as decisões da conversa e os estados previstos, além de r
 
 Todos os nomes, preços, datas, contratos e protocolos são fictícios. Não inserir dados pessoais reais. O exemplo familiar usa titular e até três dependentes somente para tornar a composição visual explícita; esse limite **não é uma regra validada**. Arquivos selecionados não são enviados, armazenados ou lidos; apenas o nome fica na memória da página. Recarregar apaga os dados demonstrativos.
 
-Método de identificação, preços, carências, limites, data de cancelamento, restituição, meios de pagamento e acesso aos prestadores ainda precisam ser validados. `CAD` e `PRE` são propostas para lacunas, não decisões aprovadas. Atendimento a interessados também é hipótese.
+Canal de envio do código, duração real de sessão, preços, carências, limites, data de cancelamento, restituição, meios de pagamento e acesso aos prestadores ainda precisam ser validados. `CAD` e `PRE` são propostas para lacunas, não decisões aprovadas. Atendimento a interessados também é hipótese.
 
-Os estados são cenários independentes para revisão, com condições ilustrativas em cada tela. Navegação pelo catálogo pode saltar pré-requisitos para facilitar a inspeção. Texto livre usa regras demonstrativas e não um LLM; não calcula elegibilidade nem executa operações. Documentos são exemplos sem validade contratual. Não há chamadas de rede ou telemetria.
+Os estados são cenários independentes para revisão, com condições ilustrativas em cada tela. Navegação pelo catálogo pode saltar etapas de preenchimento para inspeção, mas nunca a autenticação. Texto livre usa regras demonstrativas e não um LLM; não calcula elegibilidade nem executa operações. Documentos são exemplos sem validade contratual. Não há chamadas de rede ou telemetria.
 
 ## Rastreabilidade
 

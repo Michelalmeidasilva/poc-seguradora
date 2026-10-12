@@ -29,6 +29,20 @@
   let selectedContract = 'Assistência Saúde';
   let selectedPlan = 'Familiar';
   let identityReturn = 'CON-02';
+  let authenticatedUntil = 0;
+  let sessionTimer;
+  const isAuthenticated = () => Date.now() < authenticatedUntil;
+  function validCpf(value) {
+    const digits = String(value).replace(/\D/g, '');
+    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
+    for (let size = 9; size <= 10; size++) {
+      let sum = 0;
+      for (let i = 0; i < size; i++) sum += Number(digits[i]) * (size + 1 - i);
+      const digit = (sum * 10) % 11 % 10;
+      if (digit !== Number(digits[size])) return false;
+    }
+    return true;
+  }
   let toastTimer;
   const modeLabels = {
     chat: 'Conversa',
@@ -64,16 +78,20 @@
       toast('Esta interação depende de definição do produto.');
       return;
     }
-    if (id.startsWith('IDE-') && !current.startsWith('IDE-')) {
-      const step = index[current];
-      identityReturn =
-        step.journey === 'DEP' || current === 'ENT-01'
-          ? 'DEP-03'
-          : step.journey === 'ADE'
-            ? 'ADE-03'
-            : step.journey === 'CAN'
-              ? 'CAN-05'
-              : 'CON-02';
+    if (['IDE-01', 'IDE-02'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
+      if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
+      else if (current === 'DES-10') identityReturn = 'ADE-01';
+    }
+    if (id === 'IDE-05' || id === 'IDE-06' || id === 'IDE-07') {
+      if (index[current]?.requiresAuth) identityReturn = current;
+      authenticatedUntil = 0;
+      clearTimeout(sessionTimer);
+      $('gallery').innerHTML = '';
+      $('document-dialog').close();
+    }
+    if ((index[id].requiresAuth || id === 'IDE-03') && !isAuthenticated()) {
+      if (id !== 'IDE-03') identityReturn = id;
+      id = 'IDE-01';
     }
     if (id === 'IDE-03')
       index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
@@ -191,6 +209,10 @@
     return step.flow.choices;
   }
   function renderFlow(step) {
+    if (step.requiresAuth && !isAuthenticated()) {
+      go(step.id);
+      return;
+    }
     const flow = step.flow;
     if (!flow) {
       $('overlay').hidden = true;
@@ -230,6 +252,31 @@
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       let target = flow.target;
+      if (step.id === 'IDE-08') {
+        const cpf = String(data.get('authCpf') || '');
+        if (!validCpf(cpf) || cpf.replace(/\D/g, '') !== '52998224725') {
+          $('flow-error').textContent = 'Use o CPF fictício válido 529.982.247-25. Nenhuma consulta real é feita.';
+          $('flow-error').hidden = false;
+          return;
+        }
+        go('IDE-02');
+        return;
+      }
+      if (step.id === 'IDE-02') {
+        if (String(data.get('verification') || '') !== '123456') {
+          go('IDE-04');
+          return;
+        }
+        // Code-only represents a previously identified account; never CPF-only.
+        authenticatedUntil = Date.now() + 15 * 60 * 1000;
+        clearTimeout(sessionTimer);
+        sessionTimer = setTimeout(() => {
+          toggleGallery(false);
+          go('IDE-05');
+        }, 15 * 60 * 1000);
+        go('IDE-03');
+        return;
+      }
       if (step.mode === 'list') {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
@@ -341,6 +388,10 @@
     return `<div class="mini-sheet"><h5>${escape(step.flow.title)}</h5>${content}<button class="sheet-primary" disabled>${escape(step.flow.submit)}</button></div>`;
   }
   function renderGallery() {
+    if (!isAuthenticated()) {
+      $('gallery').innerHTML = '<p>Autentique seu acesso para visualizar as jornadas pessoais do catálogo.</p>';
+      return;
+    }
     $('gallery').innerHTML = groups
       .map(
         (group) =>
@@ -349,6 +400,10 @@
       .join('');
   }
   function toggleGallery(force) {
+    if (force !== false && !isAuthenticated()) {
+      go('IDE-01');
+      return;
+    }
     galleryVisible = force ?? !galleryVisible;
     $('gallery').hidden = !galleryVisible;
     $('explorer').hidden = galleryVisible;
@@ -357,6 +412,11 @@
     if (galleryVisible) renderGallery();
   }
   function showDocument(title) {
+    if (!isAuthenticated()) {
+      identityReturn = current;
+      go('IDE-01');
+      return;
+    }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
       `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;

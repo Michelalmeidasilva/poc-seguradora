@@ -275,22 +275,22 @@
     'IDE',
     'Identificação e sessão',
     'Começar',
-    'Verificação proporcional ao pedido, com retorno ao ponto original da conversa.',
-    'Reutilizar sessão válida e pedir confirmação adicional quando exigida.',
-    'Método, expiração e ações sensíveis ainda precisam ser definidos com o banco. O código aqui é demonstrativo.',
+    'Autenticação obrigatória antes de qualquer jornada pessoal, com retorno ao pedido original.',
+    'CPF localiza o cadastro; código confirma o acesso. Sessão válida pode ser reutilizada.',
+    'Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.',
     [
       screen(
         'IDE-01',
         'Identificação necessária',
         'Quero consultar meu contrato.',
-        'Para exibir dados do seu contrato, preciso verificar sua identidade. Vamos continuar seu pedido depois dessa etapa.',
-        { actions: [action('Verificar identidade', 'IDE-02'), action('Pedir ajuda', 'HUM-01')] },
+        'Antes de acessar dados pessoais ou do contrato, precisamos autenticar seu acesso. O CPF localiza o cadastro e o código confirma sua identidade. Depois retomamos seu pedido.',
+        { actions: [action('Informar CPF', 'IDE-08'), action('Já tenho código', 'IDE-02')] },
       ),
       screen(
         'IDE-02',
         'Verificação de demonstração',
         'Vou verificar.',
-        'Complete a verificação para continuar. Este exemplo representa a etapa de identidade; o método real ainda será definido.',
+        'Informe o código de acesso enviado pelo canal cadastrado. Na demonstração, use 123456. O envio real não acontece neste protótipo.',
         form(
           'Verificar identidade',
           [
@@ -312,7 +312,7 @@
         'Identidade verificada',
         '123456',
         'Identidade verificada. Vamos continuar sua solicitação.',
-        { actions: [action('Continuar inclusão', 'DEP-03'), action('Ver contrato', 'CON-02')] },
+        { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
       ),
       screen(
         'IDE-04',
@@ -348,6 +348,15 @@
         'Esse contrato não é meu.',
         'Não vou exibir outros dados desse contrato. Podemos encaminhar a divergência para a equipe responsável.',
         { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
+      ),
+      screen(
+        'IDE-08',
+        'CPF para localizar cadastro',
+        'Vou informar meu CPF.',
+        'Informe somente o CPF fictício 529.982.247-25 nesta demonstração. O CPF sozinho não libera o acesso: a próxima etapa exige o código.',
+        form('Localizar cadastro', [
+          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '529.982.247-25', required: true },
+        ], 'Continuar para código', 'IDE-02'),
       ),
     ],
   );
@@ -570,7 +579,7 @@
         'Primeiro, precisamos verificar sua identidade. Se sua sessão estiver válida, esta etapa será aproveitada.',
         {
           actions: [
-            action('Simular sessão válida', 'ADE-03'),
+            action('Continuar com autenticação', 'ADE-03'),
             action('Ver identificação', 'IDE-01'),
           ],
         },
@@ -3056,6 +3065,13 @@
   for (const group of groups) {
     group.steps.forEach((step, position) => {
       step.journey = group.code;
+      // Deny by default: only these informational screens are public.
+      step.requiresAuth = ![
+        'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09',
+        'NAV-01', 'DES-01', 'DES-02', 'DES-03', 'DES-04', 'DES-05', 'DES-06',
+        'DES-09', 'DES-10', 'DES-11', 'HUM-01', 'HUM-02', 'HUM-03',
+        'AUD-01', 'AUD-03', 'AUD-04',
+      ].includes(step.id) && group.code !== 'IDE';
       step.position = position;
       step.rule ??= group.rule;
       step.intent ??= step.user || 'Receber atualização de serviço.';

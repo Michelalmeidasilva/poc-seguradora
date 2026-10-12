@@ -1960,22 +1960,22 @@ dialog::backdrop {
     'IDE',
     'Identificação e sessão',
     'Começar',
-    'Verificação proporcional ao pedido, com retorno ao ponto original da conversa.',
-    'Reutilizar sessão válida e pedir confirmação adicional quando exigida.',
-    'Método, expiração e ações sensíveis ainda precisam ser definidos com o banco. O código aqui é demonstrativo.',
+    'Autenticação obrigatória antes de qualquer jornada pessoal, com retorno ao pedido original.',
+    'CPF localiza o cadastro; código confirma o acesso. Sessão válida pode ser reutilizada.',
+    'Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.',
     [
       screen(
         'IDE-01',
         'Identificação necessária',
         'Quero consultar meu contrato.',
-        'Para exibir dados do seu contrato, preciso verificar sua identidade. Vamos continuar seu pedido depois dessa etapa.',
-        { actions: [action('Verificar identidade', 'IDE-02'), action('Pedir ajuda', 'HUM-01')] },
+        'Antes de acessar dados pessoais ou do contrato, precisamos autenticar seu acesso. O CPF localiza o cadastro e o código confirma sua identidade. Depois retomamos seu pedido.',
+        { actions: [action('Informar CPF', 'IDE-08'), action('Já tenho código', 'IDE-02')] },
       ),
       screen(
         'IDE-02',
         'Verificação de demonstração',
         'Vou verificar.',
-        'Complete a verificação para continuar. Este exemplo representa a etapa de identidade; o método real ainda será definido.',
+        'Informe o código de acesso enviado pelo canal cadastrado. Na demonstração, use 123456. O envio real não acontece neste protótipo.',
         form(
           'Verificar identidade',
           [
@@ -1997,7 +1997,7 @@ dialog::backdrop {
         'Identidade verificada',
         '123456',
         'Identidade verificada. Vamos continuar sua solicitação.',
-        { actions: [action('Continuar inclusão', 'DEP-03'), action('Ver contrato', 'CON-02')] },
+        { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
       ),
       screen(
         'IDE-04',
@@ -2033,6 +2033,15 @@ dialog::backdrop {
         'Esse contrato não é meu.',
         'Não vou exibir outros dados desse contrato. Podemos encaminhar a divergência para a equipe responsável.',
         { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
+      ),
+      screen(
+        'IDE-08',
+        'CPF para localizar cadastro',
+        'Vou informar meu CPF.',
+        'Informe somente o CPF fictício 529.982.247-25 nesta demonstração. O CPF sozinho não libera o acesso: a próxima etapa exige o código.',
+        form('Localizar cadastro', [
+          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '529.982.247-25', required: true },
+        ], 'Continuar para código', 'IDE-02'),
       ),
     ],
   );
@@ -2255,7 +2264,7 @@ dialog::backdrop {
         'Primeiro, precisamos verificar sua identidade. Se sua sessão estiver válida, esta etapa será aproveitada.',
         {
           actions: [
-            action('Simular sessão válida', 'ADE-03'),
+            action('Continuar com autenticação', 'ADE-03'),
             action('Ver identificação', 'IDE-01'),
           ],
         },
@@ -4741,6 +4750,13 @@ dialog::backdrop {
   for (const group of groups) {
     group.steps.forEach((step, position) => {
       step.journey = group.code;
+      // Deny by default: only these informational screens are public.
+      step.requiresAuth = ![
+        'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09',
+        'NAV-01', 'DES-01', 'DES-02', 'DES-03', 'DES-04', 'DES-05', 'DES-06',
+        'DES-09', 'DES-10', 'DES-11', 'HUM-01', 'HUM-02', 'HUM-03',
+        'AUD-01', 'AUD-03', 'AUD-04',
+      ].includes(step.id) && group.code !== 'IDE';
       step.position = position;
       step.rule ??= group.rule;
       step.intent ??= step.user || 'Receber atualização de serviço.';
@@ -4794,6 +4810,20 @@ dialog::backdrop {
   let selectedContract = 'Assistência Saúde';
   let selectedPlan = 'Familiar';
   let identityReturn = 'CON-02';
+  let authenticatedUntil = 0;
+  let sessionTimer;
+  const isAuthenticated = () => Date.now() < authenticatedUntil;
+  function validCpf(value) {
+    const digits = String(value).replace(/\D/g, '');
+    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
+    for (let size = 9; size <= 10; size++) {
+      let sum = 0;
+      for (let i = 0; i < size; i++) sum += Number(digits[i]) * (size + 1 - i);
+      const digit = (sum * 10) % 11 % 10;
+      if (digit !== Number(digits[size])) return false;
+    }
+    return true;
+  }
   let toastTimer;
   const modeLabels = {
     chat: 'Conversa',
@@ -4829,16 +4859,20 @@ dialog::backdrop {
       toast('Esta interação depende de definição do produto.');
       return;
     }
-    if (id.startsWith('IDE-') && !current.startsWith('IDE-')) {
-      const step = index[current];
-      identityReturn =
-        step.journey === 'DEP' || current === 'ENT-01'
-          ? 'DEP-03'
-          : step.journey === 'ADE'
-            ? 'ADE-03'
-            : step.journey === 'CAN'
-              ? 'CAN-05'
-              : 'CON-02';
+    if (['IDE-01', 'IDE-02'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
+      if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
+      else if (current === 'DES-10') identityReturn = 'ADE-01';
+    }
+    if (id === 'IDE-05' || id === 'IDE-06' || id === 'IDE-07') {
+      if (index[current]?.requiresAuth) identityReturn = current;
+      authenticatedUntil = 0;
+      clearTimeout(sessionTimer);
+      $('gallery').innerHTML = '';
+      $('document-dialog').close();
+    }
+    if ((index[id].requiresAuth || id === 'IDE-03') && !isAuthenticated()) {
+      if (id !== 'IDE-03') identityReturn = id;
+      id = 'IDE-01';
     }
     if (id === 'IDE-03')
       index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
@@ -4956,6 +4990,10 @@ dialog::backdrop {
     return step.flow.choices;
   }
   function renderFlow(step) {
+    if (step.requiresAuth && !isAuthenticated()) {
+      go(step.id);
+      return;
+    }
     const flow = step.flow;
     if (!flow) {
       $('overlay').hidden = true;
@@ -4995,6 +5033,31 @@ dialog::backdrop {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       let target = flow.target;
+      if (step.id === 'IDE-08') {
+        const cpf = String(data.get('authCpf') || '');
+        if (!validCpf(cpf) || cpf.replace(/\D/g, '') !== '52998224725') {
+          $('flow-error').textContent = 'Use o CPF fictício válido 529.982.247-25. Nenhuma consulta real é feita.';
+          $('flow-error').hidden = false;
+          return;
+        }
+        go('IDE-02');
+        return;
+      }
+      if (step.id === 'IDE-02') {
+        if (String(data.get('verification') || '') !== '123456') {
+          go('IDE-04');
+          return;
+        }
+        // Code-only represents a previously identified account; never CPF-only.
+        authenticatedUntil = Date.now() + 15 * 60 * 1000;
+        clearTimeout(sessionTimer);
+        sessionTimer = setTimeout(() => {
+          toggleGallery(false);
+          go('IDE-05');
+        }, 15 * 60 * 1000);
+        go('IDE-03');
+        return;
+      }
       if (step.mode === 'list') {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
@@ -5106,6 +5169,10 @@ dialog::backdrop {
     return `<div class="mini-sheet"><h5>${escape(step.flow.title)}</h5>${content}<button class="sheet-primary" disabled>${escape(step.flow.submit)}</button></div>`;
   }
   function renderGallery() {
+    if (!isAuthenticated()) {
+      $('gallery').innerHTML = '<p>Autentique seu acesso para visualizar as jornadas pessoais do catálogo.</p>';
+      return;
+    }
     $('gallery').innerHTML = groups
       .map(
         (group) =>
@@ -5114,6 +5181,10 @@ dialog::backdrop {
       .join('');
   }
   function toggleGallery(force) {
+    if (force !== false && !isAuthenticated()) {
+      go('IDE-01');
+      return;
+    }
     galleryVisible = force ?? !galleryVisible;
     $('gallery').hidden = !galleryVisible;
     $('explorer').hidden = galleryVisible;
@@ -5122,6 +5193,11 @@ dialog::backdrop {
     if (galleryVisible) renderGallery();
   }
   function showDocument(title) {
+    if (!isAuthenticated()) {
+      identityReturn = current;
+      go('IDE-01');
+      return;
+    }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
       `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
