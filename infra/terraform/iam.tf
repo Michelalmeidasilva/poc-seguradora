@@ -26,115 +26,23 @@ resource "google_service_account" "chatbot" {
   depends_on = [google_project_service.apis]
 }
 
-resource "google_service_account" "fake_services" {
+resource "google_service_account" "svc_cotacao" {
   project      = var.project_id
-  account_id   = "seguradora-fake-services"
-  display_name = "seguradora fake-services runtime"
-
-  depends_on = [google_project_service.apis]
+  account_id   = "seguradora-svc-cotacao"
+  display_name = "seguradora svc-cotacao runtime"
+  depends_on   = [google_project_service.apis]
 }
 
-# Identity that runs Terraform and pushes images from GitHub Actions (through WIF, no keys).
-resource "google_service_account" "deployer" {
+resource "google_service_account" "svc_apolice" {
   project      = var.project_id
-  account_id   = "seguradora-deployer"
-  display_name = "seguradora deployer (GitHub Actions)"
-
-  depends_on = [google_project_service.apis]
+  account_id   = "seguradora-svc-apolice"
+  display_name = "seguradora svc-apolice runtime"
+  depends_on   = [google_project_service.apis]
 }
 
-locals {
-  # Project roles the deployer needs to plan/apply THIS stack and nothing more:
-  deployer_project_roles = toset(concat([
-    "roles/run.admin",                       # Cloud Run services and their IAM (allUsers invoker)
-    "roles/artifactregistry.admin",          # the repository (cleanup policies) and image push
-    "roles/secretmanager.admin",             # the SESSION_SECRET secret, its versions and IAM
-    "roles/compute.networkAdmin",            # VPC and subnet
-    "roles/iam.serviceAccountAdmin",         # the five service accounts and their IAM
-    "roles/iam.workloadIdentityPoolAdmin",   # GitHub WIF pool/provider
-    "roles/resourcemanager.projectIamAdmin", # these project role bindings (also reads the project)
-    "roles/serviceusage.serviceUsageAdmin",  # google_project_service and the budget quota project
-    ], var.billing_account_id != "" && var.budget_alert_email != "" ? [
-    "roles/monitoring.notificationChannelEditor", # budget e-mail channel
-  ] : []))
-
-  runtime_service_accounts = {
-    web           = google_service_account.web.name
-    gateway       = google_service_account.gateway.name
-    chatbot       = google_service_account.chatbot.name
-    fake_services = google_service_account.fake_services.name
-  }
-}
-
-resource "google_project_iam_member" "deployer" {
-  for_each = local.deployer_project_roles
-
-  project = var.project_id
-  role    = each.value
-  member  = "serviceAccount:${google_service_account.deployer.email}"
-}
-
-# actAs only on the four runtime identities (not project-wide), required to deploy Cloud Run
-# revisions that run as them.
-resource "google_service_account_iam_member" "deployer_act_as" {
-  for_each = local.runtime_service_accounts
-
-  service_account_id = each.value
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${google_service_account.deployer.email}"
-}
-
-# The state bucket and the deployer's roles/storage.objectAdmin on it are granted in the
-# bootstrap (README / runbook), not here: with only objectAdmin the deployer cannot read the
-# bucket IAM policy, so a managed binding would fail the CI refresh with 403.
-
-# Workload Identity Federation for GitHub Actions (only when github_repository is set).
-resource "google_iam_workload_identity_pool" "github" {
-  count = var.github_repository == "" ? 0 : 1
-
-  project                   = var.project_id
-  workload_identity_pool_id = "github"
-  display_name              = "GitHub Actions"
-  description               = "OIDC tokens from GitHub Actions of ${var.github_repository}."
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_iam_workload_identity_pool_provider" "github" {
-  count = var.github_repository == "" ? 0 : 1
-
-  project                            = var.project_id
-  workload_identity_pool_id          = google_iam_workload_identity_pool.github[0].workload_identity_pool_id
-  workload_identity_pool_provider_id = "github-actions"
-  display_name                       = "GitHub Actions OIDC"
-
-  # Jobs without an environment have no `environment` claim: map it to "" instead of failing.
-  attribute_mapping = {
-    "google.subject"        = "assertion.sub"
-    "attribute.repository"  = "assertion.repository"
-    "attribute.ref"         = "assertion.ref"
-    "attribute.environment" = "has(assertion.environment) ? assertion.environment : \"\""
-  }
-
-  # Only this repository, only a job running in the `production` environment (the deploy
-  # workflow's approval gate) AND only for the deploy branch or a v* tag. A workflow edited on
-  # any branch or tag to drop `environment:` gets no token, so every use of the deployer
-  # credentials passes the environment's required reviewers.
-  attribute_condition = join(" && ", [
-    "assertion.repository == \"${var.github_repository}\"",
-    "attribute.environment == \"production\"",
-    "(assertion.ref == \"refs/heads/${var.github_deploy_branch}\" || assertion.ref.startsWith(\"refs/tags/v\"))",
-  ])
-
-  oidc {
-    issuer_uri = "https://token.actions.githubusercontent.com"
-  }
-}
-
-resource "google_service_account_iam_member" "deployer_wif" {
-  count = var.github_repository == "" ? 0 : 1
-
-  service_account_id = google_service_account.deployer.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github[0].name}/attribute.repository/${var.github_repository}"
+resource "google_service_account" "svc_sinistro" {
+  project      = var.project_id
+  account_id   = "seguradora-svc-sinistro"
+  display_name = "seguradora svc-sinistro runtime"
+  depends_on   = [google_project_service.apis]
 }

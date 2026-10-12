@@ -13,10 +13,12 @@ output "gateway_url" {
 output "service_uris" {
   description = "Real `uri` reported by Cloud Run for each service, to compare with the computed URLs."
   value = {
-    web           = google_cloud_run_v2_service.web.uri
-    gateway       = google_cloud_run_v2_service.gateway.uri
-    chatbot       = google_cloud_run_v2_service.chatbot.uri
-    fake_services = var.deploy_fake_services ? google_cloud_run_v2_service.fake_services[0].uri : null
+    web          = google_cloud_run_v2_service.web.uri
+    gateway      = google_cloud_run_v2_service.gateway.uri
+    chatbot      = google_cloud_run_v2_service.chatbot.uri
+    svc_cotacao  = google_cloud_run_v2_service.svc_cotacao.uri
+    svc_apolice  = google_cloud_run_v2_service.svc_apolice.uri
+    svc_sinistro = google_cloud_run_v2_service.svc_sinistro.uri
   }
 }
 
@@ -31,16 +33,6 @@ output "url_consistency_note" {
 }
 
 output "artifact_registry" {
-  description = "Docker registry prefix: push <artifact_registry>/{web,gateway,chatbot,fake-services}:<image_tag>."
+  description = "Docker registry prefix: push <artifact_registry>/<service>:<tag>."
   value       = local.registry
-}
-
-output "deployer_service_account" {
-  description = "E-mail of the deployer service account (GitHub variable GCP_DEPLOYER_SA)."
-  value       = google_service_account.deployer.email
-}
-
-output "wif_provider" {
-  description = "Full Workload Identity provider name for google-github-actions/auth (GitHub variable GCP_WIF_PROVIDER). Empty when github_repository is not set."
-  value       = var.github_repository == "" ? "" : google_iam_workload_identity_pool_provider.github[0].name
 }

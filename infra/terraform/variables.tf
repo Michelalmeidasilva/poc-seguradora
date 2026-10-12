@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "GCP project id that hosts the whole stack (never commit a real one; set it in terraform.tfvars)."
+  description = "GCP project id that hosts the whole stack (set through infra/.env)."
   type        = string
 
   validation {
@@ -14,18 +14,9 @@ variable "region" {
   default     = "southamerica-east1"
 }
 
-variable "image_tag" {
-  description = "Tag of the four images in Artifact Registry (the deploy workflow passes the commit SHA or the release tag)."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.image_tag))
-    error_message = "image_tag must be a valid Docker tag."
-  }
-}
 
 variable "artifact_registry_repo" {
-  description = "Artifact Registry Docker repository id. Images: <region>-docker.pkg.dev/<project>/<repo>/{web,gateway,chatbot,fake-services}:<image_tag>."
+  description = "Artifact Registry Docker repository id. Image tags are managed by deploy.sh."
   type        = string
   default     = "seguradora"
 }
@@ -75,26 +66,7 @@ variable "budget_alert_email" {
   default     = ""
 }
 
-variable "deploy_fake_services" {
-  description = "Deploy the fake-services Cloud Run service (cotação, apólice, sinistro) while the real svc-* do not exist. When false, service_urls is required."
-  type        = bool
-  default     = true
-}
 
-variable "service_urls" {
-  description = "Base URLs of the real internal services, used by the chatbot when deploy_fake_services = false. They must be reachable through the VPC (no NAT: no internet egress)."
-  type = object({
-    cotacao  = string
-    apolice  = string
-    sinistro = string
-  })
-  default = null
-
-  validation {
-    condition     = var.deploy_fake_services || var.service_urls != null
-    error_message = "service_urls is required when deploy_fake_services = false."
-  }
-}
 
 variable "log_level" {
   description = "LOG_LEVEL of the gateway and the chatbot."
@@ -107,24 +79,20 @@ variable "log_level" {
   }
 }
 
-variable "github_repository" {
-  description = "GitHub repository (owner/name) allowed to deploy through Workload Identity Federation. Empty = no WIF pool/provider."
-  type        = string
-  default     = ""
 
-  validation {
-    condition     = var.github_repository == "" || can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
-    error_message = "github_repository must be empty or owner/name."
+variable "service_scaling" {
+  description = "Per-service minimum/maximum instances and memory; stateful services default to max 1."
+  type        = map(object({ min_instances = number, max_instances = number, memory = string }))
+  default = {
+    web          = { min_instances = 0, max_instances = 2, memory = "256Mi" }
+    gateway      = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+    chatbot      = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+    svc_cotacao  = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+    svc_apolice  = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+    svc_sinistro = { min_instances = 0, max_instances = 1, memory = "512Mi" }
   }
-}
-
-variable "github_deploy_branch" {
-  description = "Branch allowed to deploy through Workload Identity Federation (besides v* tags), always together with the GitHub environment production. Plain branch name, no wildcard."
-  type        = string
-  default     = "master"
-
   validation {
-    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$", var.github_deploy_branch)) && !strcontains(var.github_deploy_branch, "..") && !endswith(var.github_deploy_branch, "/") && !endswith(var.github_deploy_branch, ".lock")
-    error_message = "github_deploy_branch must be a plain branch name (letters, digits, . _ / -; no wildcard, no .., no trailing / or .lock)."
+    condition     = toset(keys(var.service_scaling)) == toset(["web", "gateway", "chatbot", "svc_cotacao", "svc_apolice", "svc_sinistro"]) && alltrue([for s in values(var.service_scaling) : s.min_instances >= 0 && floor(s.min_instances) == s.min_instances && s.max_instances >= 1 && floor(s.max_instances) == s.max_instances && s.min_instances <= s.max_instances && can(regex("^[1-9][0-9]*(Mi|Gi)$", s.memory))])
+    error_message = "service_scaling must contain exactly six services with integer 0 <= min <= max, max >= 1 and memory in Mi or Gi."
   }
 }

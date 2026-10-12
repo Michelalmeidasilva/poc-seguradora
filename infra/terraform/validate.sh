@@ -94,9 +94,13 @@ expect() {
   got="$(count_type "$type")"
   if [ "$got" = "$want" ]; then pass "$type blocks: $got"; else fail "$type blocks: got $got, want $want"; fi
 }
-expect google_cloud_run_v2_service 4
-expect google_cloud_run_v2_service_iam_member 4
-expect google_service_account 5
+expect google_cloud_run_v2_service 6
+expect google_cloud_run_v2_service_iam_member 6
+expect google_service_account 6
+expect google_project_iam_member 0
+expect google_service_account_iam_member 0
+expect google_monitoring_notification_channel 1
+expect google_project_service 1
 expect google_secret_manager_secret 1
 expect google_secret_manager_secret_version 1
 expect google_secret_manager_secret_iam_member 1
@@ -105,8 +109,8 @@ expect google_compute_network 1
 expect google_compute_subnetwork 1
 expect google_artifact_registry_repository 1
 expect google_billing_budget 1
-expect google_iam_workload_identity_pool 1
-expect google_iam_workload_identity_pool_provider 1
+expect google_iam_workload_identity_pool 0
+expect google_iam_workload_identity_pool_provider 0
 # The state bucket's IAM is bootstrap-only: a deployer with objectAdmin cannot read bucket IAM,
 # so managing it here would break CI refresh with 403.
 if grep -nE '^(resource|data) "google_storage_bucket_iam_' ./*.tf; then
@@ -115,63 +119,52 @@ else
   pass "no google_storage_bucket_iam_* resource"
 fi
 
-# Behavioural settings from the plan's Global Constraints, checked per service block.
+# Each explicit service owns infrastructure; deploy.sh owns the image and client metadata.
 run_block() {
-  awk -v name="$1" '
-    $0 ~ "^resource \"google_cloud_run_v2_service\" \"" name "\"" { on = 1 }
-    on { print }
-    on && /^}/ { exit }
-  ' run.tf
+  awk -v name="$1" '$0 ~ "^resource \"google_cloud_run_v2_service\" \"" name "\"" { on = 1 } on { print } on && /^}/ { exit }' run.tf
 }
 assert_in() {
   local svc="$1" pattern="$2" label="$3"
   if run_block "$svc" | grep -qE "$pattern"; then pass "$svc: $label"; else fail "$svc: missing $label"; fi
 }
-assert_not_in() {
-  local svc="$1" pattern="$2" label="$3"
-  if run_block "$svc" | grep -qE "$pattern"; then fail "$svc: must not have $label"; else pass "$svc: no $label"; fi
-}
-if [ -f run.tf ]; then
-  for svc in gateway chatbot fake_services; do
-    assert_in "$svc" 'max_instance_count[[:space:]]*=[[:space:]]*1$' "max_instance_count = 1"
-    assert_in "$svc" 'session_affinity[[:space:]]*=[[:space:]]*true' "session_affinity = true"
-  done
-  assert_in web 'max_instance_count[[:space:]]*=[[:space:]]*2$' "max_instance_count = 2"
-  for svc in web gateway; do
-    assert_in "$svc" 'timeout[[:space:]]*=[[:space:]]*"3600s"' 'timeout = "3600s"'
-    assert_in "$svc" 'ingress[[:space:]]*=[[:space:]]*"INGRESS_TRAFFIC_ALL"' "public ingress"
-  done
-  for svc in chatbot fake_services; do
-    assert_in "$svc" 'ingress[[:space:]]*=[[:space:]]*"INGRESS_TRAFFIC_INTERNAL_ONLY"' "internal ingress"
-  done
-  for svc in gateway chatbot; do
-    assert_in "$svc" 'egress[[:space:]]*=[[:space:]]*"ALL_TRAFFIC"' "Direct VPC egress ALL_TRAFFIC"
-  done
-  assert_in gateway 'cpu_idle[[:space:]]*=[[:space:]]*false' "cpu_idle = false"
-  for svc in web chatbot fake_services; do
-    assert_not_in "$svc" 'cpu_idle[[:space:]]*=[[:space:]]*false' "cpu_idle = false"
-  done
-  assert_in gateway 'secret_key_ref' "SESSION_SECRET from Secret Manager"
-  assert_in gateway 'var\.trust_proxy_hops' "TRUST_PROXY_HOPS from var.trust_proxy_hops"
-else
-  fail "run.tf missing"
-fi
+for svc in web gateway chatbot svc_cotacao svc_apolice svc_sinistro; do
+  assert_in "$svc" 'image[[:space:]]*=[[:space:]]*local.placeholder_image' 'placeholder image'
+  assert_in "$svc" 'ignore_changes.*template\[0\].containers\[0\].image.*client.*client_version' 'image/client ownership ignored'
+  assert_in "$svc" "var\\.service_scaling\\.${svc}\\.min_instances" 'minimum scaling lookup'
+  assert_in "$svc" "var\\.service_scaling\\.${svc}\\.max_instances" 'maximum scaling lookup'
+  assert_in "$svc" "var\\.service_scaling\\.${svc}\\.memory" 'memory lookup'
+  assert_in "$svc" 'tcp_socket' 'TCP startup probe'
+  if grep -A8 "resource \"google_cloud_run_v2_service_iam_member\" \"${svc}_invoker\"" run.tf | grep -q 'member.*"allUsers"'; then pass "$svc: allUsers invoker"; else fail "$svc: missing allUsers invoker"; fi
+done
+for svc in chatbot svc_cotacao svc_apolice svc_sinistro; do
+  assert_in "$svc" 'INGRESS_TRAFFIC_INTERNAL_ONLY' 'internal ingress'
+  assert_in "$svc" 'session_affinity.*true' 'session affinity'
+done
+for svc in web gateway; do
+  assert_in "$svc" 'INGRESS_TRAFFIC_ALL' 'public ingress'
+  assert_in "$svc" 'timeout.*"3600s"' 'SSE timeout'
+done
+for svc in gateway chatbot; do assert_in "$svc" 'egress.*"ALL_TRAFFIC"' 'Direct VPC egress'; done
+assert_in gateway 'cpu_idle.*false' 'always allocated CPU'
+assert_in gateway 'secret_key_ref' 'Secret Manager reference'
+assert_in gateway 'var\.trust_proxy_hops' 'proxy hops lookup'
+assert_in gateway 'local.run_url.chatbot' 'chatbot URL wiring'
+assert_in web 'local.run_url.gateway' 'gateway URL wiring'
+for svc in svc_cotacao svc_apolice svc_sinistro; do
+  if run_block "$svc" | grep -q 'vpc_access'; then fail "$svc: unexpected VPC egress"; else pass "$svc: no VPC egress"; fi
+done
+assert_in gateway 'local.web_public_url' 'allowed origin wiring'
+if grep -q 'placeholder_image.*"us-docker.pkg.dev/cloudrun/container/hello"' main.tf; then pass 'official placeholder'; else fail 'missing official placeholder'; fi
+for api in iamcredentials.googleapis.com sts.googleapis.com; do
+  if grep -q "$api" main.tf; then fail "unused API: $api"; else pass "no unused API $api"; fi
+done
+for svc in svc_cotacao svc_apolice svc_sinistro; do assert_in chatbot "local.run_url.$svc" "$svc URL wiring"; done
+if grep -nE '^(resource|variable|output) "(google_iam_workload_identity_pool[^" ]*|google_project_iam_member|google_service_account_iam_member|github_[^" ]*|image_tag|deploy_fake_services|service_urls|deployer_service_account|wif_provider)"|^resource "[^"]+" "(deployer|fake_services)"' ./*.tf; then fail 'removed CI identities/legacy configuration present'; else pass 'no CI identities or legacy configuration'; fi
 if grep -qE 'private_ip_google_access[[:space:]]*=[[:space:]]*true' network.tf 2>/dev/null; then pass "subnet private_ip_google_access"; else fail "subnet without private_ip_google_access = true"; fi
 if grep -qE '"10\.10\.0\.0/24"' network.tf 2>/dev/null; then pass "subnet 10.10.0.0/24"; else fail "subnet range is not 10.10.0.0/24"; fi
 if grep -qE 'backend "gcs" \{\}' versions.tf 2>/dev/null; then pass "partial gcs backend"; else fail 'versions.tf needs backend "gcs" {}'; fi
 
-# WIF: the deployer credentials only for a job in the `production` environment (approval gate),
-# as its own && term, on the deploy branch or a v* tag. An `||` with the environment would let
-# any branch or tag run skip the reviewers.
-wif_condition="$(awk '/attribute_condition/,/\]\)/' iam.tf 2>/dev/null || true)"
-if printf '%s\n' "$wif_condition" | grep -qE '^[[:space:]]*"attribute\.environment == \\"production\\"",$'; then
-  pass "WIF condition requires environment production (own && term)"
-else
-  fail "WIF attribute_condition must have \"attribute.environment == \\\"production\\\"\" as its own term"
-fi
-if printf '%s\n' "$wif_condition" | grep -q 'refs/heads/${var.github_deploy_branch}'; then pass "WIF condition uses github_deploy_branch"; else fail "WIF condition must use refs/heads/\${var.github_deploy_branch}"; fi
-if printf '%s\n' "$wif_condition" | grep -qE 'environment[^&]*\|\||\|\|[^&]*environment'; then fail "WIF condition ORs the environment (bypass)"; else pass "WIF condition does not OR the environment"; fi
-if grep -qE '"attribute\.environment"[[:space:]]*=[[:space:]]*"has\(assertion\.environment\)' iam.tf 2>/dev/null; then pass "WIF maps a missing environment claim safely"; else fail "WIF attribute.environment mapping must guard with has(assertion.environment)"; fi
+echo "Expected resource instances: default 31 = 6 APIs + registry 1 + network/subnet 2 + runtime SAs 6 + secret/password/accessor 4 + services/invokers 12; budget only 33; budget and email 35."
 
 echo "== resource counts by type (blocks in the .tf files; see README 'O que o plan deve mostrar')"
 { cat ./*.tf | grep -E '^resource "' || true; } | awk '{ gsub(/"/, "", $2); print $2 }' | sort | uniq -c

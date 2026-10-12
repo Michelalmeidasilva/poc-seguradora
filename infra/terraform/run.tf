@@ -1,12 +1,4 @@
-# The four Cloud Run services. Settings follow the Plan 7 Global Constraints:
-# - gateway and chatbot keep session/turn state in memory: max 1 instance + session affinity
-#   (fake-services too, so its in-memory fake data stays consistent);
-# - web and gateway hold SSE connections: request timeout 3600s; only the gateway keeps CPU
-#   allocated outside requests (cpu_idle = false);
-# - chatbot and fake-services accept internal traffic only; gateway and chatbot reach them
-#   through Direct VPC egress (ALL_TRAFFIC) on the private-Google-access subnet.
-# Cloud Run sets PORT (8080) itself; it is a reserved variable and is not set here.
-
+# Infrastructure belongs to Terraform; deployed images belong to deploy.sh.
 resource "google_cloud_run_v2_service" "web" {
   project             = var.project_id
   name                = local.service_names.web
@@ -21,12 +13,12 @@ resource "google_cloud_run_v2_service" "web" {
     max_instance_request_concurrency = 250 # each open chat holds one SSE request
 
     scaling {
-      min_instance_count = 0
-      max_instance_count = 2
+      min_instance_count = var.service_scaling.web.min_instances
+      max_instance_count = var.service_scaling.web.max_instances
     }
 
     containers {
-      image = local.images.web
+      image = local.placeholder_image
 
       ports {
         container_port = 8080
@@ -41,7 +33,7 @@ resource "google_cloud_run_v2_service" "web" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "256Mi"
+          memory = var.service_scaling.web.memory
         }
         cpu_idle          = true
         startup_cpu_boost = true
@@ -51,18 +43,7 @@ resource "google_cloud_run_v2_service" "web" {
         period_seconds    = 2
         timeout_seconds   = 1
         failure_threshold = 15
-        http_get {
-          path = "/health"
-          port = 8080
-        }
-      }
-
-      liveness_probe {
-        period_seconds    = 30
-        timeout_seconds   = 3
-        failure_threshold = 3
-        http_get {
-          path = "/health"
+        tcp_socket {
           port = 8080
         }
       }
@@ -70,6 +51,9 @@ resource "google_cloud_run_v2_service" "web" {
   }
 
   depends_on = [google_project_service.apis]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
 }
 
 resource "google_cloud_run_v2_service" "gateway" {
@@ -87,8 +71,8 @@ resource "google_cloud_run_v2_service" "gateway" {
     max_instance_request_concurrency = 250 # each open chat holds one SSE request
 
     scaling {
-      min_instance_count = 0
-      max_instance_count = 1
+      min_instance_count = var.service_scaling.gateway.min_instances
+      max_instance_count = var.service_scaling.gateway.max_instances
     }
 
     vpc_access {
@@ -100,7 +84,7 @@ resource "google_cloud_run_v2_service" "gateway" {
     }
 
     containers {
-      image = local.images.gateway
+      image = local.placeholder_image
 
       ports {
         container_port = 8080
@@ -144,7 +128,7 @@ resource "google_cloud_run_v2_service" "gateway" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = var.service_scaling.gateway.memory
         }
         # SSE connections and heartbeats run outside request processing time.
         cpu_idle          = false
@@ -155,18 +139,7 @@ resource "google_cloud_run_v2_service" "gateway" {
         period_seconds    = 2
         timeout_seconds   = 1
         failure_threshold = 15
-        http_get {
-          path = "/health"
-          port = 8080
-        }
-      }
-
-      liveness_probe {
-        period_seconds    = 30
-        timeout_seconds   = 3
-        failure_threshold = 3
-        http_get {
-          path = "/health"
+        tcp_socket {
           port = 8080
         }
       }
@@ -177,6 +150,9 @@ resource "google_cloud_run_v2_service" "gateway" {
     google_project_service.apis,
     google_secret_manager_secret_iam_member.gateway_session_secret,
   ]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
 }
 
 resource "google_cloud_run_v2_service" "chatbot" {
@@ -192,8 +168,8 @@ resource "google_cloud_run_v2_service" "chatbot" {
     session_affinity = true
 
     scaling {
-      min_instance_count = 0
-      max_instance_count = 1
+      min_instance_count = var.service_scaling.chatbot.min_instances
+      max_instance_count = var.service_scaling.chatbot.max_instances
     }
 
     vpc_access {
@@ -205,7 +181,7 @@ resource "google_cloud_run_v2_service" "chatbot" {
     }
 
     containers {
-      image = local.images.chatbot
+      image = local.placeholder_image
 
       ports {
         container_port = 8080
@@ -213,15 +189,15 @@ resource "google_cloud_run_v2_service" "chatbot" {
 
       env {
         name  = "COTACAO_URL"
-        value = local.internal_service_urls.cotacao
+        value = local.run_url.svc_cotacao
       }
       env {
         name  = "APOLICE_URL"
-        value = local.internal_service_urls.apolice
+        value = local.run_url.svc_apolice
       }
       env {
         name  = "SINISTRO_URL"
-        value = local.internal_service_urls.sinistro
+        value = local.run_url.svc_sinistro
       }
       env {
         name  = "LOG_LEVEL"
@@ -231,74 +207,12 @@ resource "google_cloud_run_v2_service" "chatbot" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = var.service_scaling.chatbot.memory
         }
         cpu_idle          = true
         startup_cpu_boost = true
       }
 
-      startup_probe {
-        period_seconds    = 2
-        timeout_seconds   = 1
-        failure_threshold = 15
-        http_get {
-          path = "/health"
-          port = 8080
-        }
-      }
-
-      liveness_probe {
-        period_seconds    = 30
-        timeout_seconds   = 3
-        failure_threshold = 3
-        http_get {
-          path = "/health"
-          port = 8080
-        }
-      }
-    }
-  }
-
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_cloud_run_v2_service" "fake_services" {
-  count = var.deploy_fake_services ? 1 : 0
-
-  project             = var.project_id
-  name                = local.service_names.fake_services
-  location            = var.region
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  deletion_protection = false
-  labels              = local.labels
-
-  template {
-    service_account  = google_service_account.fake_services.email
-    session_affinity = true
-
-    scaling {
-      min_instance_count = 0
-      max_instance_count = 1
-    }
-
-    containers {
-      image = local.images.fake_services
-
-      ports {
-        container_port = 8080
-      }
-
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "256Mi"
-        }
-        cpu_idle          = true
-        startup_cpu_boost = true
-      }
-
-      # The fake has no /health (it only serves the services contract): TCP at startup and a
-      # known claim as liveness, the same probe docker-compose uses.
       startup_probe {
         period_seconds    = 2
         timeout_seconds   = 1
@@ -307,13 +221,53 @@ resource "google_cloud_run_v2_service" "fake_services" {
           port = 8080
         }
       }
+    }
+  }
 
-      liveness_probe {
-        period_seconds    = 30
-        timeout_seconds   = 3
-        failure_threshold = 3
-        http_get {
-          path = "/v1/sinistros/SN-2001"
+  depends_on = [google_project_service.apis]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
+}
+
+resource "google_cloud_run_v2_service" "svc_cotacao" {
+  project             = var.project_id
+  name                = local.service_names.svc_cotacao
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  deletion_protection = false
+  labels              = local.labels
+
+  template {
+    service_account  = google_service_account.svc_cotacao.email
+    session_affinity = true
+
+    scaling {
+      min_instance_count = var.service_scaling.svc_cotacao.min_instances
+      max_instance_count = var.service_scaling.svc_cotacao.max_instances
+    }
+
+    containers {
+      image = local.placeholder_image
+
+      ports {
+        container_port = 8080
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = var.service_scaling.svc_cotacao.memory
+        }
+        cpu_idle          = true
+        startup_cpu_boost = true
+      }
+
+      startup_probe {
+        period_seconds    = 2
+        timeout_seconds   = 1
+        failure_threshold = 15
+        tcp_socket {
           port = 8080
         }
       }
@@ -321,13 +275,112 @@ resource "google_cloud_run_v2_service" "fake_services" {
   }
 
   depends_on = [google_project_service.apis]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
 }
 
-# Invokers. web and gateway are public. chatbot and fake-services are also `allUsers` on IAM
-# because today the gateway and the chatbot do not send Google ID tokens: a per-service-account
-# invoker would answer 403. Their access control is the internal ingress (only traffic from the
-# project's VPC reaches them). ID-token auth is a pendência (README).
-resource "google_cloud_run_v2_service_iam_member" "web_public" {
+resource "google_cloud_run_v2_service" "svc_apolice" {
+  project             = var.project_id
+  name                = local.service_names.svc_apolice
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  deletion_protection = false
+  labels              = local.labels
+
+  template {
+    service_account  = google_service_account.svc_apolice.email
+    session_affinity = true
+
+    scaling {
+      min_instance_count = var.service_scaling.svc_apolice.min_instances
+      max_instance_count = var.service_scaling.svc_apolice.max_instances
+    }
+
+    containers {
+      image = local.placeholder_image
+
+      ports {
+        container_port = 8080
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = var.service_scaling.svc_apolice.memory
+        }
+        cpu_idle          = true
+        startup_cpu_boost = true
+      }
+
+      startup_probe {
+        period_seconds    = 2
+        timeout_seconds   = 1
+        failure_threshold = 15
+        tcp_socket {
+          port = 8080
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
+}
+
+resource "google_cloud_run_v2_service" "svc_sinistro" {
+  project             = var.project_id
+  name                = local.service_names.svc_sinistro
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  deletion_protection = false
+  labels              = local.labels
+
+  template {
+    service_account  = google_service_account.svc_sinistro.email
+    session_affinity = true
+
+    scaling {
+      min_instance_count = var.service_scaling.svc_sinistro.min_instances
+      max_instance_count = var.service_scaling.svc_sinistro.max_instances
+    }
+
+    containers {
+      image = local.placeholder_image
+
+      ports {
+        container_port = 8080
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = var.service_scaling.svc_sinistro.memory
+        }
+        cpu_idle          = true
+        startup_cpu_boost = true
+      }
+
+      startup_probe {
+        period_seconds    = 2
+        timeout_seconds   = 1
+        failure_threshold = 15
+        tcp_socket {
+          port = 8080
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
+}
+
+resource "google_cloud_run_v2_service_iam_member" "web_invoker" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.web.name
@@ -335,7 +388,7 @@ resource "google_cloud_run_v2_service_iam_member" "web_public" {
   member   = "allUsers"
 }
 
-resource "google_cloud_run_v2_service_iam_member" "gateway_public" {
+resource "google_cloud_run_v2_service_iam_member" "gateway_invoker" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.gateway.name
@@ -343,7 +396,7 @@ resource "google_cloud_run_v2_service_iam_member" "gateway_public" {
   member   = "allUsers"
 }
 
-resource "google_cloud_run_v2_service_iam_member" "chatbot_internal" {
+resource "google_cloud_run_v2_service_iam_member" "chatbot_invoker" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.chatbot.name
@@ -351,12 +404,26 @@ resource "google_cloud_run_v2_service_iam_member" "chatbot_internal" {
   member   = "allUsers"
 }
 
-resource "google_cloud_run_v2_service_iam_member" "fake_services_internal" {
-  count = var.deploy_fake_services ? 1 : 0
-
+resource "google_cloud_run_v2_service_iam_member" "svc_cotacao_invoker" {
   project  = var.project_id
   location = var.region
-  name     = google_cloud_run_v2_service.fake_services[0].name
+  name     = google_cloud_run_v2_service.svc_cotacao.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "svc_apolice_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.svc_apolice.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "svc_sinistro_invoker" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.svc_sinistro.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

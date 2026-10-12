@@ -1,161 +1,39 @@
 # infra/terraform
 
-Terraform do deploy do POC no Google Cloud Run (Plano 7). Cria, num projeto GCP existente: APIs, repositório Docker no Artifact Registry, VPC + sub-rede para o Direct VPC egress, contas de serviço com privilégio mínimo, o `SESSION_SECRET` no Secret Manager, os quatro serviços Cloud Run (`web`, `gateway`, `chatbot`, `fake-services`), o Workload Identity Federation do GitHub Actions (opcional) e um alerta de orçamento (opcional).
+Terraform do deploy local do POC no Google Cloud Run (Plano 8). Em um projeto existente, cria APIs, Artifact Registry com limpeza de versões, VPC/sub-rede, seis contas de runtime, Secret Manager, seis serviços Cloud Run e orçamento opcional. O operador usa a própria identidade; não há deployer, WIF ou identidades de CI nesta stack. O fluxo completo está em [docs/deploy.md](../../docs/deploy.md).
 
-Nada aqui foi aplicado: neste repositório o Terraform só passa por `fmt`, `init -backend=false` e `validate` (`./validate.sh`). O primeiro `apply` é feito pelo operador com a própria conta, seguindo o runbook (`docs/deploy.md`).
+## Configuração e estado
 
-## Arquivos
+A configuração vem de `infra/.env`; `infra/deploy.sh` exporta `TF_VAR_*`. `terraform.tfvars.example` é somente uma referência dos tipos. As variáveis são `project_id` (obrigatória), `region` (`southamerica-east1`), `artifact_registry_repo` (`seguradora`), `trust_proxy_hops` (3), `log_level` (`info`), `web_custom_domain_url` (vazia), `billing_account_id` (vazia), `budget_amount_brl` (200), `budget_alert_email` (vazia) e `service_scaling`.
 
-| Arquivo | Conteúdo |
-|---|---|
-| `versions.tf` | Terraform `>= 1.10`, `hashicorp/google ~> 6.0`, `hashicorp/random ~> 3.6`, backend `gcs` parcial, provider com `user_project_override` (a API de Budgets exige projeto de cota) |
-| `variables.tf` | Variáveis (todas com descrição, tipo e validação quando cabe) |
-| `main.tf` | `data.google_project`, `locals` (imagens, URLs computadas), APIs, Artifact Registry (mantém as 10 versões mais recentes de cada imagem; apaga as outras com mais de 30 dias) |
-| `network.tf` | VPC `seguradora-vpc` e sub-rede `seguradora-run` (`10.10.0.0/24`, `private_ip_google_access = true`, sem Cloud NAT) |
-| `iam.tf` | Contas de serviço, papéis do deployer, WIF do GitHub |
-| `secrets.tf` | `random_password` (48 caracteres) → secret `seguradora-session-secret`; só a conta do gateway pode ler |
-| `run.tf` | Os quatro serviços Cloud Run e os invokers |
-| `budget.tf` | Orçamento mensal em BRL e canal de e-mail (só com `billing_account_id`) |
-| `outputs.tf` | URLs e nomes; nenhum valor secreto |
-| `validate.sh` | Validação offline (ver abaixo) |
-| `.terraform.lock.hcl` | Versões exatas dos providers (gerado pelo `init`, versionado) |
+`service_scaling` é um mapa de objetos `{ min_instances, max_instances, memory }` com exatamente as chaves `web`, `gateway`, `chatbot`, `svc_cotacao`, `svc_apolice`, `svc_sinistro`. Padrão: mínimo 0 em todos; máximo 2 e memória 256Mi no web; máximo 1 e memória 512Mi nos demais. Gateway, chatbot e os serviços internos têm afinidade de sessão; estado em memória torna o limite de uma instância relevante. Alterar esse máximo exige avaliar a perda/divisão de sessões.
 
-## Backend (estado)
+O backend `gcs` recebe bucket e prefixo no init, fora do código. O bucket privado, com versionamento e acesso uniforme, é criado pelo operador antes do init. Terraform não gerencia seu IAM. O estado contém o valor sensível de `SESSION_SECRET`; o script mantém planos em diretório temporário privado e os remove ao terminar.
 
-O backend é `gcs` com configuração parcial: o bucket não fica no repositório.
+## Infraestrutura e imagens
 
-```bash
-terraform init -backend-config="bucket=<TF_STATE_BUCKET>" -backend-config="prefix=seguradora"
-```
+Terraform cria cada serviço com `us-docker.pkg.dev/cloudrun/container/hello`. A imagem é propriedade de `deploy.sh`: `ignore_changes` cobre `template[0].containers[0].image`, `client` e `client_version`, para que um apply posterior preserve imagens implantadas por gcloud. O placeholder permite criar a stack inteira antes de construir/publicar imagens; bootstrap com `-target` deixou de ser necessário. Depois do primeiro apply, implante as seis imagens pelo script antes do smoke funcional.
 
-O estado guarda o valor do `SESSION_SECRET` (é assim que o `random_password` funciona), então o bucket precisa ser privado, com versionamento e acesso uniforme.
+Todos escutam na porta 8080. O startup probe é TCP porque o placeholder não responde a `/health`. Probes HTTP de startup/liveness permanecem uma pendência até haver estratégia compatível com bootstrap e deploy independente.
 
-O bucket e a permissão do deployer nele são criados no bootstrap, manualmente pelo operador, e **não** por este Terraform: com só `roles/storage.objectAdmin` o deployer não lê a política de IAM do bucket (`storage.buckets.getIamPolicy`), então um binding gerenciado aqui quebraria o refresh do `plan` no CI com 403 (`validate.sh` impede `google_storage_bucket_iam_*` na stack). Depois do primeiro apply (que cria a conta `seguradora-deployer`):
+`web` e `gateway` têm ingresso público e timeout de 3600s para SSE. `chatbot`, `svc-cotacao`, `svc-apolice`, `svc-sinistro` têm ingresso interno. Gateway e chatbot usam Direct VPC egress `ALL_TRAFFIC` na sub-rede `10.10.0.0/24`, com Private Google Access e sem NAT; os svc-* não precisam de egress. Só gateway mantém CPU fora das requisições e pode ler o secret `seguradora-session-secret`. As seis contas de runtime não recebem papéis no projeto.
 
-```bash
-gcloud storage buckets create gs://<TF_STATE_BUCKET> --project=<PROJECT_ID> --location=<REGION> --uniform-bucket-level-access --public-access-prevention
-gcloud storage buckets update gs://<TF_STATE_BUCKET> --versioning
-gcloud storage buckets add-iam-policy-binding gs://<TF_STATE_BUCKET> \
-  --member="serviceAccount:seguradora-deployer@<PROJECT_ID>.iam.gserviceaccount.com" \
-  --role="roles/storage.objectAdmin"
-```
+Os seis invokers usam `allUsers`, conforme a decisão do Plano 7: os clientes ainda não enviam ID tokens Google. O ingresso interno controla o acesso aos quatro serviços internos. Autenticação por ID token e substituição dos respectivos bindings permanecem pendentes; políticas organizacionais que proíbem `allUsers` exigem tratamento pelo operador.
 
-(O `create`/`update` do bucket vem antes do primeiro `terraform init`; o `add-iam-policy-binding`, depois do primeiro apply. O runbook `docs/deploy.md` repete esses passos.)
+## URLs e ambiente
 
-## Variáveis
+As URLs são computadas como `https://<serviço>-<número_do_projeto>.<região>.run.app`, evitando ciclo entre web e gateway. Web recebe `GATEWAY_URL`; gateway recebe `CHATBOT_URL`, `ALLOWED_ORIGIN` (domínio customizado ou URL do web), `SESSION_SECRET` via Secret Manager, cookies seguros, `TRUST_PROXY_HOPS` e `LOG_LEVEL`. Chatbot recebe `COTACAO_URL`, `APOLICE_URL`, `SINISTRO_URL` apontando aos respectivos svc-* e `LOG_LEVEL`. Cloud Run define `PORT`.
 
-| Variável | Padrão | Uso |
-|---|---|---|
-| `project_id` | (obrigatória) | Projeto GCP |
-| `image_tag` | (obrigatória) | Tag das quatro imagens (SHA do commit ou tag de release) |
-| `region` | `southamerica-east1` | Região de tudo |
-| `artifact_registry_repo` | `seguradora` | Repositório Docker. Imagens: `<region>-docker.pkg.dev/<project>/<repo>/{web,gateway,chatbot,fake-services}:<image_tag>` |
-| `trust_proxy_hops` | `3` | `TRUST_PROXY_HOPS` do gateway (cliente → front end do Google → nginx do web → front end do Google → gateway). Conferir nos logs do gateway no primeiro deploy |
-| `log_level` | `info` | `LOG_LEVEL` do gateway e do chatbot |
-| `web_custom_domain_url` | `""` | URL pública do web com domínio próprio (`https://host`, sem barra no fim); vira o `ALLOWED_ORIGIN` do gateway |
-| `deploy_fake_services` | `true` | Sobe o `fake-services` enquanto os `svc-*` reais não existem |
-| `service_urls` | `null` | `{ cotacao, apolice, sinistro }`: obrigatório com `deploy_fake_services = false`. Precisam ser alcançáveis pela VPC (não há NAT, logo não há saída para a internet) |
-| `github_repository` | `""` | `owner/nome` autorizado a fazer deploy via WIF. Vazio = sem WIF |
-| `github_deploy_branch` | `"master"` | Branch autorizada a fazer deploy via WIF (além das tags `v*`), sempre junto com o environment `production`. Nome simples de branch, sem curinga |
-| `billing_account_id` | `""` | Conta de faturamento para o orçamento. Vazio = sem orçamento |
-| `budget_amount_brl` | `200` | Valor mensal (a moeda da conta de faturamento precisa ser BRL). Alertas em 50%, 90%, 100% e 100% previsto |
-| `budget_alert_email` | `""` | E-mail extra dos alertas (canal do Cloud Monitoring); os administradores da conta de faturamento recebem sempre |
+Outputs sem segredos: `web_url`, `gateway_url`, `computed_urls`, `service_uris`, `url_consistency_note`, `artifact_registry`. Compare URLs computadas com as servidas no primeiro deploy; o formato com hash pode aparecer em `service_uris`. O navegador usa web/nginx como origem para o proxy `/v1` e o cookie first-party.
 
-Copie `terraform.tfvars.example` para `terraform.tfvars` (ignorado pelo git) e preencha.
+## Contagens esperadas
 
-## Serviços Cloud Run
+Sem executar plan, derivamos as instâncias gerenciadas: 6 APIs (`run`, `artifactregistry`, `secretmanager`, `compute`, `iam`, `cloudresourcemanager`), 1 registry, 1 VPC, 1 sub-rede, 6 contas de runtime, 1 senha, 1 secret, 1 versão, 1 accessor, 6 serviços e 6 invokers: **31 recursos**. Com billing, somam-se API de budgets e orçamento: **33**. Com billing e e-mail, somam-se também API de monitoring e canal: **35**. `data.google_project` não entra na soma.
 
-| Serviço | Ingress | Instâncias | Afinidade | Timeout | CPU fora de requisição | Egress | Probes |
-|---|---|---|---|---|---|---|---|
-| `web` | público | 0–2 | não | 3600s (SSE) | não | padrão | HTTP `/health` |
-| `gateway` | público | 0–1 | sim | 3600s (SSE) | sim (`cpu_idle = false`) | Direct VPC, `ALL_TRAFFIC` | HTTP `/health` |
-| `chatbot` | interno | 0–1 | sim | 300s (padrão) | não | Direct VPC, `ALL_TRAFFIC` | HTTP `/health` |
-| `fake-services` | interno | 0–1 | sim | 300s (padrão) | não | padrão | TCP no startup; liveness em `GET /v1/sinistros/SN-2001` (o fake não tem `/health`) |
-
-`gateway` e `chatbot` guardam sessão e turnos em memória: duas instâncias dividiriam as sessões, por isso máximo 1. Instância reciclada perde as sessões (limite conhecido do POC).
-
-Variáveis de ambiente (o Cloud Run define `PORT=8080`):
-
-- `web`: `GATEWAY_URL` = URL do gateway (sem caminho).
-- `gateway`: `CHATBOT_URL` = URL do chatbot; `SESSION_SECRET` via `secret_key_ref` (versão fixada; uma nova versão gera nova revisão); `ALLOWED_ORIGIN` = URL pública do web; `COOKIE_SECURE=true`; `COOKIE_SAME_SITE=lax`; `TRUST_PROXY_HOPS` = `var.trust_proxy_hops`; `LOG_LEVEL` = `var.log_level`.
-- `chatbot`: `COTACAO_URL`, `APOLICE_URL`, `SINISTRO_URL` = URL do `fake-services` (ou `service_urls`); `LOG_LEVEL`.
-
-O navegador só fala com o `web` (o nginx faz proxy de `/v1` para o gateway), então o cookie de sessão é first-party mesmo com URLs diferentes.
-
-### URLs sem ciclo
-
-As URLs usadas nas variáveis de ambiente são computadas no formato determinístico do Cloud Run v2, `https://<serviço>-<número_do_projeto>.<região>.run.app`, a partir de `data.google_project.project.number`. Ler o atributo `uri` criaria um ciclo (`web` precisa da URL do gateway e o gateway precisa da URL do web como origem). Os outputs `computed_urls` (o que foi injetado) e `service_uris` (o `uri` que o Cloud Run informa, que pode vir no outro formato, com hash) permitem comparar depois do apply; `url_consistency_note` explica a conferência.
-
-### Invokers e autenticação entre serviços
-
-- `web` e `gateway`: `allUsers` (públicos).
-- `chatbot` e `fake-services`: também `allUsers` no IAM, porque hoje o gateway e o chatbot **não enviam ID token do Google**; um invoker por conta de serviço responderia 403. O controle de acesso deles é o ingress interno: só tráfego vindo da VPC do projeto (Direct VPC egress + Private Google Access) chega neles.
-- Se o projeto tiver a org policy `iam.allowedPolicyMemberDomains` (Domain Restricted Sharing), os bindings `allUsers` falham no apply; é preciso uma exceção para o projeto.
-
-**Pendência:** autenticação gateway → chatbot e chatbot → serviços com ID token do Cloud Run (`Authorization: Bearer` com audiência = URL do serviço chamado), trocando os `allUsers` dos dois serviços internos por `roles/run.invoker` só para a conta de serviço chamadora. Exige mudança no código do gateway e do chatbot (cliente HTTP com token do metadata server).
-
-## Contas de serviço e papéis
-
-| Conta | Papéis |
-|---|---|
-| `seguradora-web`, `seguradora-chatbot`, `seguradora-fake-services` | nenhum (o Cloud Run escreve logs do stdout e baixa imagens do mesmo projeto com o próprio service agent) |
-| `seguradora-gateway` | `roles/secretmanager.secretAccessor` só no secret `seguradora-session-secret` |
-| `seguradora-deployer` | no projeto: `roles/run.admin`, `roles/artifactregistry.admin`, `roles/secretmanager.admin`, `roles/compute.networkAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.workloadIdentityPoolAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/serviceusage.serviceUsageAdmin` e, com orçamento + e-mail, `roles/monitoring.notificationChannelEditor`; `roles/iam.serviceAccountUser` só nas quatro contas de runtime; `roles/storage.objectAdmin` no bucket do estado, concedido no bootstrap (fora desta stack) |
-
-O deployer precisa de `projectIamAdmin` e `serviceAccountAdmin` porque este Terraform gerencia bindings de IAM; na prática isso permite escalar privilégios dentro do projeto. Por isso o WIF só aceita tokens deste repositório, de um job no environment `production` (com aprovação) **e** da branch `github_deploy_branch` ou de uma tag `v*`. Um workflow editado numa branch ou tag para tirar o `environment:` não recebe credencial. Papéis na conta de faturamento (orçamento: `roles/billing.costsManager`) não são concedidos aqui: o operador concede manualmente se o deploy pelo CI tiver orçamento.
-
-WIF (com `github_repository`): pool `github`, provider `github-actions` (issuer `https://token.actions.githubusercontent.com`), mapeamento `attribute.environment` = `has(assertion.environment) ? assertion.environment : ""` (jobs sem environment não têm o claim), `attribute_condition` = repositório igual a `github_repository` **e** `attribute.environment == "production"` **e** (`ref == refs/heads/<github_deploy_branch>` ou `ref` começando com `refs/tags/v`); o deployer aceita `principalSet://.../attribute.repository/<owner>/<repo>`. Pools apagados ficam 30 dias em soft delete: recriar com o mesmo id nesse período falha (use `terraform import` ou restaure o pool).
-
-## O que o plan deve mostrar
-
-Não é possível rodar `terraform plan` sem credenciais, então a conferência no primeiro plan é manual. Os blocos por tipo estão em `validate.sh` (última seção); as instâncias esperadas, por cenário:
-
-| Tipo | Padrão¹ | Com tudo² | Observação |
-|---|---|---|---|
-| `google_project_service` | 8 | 10 | + `billingbudgets` e `monitoring` |
-| `google_artifact_registry_repository` | 1 | 1 | |
-| `google_compute_network` | 1 | 1 | |
-| `google_compute_subnetwork` | 1 | 1 | |
-| `google_service_account` | 5 | 5 | |
-| `google_project_iam_member` | 8 | 9 | + `monitoring.notificationChannelEditor` |
-| `google_service_account_iam_member` | 4 | 5 | actAs ×4; + `workloadIdentityUser` |
-| `google_iam_workload_identity_pool` | 0 | 1 | |
-| `google_iam_workload_identity_pool_provider` | 0 | 1 | |
-| `random_password` | 1 | 1 | |
-| `google_secret_manager_secret` | 1 | 1 | |
-| `google_secret_manager_secret_version` | 1 | 1 | |
-| `google_secret_manager_secret_iam_member` | 1 | 1 | |
-| `google_cloud_run_v2_service` | 4 | 4 | |
-| `google_cloud_run_v2_service_iam_member` | 4 | 4 | |
-| `google_monitoring_notification_channel` | 0 | 1 | |
-| `google_billing_budget` | 0 | 1 | |
-| **Total** | **40** | **48** | |
-
-¹ Só `project_id` e `image_tag`. ² `github_repository`, `billing_account_id` e `budget_alert_email` preenchidos. Com `deploy_fake_services = false`, tire 2 (serviço `fake-services` e o invoker dele).
-
-No primeiro plan, confira também: nenhum `destroy`; `random_password.session_secret` e `secret_data` aparecem como `(sensitive value)`; os `env` têm as URLs no formato `https://<serviço>-<número>.<região>.run.app`; `TRUST_PROXY_HOPS = "3"`; `ingress` interno em `chatbot` e `fake-services`.
-
-## Outputs
-
-| Output | Como usar |
-|---|---|
-| `web_url` | URL pública do produto; alvo do smoke (`node infra/smoke.mjs "$(terraform output -raw web_url)"`) |
-| `gateway_url` | URL pública do gateway (computada). O navegador não usa; serve para diagnóstico (`curl <gateway_url>/health`) |
-| `computed_urls` | As URLs injetadas nas variáveis de ambiente |
-| `service_uris` | O `uri` real de cada serviço segundo o Cloud Run; compare com `computed_urls` |
-| `url_consistency_note` | Texto com a conferência a fazer depois do apply |
-| `artifact_registry` | Prefixo para `docker push <artifact_registry>/<imagem>:<tag>` |
-| `deployer_service_account` | Variável `GCP_DEPLOYER_SA` do GitHub |
-| `wif_provider` | Variável `GCP_WIF_PROVIDER` do GitHub (vazio sem `github_repository`) |
-
-Nenhum output contém o `SESSION_SECRET` ou outro valor sensível (`validate.sh` confere).
+As contagens de blocos são diferentes das instâncias: há um bloco de APIs com `for_each` e blocos opcionais de budget/canal com `count`. `validate.sh` imprime ambos os critérios. Em migração de uma stack anterior, revise as remoções das identidades de CI e do serviço agregado; esta contagem descreve uma stack nova.
 
 ## Validação offline
 
-```bash
-infra/terraform/validate.sh
-```
+Execute `bash infra/terraform/validate.sh`: fmt, init com backend desativado, validate e assertions estruturais por serviço. Não usa credenciais nem chama GCP; init pode baixar providers públicos. Terraform >= 1.10; providers google ~> 6.0 e random ~> 3.6, fixados no lock versionado.
 
-Roda `terraform fmt -check -recursive`, `terraform init -backend=false -input=false` e `terraform validate` (sem credenciais; baixa os providers do registry público) e confere: outputs sem referência a segredo; nenhum valor de segredo literal nos `.tf` e a versão do secret alimentada pelo `random_password`; `.gitignore` cobrindo `*.tfvars`, estado, `.terraform/` e crash logs (e não o exemplo nem o lock); descrição e tipo em toda variável; contagem de blocos por tipo; nenhum `google_storage_bucket_iam_*` na stack; e as regras do plano por serviço (instâncias, afinidade, timeout, ingress, egress, `cpu_idle`, `secret_key_ref`, `trust_proxy_hops`, sub-rede). Compatível com o bash 3.2 do macOS.
-
-O que não dá para verificar offline (fica para o primeiro apply + smoke): ingress interno com Direct VPC egress de fato roteando, `TRUST_PROXY_HOPS`, o formato de URL computado batendo com o servido, cold start, org policies do projeto.
+Ingresso interno, roteamento VPC, URLs, cold start e `TRUST_PROXY_HOPS` exigem conferência no primeiro deploy real. Nenhum plan/apply foi executado nesta implementação.

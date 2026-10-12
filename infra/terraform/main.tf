@@ -9,8 +9,6 @@ locals {
     "secretmanager.googleapis.com",
     "compute.googleapis.com",
     "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "sts.googleapis.com",
     "cloudresourcemanager.googleapis.com",
   ]
   budget_apis = var.billing_account_id == "" ? [] : concat(
@@ -19,19 +17,15 @@ locals {
   )
   apis = toset(concat(local.base_apis, local.budget_apis))
 
-  registry = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repo}"
-  images = {
-    web           = "${local.registry}/web:${var.image_tag}"
-    gateway       = "${local.registry}/gateway:${var.image_tag}"
-    chatbot       = "${local.registry}/chatbot:${var.image_tag}"
-    fake_services = "${local.registry}/fake-services:${var.image_tag}"
-  }
-
+  registry          = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repo}"
+  placeholder_image = "us-docker.pkg.dev/cloudrun/container/hello"
   service_names = {
-    web           = "web"
-    gateway       = "gateway"
-    chatbot       = "chatbot"
-    fake_services = "fake-services"
+    web          = "web"
+    gateway      = "gateway"
+    chatbot      = "chatbot"
+    svc_cotacao  = "svc-cotacao"
+    svc_apolice  = "svc-apolice"
+    svc_sinistro = "svc-sinistro"
   }
 
   # Deterministic Cloud Run v2 URL: https://<service>-<project_number>.<region>.run.app.
@@ -44,12 +38,6 @@ locals {
   }
 
   web_public_url = var.web_custom_domain_url != "" ? var.web_custom_domain_url : local.run_url.web
-
-  internal_service_urls = var.deploy_fake_services ? {
-    cotacao  = local.run_url.fake_services
-    apolice  = local.run_url.fake_services
-    sinistro = local.run_url.fake_services
-  } : var.service_urls
 
   labels = {
     app        = "seguradora"
@@ -71,7 +59,7 @@ resource "google_artifact_registry_repository" "images" {
   location      = var.region
   repository_id = var.artifact_registry_repo
   format        = "DOCKER"
-  description   = "Images of the seguradora POC (web, gateway, chatbot, fake-services)."
+  description   = "Images of the seguradora POC (web, gateway, chatbot, svc-cotacao, svc-apolice, svc-sinistro)."
   labels        = local.labels
 
   # Keep the 10 most recent versions of each image; delete older ones (cost control).

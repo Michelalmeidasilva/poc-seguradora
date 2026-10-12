@@ -1,5 +1,5 @@
 # VPC used only for Direct VPC egress of gateway and chatbot. With egress = ALL_TRAFFIC their
-# calls to the internal-ingress services (chatbot, fake-services) leave through this subnet and
+# calls to the internal-ingress services (chatbot and the three svc-* services) leave through this subnet and
 # reach *.run.app via Private Google Access, which Cloud Run treats as internal traffic.
 # There is no Cloud NAT on purpose: the gateway and the chatbot need no internet egress.
 resource "google_compute_network" "vpc" {

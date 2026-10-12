@@ -1,27 +1,19 @@
-# Copy to terraform.tfvars (git-ignored) and fill in. Placeholders only: no real values here.
+# Configuration normally comes from infra/.env through deploy.sh as TF_VAR_*.
+# This reference has placeholders only; do not commit real values.
 project_id = "<PROJECT_ID>"
-image_tag  = "<IMAGE_TAG>" # commit SHA or release tag pushed to Artifact Registry
-
-# region                 = "southamerica-east1"
+# region = "southamerica-east1"
 # artifact_registry_repo = "seguradora"
-# trust_proxy_hops       = 3     # verify from the gateway logs on the first deploy
-# log_level              = "info"
-# web_custom_domain_url  = ""    # e.g. "https://chat.example.com"
-
-# GitHub Actions deploy through Workload Identity Federation (empty = skip):
-# github_repository = "<OWNER>/<REPO>"
-# github_deploy_branch = "master" # branch allowed to deploy (plus v* tags), only from the
-#                                 # GitHub environment `production`
-
-# Budget alert (empty billing_account_id = no budget):
-# billing_account_id = "<XXXXXX-XXXXXX-XXXXXX>"
-# budget_amount_brl  = 200
-# budget_alert_email = "<ALERT_EMAIL>"
-
-# Real internal services instead of fake-services (reachable through the VPC):
-# deploy_fake_services = false
-# service_urls = {
-#   cotacao  = "https://<COTACAO_HOST>"
-#   apolice  = "https://<APOLICE_HOST>"
-#   sinistro = "https://<SINISTRO_HOST>"
+# trust_proxy_hops = 3
+# log_level = "info"
+# web_custom_domain_url = ""
+# billing_account_id = ""
+# budget_amount_brl = 200
+# budget_alert_email = ""
+# service_scaling = {
+#   web         = { min_instances = 0, max_instances = 2, memory = "256Mi" }
+#   gateway     = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+#   chatbot     = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+#   svc_cotacao = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+#   svc_apolice = { min_instances = 0, max_instances = 1, memory = "512Mi" }
+#   svc_sinistro = { min_instances = 0, max_instances = 1, memory = "512Mi" }
 # }
