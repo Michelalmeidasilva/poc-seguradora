@@ -3,8 +3,9 @@
 #   (or: pnpm test:deploy; also part of the root `pnpm test`).
 # Each scenario copies the script into a throwaway repo under a temp dir and runs it with
 # `env -i` and a PATH whose gcloud/docker/terraform/git/node are fakes that append their argv
-# to a log and answer from FAKE_* environment variables. Nothing here can reach GCP: the suite
-# refuses to run when a real gcloud/docker/terraform is reachable through the base PATH.
+# to a log and answer from FAKE_* environment variables. Nothing here can reach GCP: the base
+# PATH is a private dir of symlinks to a fixed list of system utilities (never /usr/bin itself),
+# and the suite refuses to run when a real gcloud/docker/terraform is reachable through it.
 # Runs every scenario under /bin/bash (3.2 on macOS) and, when present, a Homebrew bash.
 # Written for bash 3.2: no mapfile, associative arrays, ${var,,}, and no bare "${arr[@]}" of a
 # possibly empty array under `set -u`.
@@ -16,7 +17,21 @@ TMP="$(mktemp -d "${TMPDIR:-/tmp}"/deploy-test.XXXXXX)"
 TMP="$(cd "$TMP" && pwd -P)"
 trap 'rm -rf "$TMP"' EXIT
 
-BASE_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+# Hermetic base PATH: a private dir with symlinks to ONLY the system utilities deploy.sh and the
+# fakes call. /usr/bin is never on the scenario PATH, so a real gcloud/docker/terraform there
+# (GitHub's ubuntu-latest has docker and gcloud in /usr/bin) can never be reached.
+SYSBIN="$TMP/sysbin"
+SYSTEM_TOOLS="basename cat chmod date dirname env grep head ls mktemp rm sed sort tr"
+mkdir -p "$SYSBIN"
+for tool in $SYSTEM_TOOLS; do
+  real="$(type -P "$tool" 2>/dev/null || true)"
+  if [ -z "$real" ]; then
+    echo "ABORT: system utility '$tool' not found in PATH; the deploy tests need: $SYSTEM_TOOLS" >&2
+    exit 1
+  fi
+  ln -s "$real" "$SYSBIN/$tool"
+done
+BASE_PATH="$SYSBIN"
 for tool in gcloud docker terraform; do
   if PATH="$BASE_PATH" command -v "$tool" >/dev/null 2>&1; then
     echo "ABORT: a real $tool is reachable through $BASE_PATH; refusing to run (tests must stay offline)" >&2
@@ -224,6 +239,10 @@ run_deploy() { # run_deploy <stdin text> <deploy.sh args...>   ("<EOF>" = empty 
     "$BASH_BIN" "$REPO/infra/deploy.sh" "$@" <"$STATE/stdin" >"$OUT" 2>&1
   RC=$?
   set -e
+  # A utility missing from SYSBIN must fail loudly, never pass as an expected nonzero exit.
+  if grep -qE 'command not found|No such file or directory' "$OUT"; then
+    fail "a command was not found (add it to SYSTEM_TOOLS?)"
+  fi
 }
 
 fail() {
