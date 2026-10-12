@@ -21,6 +21,9 @@ TF_DIR="$ROOT/infra/terraform"
 TF_STATE_PREFIX="seguradora"
 SMOKE_SCRIPT="$ROOT/infra/smoke.mjs"
 FAKE_DOCKERFILE="infra/fake-services/Dockerfile"
+# Append-only history of every build/deploy per service (tracked in git; see record_history).
+HISTORY_FILE="$ROOT/infra/deploy-history.md"
+HISTORY_REL="infra/deploy-history.md"
 
 # --- service table: the single registry of deployable services ---------------------------------
 # Index i describes one service: name (also the image name), Dockerfile (build context is always
@@ -405,7 +408,8 @@ make_plan_dir() {
 git_tag() { # default image tag: <short-sha>, or <short-sha>-dirty-<yyyymmddHHMM> with --allow-dirty
   local sha dirty
   sha="$(git -C "$ROOT" rev-parse --short HEAD)" || die "$EXIT_PRECONDITION" "não foi possível ler o commit atual (git)"
-  dirty="$(git -C "$ROOT" status --porcelain)" || die "$EXIT_PRECONDITION" "git status falhou"
+  # The history file is rewritten by every run, so it must not make the next run "dirty".
+  dirty="$(git -C "$ROOT" status --porcelain -- . ":(exclude)$HISTORY_REL")" || die "$EXIT_PRECONDITION" "git status falhou"
   if [ -n "$dirty" ]; then
     [ "$OPT_ALLOW_DIRTY" = 1 ] || die "$EXIT_PRECONDITION" "árvore git suja (commit ou stash antes, ou use --allow-dirty)"
     [ -z "$OPT_TAG" ] || return 0
@@ -562,9 +566,37 @@ cmd_infra() { # cmd_infra plan|apply
   tf output
 }
 
+HIST_SHA="-"
+HIST_BRANCH="-"
+# record_history <service> <action> <build s|-> <deploy s|-> <result> <revision|->
+# Appends one row to infra/deploy-history.md (Markdown table, tracked in git, never rewritten).
+# Best effort: a failure to write only warns, it never fails a deploy that already happened.
+# Commit the file yourself after a run (the script never commits).
+record_history() {
+  local svc="$1" action="$2" build_s="$3" deploy_s="$4" result="$5" rev="$6"
+  local appver image
+  appver="$(sed -n 's/^  "version": "\([^"]*\)".*/\1/p' "$ROOT/apps/$svc/package.json" 2>/dev/null | head -n 1)" || appver=""
+  if is_fake "$svc"; then image="FAKE"; else image="própria"; fi
+  {
+    if [ ! -s "$HISTORY_FILE" ]; then
+      printf '%s\n' "# Histórico de build e deploy" "" \
+        "Uma linha por serviço a cada \`build\`/\`deploy\`/\`rollback\` de \`bash infra/deploy.sh\` (somente acrescenta;" \
+        "o script não faz commit: versione o arquivo depois de um deploy). Tempos em segundos inteiros." \
+        "\`Build\` = build + push da imagem (\`-\` quando não houve build); \`Deploy\` = \`gcloud run services update\` + leitura da revisão." \
+        "\`Versão\` é a tag da imagem (SHA curto do commit; \`-dirty-\` = árvore suja; \`existing-tag\` cobre rollback)." \
+        "" \
+        "| Data (UTC) | Serviço | Ação | Versão (tag) | Commit | Branch | Versão do app | Imagem | Build (s) | Deploy (s) | Revisão Cloud Run | Resultado | Projeto | Região | Operador |" \
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"
+    fi
+    printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$svc" "$action" "$TAG" "$HIST_SHA" "$HIST_BRANCH" "${appver:--}" "$image" \
+      "$build_s" "$deploy_s" "$rev" "$result" "$CFG_PROJECT_ID" "$CFG_REGION" "${USER:-${LOGNAME:--}}"
+  } >>"$HISTORY_FILE" || warn "não foi possível gravar o histórico em $HISTORY_REL"
+}
+
 # build_or_deploy <build|deploy> <services...>
 build_or_deploy() {
-  local mode="$1" svc ref df services rest desc rev url smoke_url number
+  local mode="$1" svc ref df services rest desc rev url smoke_url number action t0 build_s deploy_s
   shift
   services="$(sort_services "$@")"
   services="${services% }"
@@ -608,21 +640,37 @@ build_or_deploy() {
   done
   if [ "$mode" = deploy ]; then confirm_sim "implantar ($services)"; else confirm_sim "publicar as imagens ($services)"; fi
 
+  # Commit and branch for the history rows, read once (best effort; "-" when git cannot say).
+  HIST_SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)" || HIST_SHA="-"
+  HIST_BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)" || HIST_BRANCH="-"
   UPDATED_SERVICES=""
   for svc in $services; do
     ref="$(image_ref "$svc" "$TAG")"
     rest="${services#*"$svc"}"
+    build_s="-"
+    deploy_s="-"
+    rev="-"
+    if [ -n "$OPT_EXISTING_TAG" ]; then action="existing-tag"; else action="$mode"; fi
     if [ -z "$OPT_EXISTING_TAG" ]; then
       df="$(dockerfile_for "$svc")"
       warn_fake "$svc"
       info "== build $svc ($df)"
+      t0="$(date -u +%s)"
       if ! docker buildx build --platform linux/amd64 --provenance=false --push -f "$ROOT/$df" -t "$ref" "$ROOT"; then
+        record_history "$svc" "$action" "$(( $(date -u +%s) - t0 ))" "-" "falha: build/push" "-"
         deploy_failed "$svc" "build/push" "$rest"
       fi
+      build_s="$(( $(date -u +%s) - t0 ))"
+      info "  $svc: build+push em ${build_s}s"
     fi
-    [ "$mode" = deploy ] || continue
+    if [ "$mode" != deploy ]; then
+      record_history "$svc" "$action" "$build_s" "-" "ok" "-"
+      continue
+    fi
     info "== deploy $svc -> $ref"
+    t0="$(date -u +%s)"
     if ! gcloud run services update "$(run_name_for "$svc")" --image "$ref" --region "$CFG_REGION" --project "$CFG_PROJECT_ID"; then
+      record_history "$svc" "$action" "$build_s" "$(( $(date -u +%s) - t0 ))" "falha: update" "-"
       deploy_failed "$svc" "gcloud run services update" "$rest"
     fi
     UPDATED_SERVICES="$UPDATED_SERVICES $svc"
@@ -632,9 +680,14 @@ build_or_deploy() {
       url="${desc#*$'\t'}"
       info "  $svc: revisão $rev  url $url"
     else
+      rev="-"
       warn "não foi possível ler revisão/URL de $svc (o update terminou)"
     fi
+    deploy_s="$(( $(date -u +%s) - t0 ))"
+    info "  $svc: deploy em ${deploy_s}s"
+    record_history "$svc" "$action" "$build_s" "$deploy_s" "ok" "$rev"
   done
+  info "histórico atualizado: $HISTORY_REL (versione o arquivo com git add/commit)"
 
   if [ "$mode" = build ]; then
     info "build ok (tag $TAG): $services"

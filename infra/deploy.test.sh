@@ -875,6 +875,57 @@ t_no_secret_anywhere() {
   assert_log '^terraform .* show '
 }
 
+t_history_rows_appended() {
+  local h="$REPO/infra/deploy-history.md"
+  run_deploy "<EOF>" deploy gateway chatbot --yes --no-smoke
+  assert_rc 0
+  [ -f "$h" ] || fail "deploy-history.md not created"
+  grep -qF '| Data (UTC) | Serviço | Ação | Versão (tag) |' "$h" || fail "history lacks the table header"
+  grep -qE "^\| [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z \| chatbot \| deploy \| abc1234 \| abc1234 \| .* \| própria \| [0-9]+ \| [0-9]+ \| chatbot-00002-fak \| ok \| $PROJECT \| southamerica-east1 \|" "$h" ||
+    fail "history lacks the chatbot row"
+  grep -qE "^\| .* \| gateway \| deploy \| " "$h" || fail "history lacks the gateway row"
+  assert_out "histórico atualizado: infra/deploy-history.md"
+  # second run appends: header once, rows accumulate; the file never makes the tree dirty
+  run_deploy "<EOF>" deploy gateway --yes --no-smoke
+  assert_rc 0
+  [ "$(grep -c '^| Data (UTC)' "$h" || true)" = 1 ] || fail "header repeated"
+  [ "$(grep -c '| gateway | deploy |' "$h" || true)" = 2 ] || fail "second run did not append"
+  assert_log '^git .* status --porcelain -- \. :\(exclude\)infra/deploy-history\.md$'
+}
+
+t_history_fake_and_build_only() {
+  local h="$REPO/infra/deploy-history.md"
+  run_deploy "<EOF>" build svc-cotacao --yes
+  assert_rc 0
+  grep -qE "^\| .* \| svc-cotacao \| build \| abc1234 \| .* \| FAKE \| [0-9]+ \| - \| - \| ok \|" "$h" || fail "build row wrong"
+}
+
+t_history_existing_tag_has_no_build_time() {
+  local h="$REPO/infra/deploy-history.md"
+  EXTRA_ENV=("FAKE_IMAGE_EXISTS=1")
+  run_deploy "<EOF>" deploy gateway --existing-tag v9 --yes --no-smoke
+  assert_rc 0
+  grep -qE "^\| .* \| gateway \| existing-tag \| v9 \| .* \| - \| [0-9]+ \| gateway-00002-fak \| ok \|" "$h" || fail "existing-tag row wrong"
+}
+
+t_history_records_failures() {
+  local h="$REPO/infra/deploy-history.md"
+  EXTRA_ENV=("FAKE_DOCKER_BUILD_EXIT=1")
+  run_deploy "<EOF>" deploy gateway --yes --no-smoke
+  assert_rc 1
+  grep -qE "^\| .* \| gateway \| deploy \| .* \| [0-9]+ \| - \| - \| falha: build/push \|" "$h" || fail "build failure row missing"
+  EXTRA_ENV=("FAKE_GCLOUD_FAIL_SERVICE=gateway")
+  run_deploy "<EOF>" deploy gateway --yes --no-smoke
+  assert_rc 1
+  grep -qE "^\| .* \| gateway \| deploy \| .* \| falha: update \|" "$h" || fail "update failure row missing"
+}
+
+t_history_not_written_when_refused() {
+  run_deploy "<EOF>" deploy gateway
+  assert_rc 4
+  [ ! -e "$REPO/infra/deploy-history.md" ] || fail "history written for an aborted run"
+}
+
 # --- runner ------------------------------------------------------------------------------------
 BASHES="/bin/bash"
 for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash; do

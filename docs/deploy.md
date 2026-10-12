@@ -125,6 +125,10 @@ bash infra/deploy.sh build gateway --tag release-001
 bash infra/deploy.sh deploy gateway --existing-tag release-001
 ```
 
+### Histórico de build e deploy
+
+Cada `build`, `deploy` e `rollback` acrescenta uma linha por serviço em [infra/deploy-history.md](../infra/deploy-history.md): data (UTC), serviço, ação, tag (versão), commit, branch, versão do `package.json` do app, imagem (própria ou FAKE), tempo de build e de deploy em segundos, revisão do Cloud Run, resultado (inclui `falha: build/push` e `falha: update`), projeto, região e operador. Execuções canceladas na confirmação não gravam nada. O script não faz commit: depois de um deploy, rode `git add infra/deploy-history.md` e commite. O arquivo não conta como árvore suja para o próximo deploy. O tempo do smoke não entra na tabela.
+
 ### Alterações de configuração
 
 Edite `infra/.env` para escala, memória, LOG_LEVEL, proxies ou domínio e execute:
