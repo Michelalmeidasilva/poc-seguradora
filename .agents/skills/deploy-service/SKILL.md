@@ -33,7 +33,7 @@ A configuração fica em `infra/.env` (ignorado pelo git), criada pelo operador 
 | Voltar um serviço para imagem já publicada | `bash infra/deploy.sh rollback <serviço> --tag <tag-publicada>` |
 | Ver imagem, URL e revisão | `bash infra/deploy.sh status` |
 | Testar a URL pública | `bash infra/deploy.sh smoke` |
-| Destruir infraestrutura, somente por pedido explícito | `bash infra/deploy.sh destroy --confirm-project <id>` |
+| Destruir infraestrutura: o usuário executa no próprio terminal | `bash infra/deploy.sh destroy --confirm-project <id>` |
 
 `pnpm run infra:deploy <comando>` é o atalho para a mesma CLI. O `deploy` atualiza somente a imagem dos serviços pedidos, sem Terraform; `all` segue cotação → apólice → sinistro → chatbot → gateway → web e executa smoke uma vez no fim. `infra apply` mostra um novo plano, pede confirmação e aplica exatamente esse plano salvo em diretório temporário privado, fora do repositório, removido também em falhas e Ctrl-C.
 
@@ -57,6 +57,10 @@ Build/deploy recusam árvore suja sem a flag correspondente. Build recusa sobres
 
 - Nunca passe `--yes` ou `--confirm-project` sem autorização explícita do usuário no pedido atual. Um pedido genérico para fazer deploy não autoriza essas flags.
 - Nunca execute `destroy` por iniciativa própria. A confirmação digitada do projeto continua obrigatória.
+- O agente nunca executa `destroy`, nem a pedido: o usuário roda o comando e digita o id do projeto no próprio terminal. Mostre a ele o comando exato e o que será destruído.
+- Nunca forneça `sim` nem o id do projeto pela entrada padrão, de nenhuma forma: pipe, `yes`, heredoc, here-string, `expect` ou equivalente. As confirmações existem para o usuário digitar; o terminal do agente não é o dele.
+- Sem `--yes` autorizado explicitamente, mostre ao usuário o resumo e peça que ele execute o comando no próprio terminal (sem um terminal interativo a confirmação lê fim de entrada e o comando aborta com código 4).
+- Com `--yes` autorizado em `infra apply`, o comando gera um plano novo e o aplica sem pausa: compare a linha `Resumo:` com a do plano mostrado antes e pare se for diferente, reportando ao usuário que o aplicado diferiu do mostrado; não rode mais nenhum comando mutável.
 - Sempre mostre a saída do plano ao usuário antes de pedir confirmação. O plano contém material sensível: apresente as mudanças com os valores sensíveis ocultos pelo Terraform; não copie o arquivo de plano. Operações sem Terraform mostram seu resumo de ação antes da confirmação.
 - Nunca imprima nem armazene segredos ou o conteúdo de `infra/.env`. Não registre o plano salvo nem capture variáveis de ambiente em logs.
 - Pare e reporte qualquer saída diferente de zero, com o significado do código de saída. Não repita operações mutáveis automaticamente; informe quais serviços foram atualizados, os não tentados e eventual opção de rollback.

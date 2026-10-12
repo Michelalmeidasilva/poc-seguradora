@@ -14,6 +14,10 @@ const rules = [
   'Pare e reporte qualquer saída diferente de zero, com o significado do código de saída.',
   'Se faltar Dockerfile de um svc-*, diga ao usuário que será usada a imagem FAKE.',
   'Não edite `apps/svc-*`.',
+  'Nunca forneça `sim` nem o id do projeto pela entrada padrão, de nenhuma forma: pipe, `yes`, heredoc, here-string ou `expect`.',
+  'Sem `--yes` autorizado explicitamente, mostre ao usuário o resumo e peça que ele execute o comando no próprio terminal.',
+  'Com `--yes` autorizado em `infra apply`, o comando gera um plano novo: compare a linha `Resumo:` com a do plano mostrado antes e pare se for diferente.',
+  'O agente nunca executa `destroy`: o usuário roda o comando e digita o id do projeto no próprio terminal.',
 ];
 const frontmatter = (name) =>
   `---\nname: ${name}\ndescription: Use quando precisar desta operação.\n---\n`;
@@ -120,6 +124,12 @@ for (const rule of rules)
     const { edit, run } = fixture(t);
     edit(deployPath, (s) => s.replace(rule, ''));
     fails(run(), /mandatory rule/);
+  });
+for (const mechanism of ['pipe', '`yes`', 'heredoc', 'here-string', '`expect`'])
+  test(`deploy stdin rule must name every mechanism: ${mechanism}`, (t) => {
+    const { edit, run } = fixture(t);
+    edit(deployPath, (s) => s.replace(rules[7], rules[7].replace(mechanism, 'outro meio')));
+    fails(run(), /mandatory rule missing: stdin confirmations/);
   });
 test('deploy requires check as its first executable CLI instruction', (t) => {
   const { edit, run } = fixture(t);

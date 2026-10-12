@@ -26,6 +26,22 @@ export const MANDATORY_RULES = [
   ],
   ['fake image', /se faltar Dockerfile[^\n]*svc-\*[^\n]*diga ao usuário[^\n]*imagem FAKE/i],
   ['service ownership', /não edite[^\n]*apps\/svc-\*/i],
+  [
+    'stdin confirmations',
+    /nunca forneça[^\n]*sim[^\n]*id do projeto[^\n]*entrada padrão[^\n]*(?=[^\n]*pipe)(?=[^\n]*`yes`)(?=[^\n]*heredoc)(?=[^\n]*here-string)(?=[^\n]*`expect`)/i,
+  ],
+  [
+    'user runs without --yes',
+    /sem[^\n]*--yes[^\n]*autorizado[^\n]*mostre[^\n]*resumo[^\n]*peça que ele execute[^\n]*próprio terminal/i,
+  ],
+  [
+    'apply --yes re-plans',
+    /--yes[^\n]*infra apply[^\n]*plano novo[^\n]*compare[^\n]*Resumo:[^\n]*plano mostrado antes[^\n]*pare se for diferente/i,
+  ],
+  [
+    'destroy by the user',
+    /agente nunca executa[^\n]*destroy[^\n]*usuário[^\n]*digita o id do projeto[^\n]*próprio terminal/i,
+  ],
 ];
 
 function frontmatter(text, name, errors) {
