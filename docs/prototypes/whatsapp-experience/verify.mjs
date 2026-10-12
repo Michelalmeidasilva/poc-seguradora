@@ -38,6 +38,31 @@ assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escop
 assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
 const benefits = index['UTI-01'].flow.choices.map((item) => item.label);
 assert.deepEqual(Array.from(benefits), ['Telemedicina', 'Assistência Farmácia', 'Assistência Funeral']);
+assert.ok(index['DEP-05'].flow.fields.some((field) => field.name === 'phone'));
+assert.ok(index['DEP-05'].flow.fields.some((field) => field.name === 'biologicalSex'));
+assert.ok(index['DEP-33'].actions.some((item) => item.target === 'DEP-34'));
+assert.ok(index['DEP-34'].flow.fields.some((field) => field.name === 'phone'));
+assert.ok(index['DEP-34'].flow.fields.some((field) => field.name === 'biologicalSex'));
+assert.ok(index['DEP-34'].flow.rule.includes('não são inferidos'));
+assert.ok(index['IDE-03'].bot.includes('Titular identificado'));
+assert.ok(index['ENT-04'].actions.some((item) => item.target === 'FAQ-01'));
+assert.deepEqual(
+  Array.from(index['FAQ-01'].flow.choices.map((item) => item.label)),
+  ['Informações gerais', 'Como utilizar', 'Coberturas', 'Carências'],
+);
+assert.ok(index['CAN-01'].actions.some((item) => item.target === 'CAN-13'));
+assert.ok(index['CAN-13'].actions.some((item) => item.label === 'Prefiro não informar'));
+assert.deepEqual(
+  Array.from(index['CAN-13'].flow.choices.map((item) => item.label)),
+  ['O valor não compensa', 'Não utilizei o benefício', 'Contratei outro serviço', 'Desisti da contratação', 'Outro motivo'],
+);
+assert.ok(index['NAV-01'].flow.choices.some((item) => item.target === 'FIM-01'));
+assert.ok(index['FIM-01'].requiresAuth === false);
+assert.ok(!index['FIM-01'].bot.includes('cancelar sua assistência'));
+assert.ok(index['EXC-01'].flow.choices.every((item) => /CPF: •••\.•••\.•••-\d{2}/.test(item.detail)));
+assert.ok(index['DEP-05'].flow.fields.find((field) => field.name === 'phone').required);
+assert.ok(index['DEP-05'].flow.fields.find((field) => field.name === 'biologicalSex').required);
+assert.ok(!index['FAQ-05'].bot.match(/\b\d+\s*(dia|mês|ano)/i));
 assert.equal(groups.find((group) => group.code === 'LEG').steps.length, 34);
 assert.ok(total >= 220, `expected comprehensive catalog, got ${total}`);
 const html = readFileSync(new URL('index.html', root), 'utf8');

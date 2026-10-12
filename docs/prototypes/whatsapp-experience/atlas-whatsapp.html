@@ -1715,6 +1715,8 @@ dialog::backdrop {
     ['Nascimento', '{{birth}}'],
     ['CPF', '{{maskedDocument}}'],
     ['Parentesco', '{{relationship}}'],
+    ['Celular', '{{phone}}'],
+    ['Sexo biológico', '{{biologicalSex}}'],
   ];
   const dependentFields = [
     { name: 'name', label: 'Nome completo', value: 'Maria Silva', required: true },
@@ -1731,6 +1733,14 @@ dialog::backdrop {
       label: 'Parentesco',
       type: 'select',
       choices: ['Selecione', 'Filha', 'Filho', 'Cônjuge', 'Outro'],
+      required: true,
+    },
+    { name: 'phone', label: 'Celular do dependente', type: 'tel', placeholder: '(00) 00000-0000', required: true },
+    {
+      name: 'biologicalSex',
+      label: 'Sexo biológico (informado pela pessoa)',
+      type: 'select',
+      choices: ['Selecione', 'Feminino', 'Masculino', 'Prefiro não informar'],
       required: true,
     },
   ];
@@ -1807,7 +1817,7 @@ dialog::backdrop {
         'Informação sem identificação',
         'O que é a assistência saúde?',
         'É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
-        { actions: [action('Ver benefícios', 'DES-04'), action('Ver opções', 'DES-05')] },
+        { actions: [action('Ver benefícios', 'DES-04'), action('Ver opções', 'DES-05'), action('Tirar dúvidas', 'FAQ-01')] },
       ),
       screen(
         'ENT-05',
@@ -1855,6 +1865,33 @@ dialog::backdrop {
   );
 
   journey(
+    'FAQ',
+    'Central de dúvidas',
+    'Começar',
+    'Respostas informativas sobre os três serviços aprovados, com limites e condições remetidos ao produto vigente.',
+    'Informar sem identificar; não prometer cobertura, disponibilidade ou carência não confirmada.',
+    'Conteúdo público. Valores, elegibilidade, rede, limites e carências devem vir das condições vigentes do plano.',
+    [
+      screen(
+        'FAQ-01',
+        'Tópicos de dúvidas',
+        'Quero tirar uma dúvida.',
+        'Sobre qual assunto você quer saber?',
+        { ...list('Central de dúvidas', [
+          { label: 'Informações gerais', detail: 'O que é a Assistência Saúde', target: 'FAQ-02' },
+          { label: 'Como utilizar', detail: 'Telemedicina, funeral e farmácia', target: 'FAQ-03' },
+          { label: 'Coberturas', detail: 'O que está incluído e o que não está', target: 'FAQ-04' },
+          { label: 'Carências', detail: 'Consultar condições do plano', target: 'FAQ-05' },
+        ], 'Ver resposta'), actions: [action('Menu', 'NAV-01')] },
+      ),
+      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'A Assistência Saúde reúne exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-03', 'Como utilizar', 'Como uso os serviços?', 'A Telemedicina é acessada no ambiente do prestador; a Assistência Funeral oferece suporte ao titular e dependentes; a Assistência Farmácia dá acesso a descontos em redes credenciadas. Disponibilidade e instruções específicas devem ser consultadas para o seu plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01'), action('Consultar meus benefícios', 'UTI-01')] }),
+      screen('FAQ-04', 'Coberturas', 'Quais são as coberturas?', 'Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-05', 'Carências', 'Quais são as carências?', 'A carência aplicável depende do serviço e das condições vigentes do seu plano. Não vou estimar um prazo: consulte seu contrato ou autentique para verificarmos a condição aplicável.', { actions: [action('Ver contrato', 'CON-01'), action('Voltar aos tópicos', 'FAQ-01')] }),
+    ],
+  );
+
+  journey(
     'NAV',
     'Menu por necessidades',
     'Começar',
@@ -1897,6 +1934,8 @@ dialog::backdrop {
               target: 'SOL-01',
             },
             { label: 'Encerrar contrato', detail: 'Condições e cancelamento', target: 'CAN-01' },
+            { label: 'Encerrar conversa', detail: 'Finalizar este atendimento sem alterar contrato ou pedidos', target: 'FIM-01' },
+            { label: 'Tirar dúvidas', detail: 'Informações, utilização, coberturas e carências', target: 'FAQ-01' },
             {
               label: 'Falar com uma pessoa',
               detail: 'Atendimento ou pedido de retorno',
@@ -1996,7 +2035,7 @@ dialog::backdrop {
         'IDE-03',
         'Identidade verificada',
         '123456',
-        'Identidade verificada. Vamos continuar sua solicitação.',
+        '**Titular identificado**\nAna Silva\nCPF: •••.•••.•••-25\n\nIdentidade verificada. Vamos continuar sua solicitação.',
         { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
       ),
       screen(
@@ -2735,7 +2774,7 @@ dialog::backdrop {
         'DEP-33',
         'Mensagem única · dados compreendidos',
         'Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.',
-        'Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nVou verificar as condições do seu contrato. Antes de incluir, você poderá revisar os dados e confirmar.',
+        'Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nPara concluir o cadastro legado, preciso perguntar o celular e o sexo biológico. Não vou deduzir nenhum deles pelo nome.',
         {
           seed: {
             name: 'João da Silva',
@@ -2743,11 +2782,21 @@ dialog::backdrop {
             maskedDocument: '•••.•••.•••-10',
             relationship: 'Filho',
           },
-          actions: [action('Revisar inclusão', 'DEP-06'), action('Corrigir dados', 'DEP-14')],
+          actions: [action('Informar dados que faltam', 'DEP-34'), action('Corrigir dados', 'DEP-14')],
           behavior:
-            'Uma única mensagem fornece nome, CPF, nascimento e parentesco. O assistente aproveita os dados, verifica as regras e pergunta apenas campos obrigatórios que faltarem. A inclusão exige revisão e confirmação.',
-          rule: 'Exemplo demonstrativo baseado no slide fornecido. Parentesco foi declarado como filho; sexo ou gênero não são inferidos do nome ou parentesco. Campos obrigatórios e elegibilidade dependem do produto.',
+            'Uma única mensagem fornece nome, CPF, nascimento e parentesco. O assistente aproveita os dados e pergunta apenas campos legados obrigatórios que faltarem — celular e sexo biológico são sempre perguntados explicitamente, nunca inferidos. A inclusão exige revisão e confirmação.',
+          rule: 'Exemplo baseado no slide. Celular e sexo biológico constam do legado; confirmar com produto se continuam obrigatórios. Nunca inferir sexo ou gênero pelo nome ou parentesco.',
         },
+      ),
+      screen(
+        'DEP-34',
+        'Completar dados do dependente',
+        'Quero concluir o cadastro.',
+        'Qual é o celular do João e qual sexo biológico ele informa? Esses dados não são inferidos. Use apenas dados fictícios nesta demonstração.',
+        form('Dados complementares', [
+          { name: 'phone', label: 'Celular do dependente', type: 'tel', placeholder: '(00) 00000-0000', required: true },
+          { name: 'biologicalSex', label: 'Sexo biológico informado', type: 'select', choices: ['Selecione', 'Feminino', 'Masculino', 'Prefiro não informar'], required: true },
+        ], 'Revisar inclusão', 'DEP-06', { note: 'O legado solicita estes dados. Obrigatoriedade e opções precisam ser validadas pelo produto.', rule: 'Sexo biológico e celular são perguntados explicitamente e não são inferidos. A necessidade e a obrigatoriedade destes campos ainda dependem de validação do produto.' }),
       ),
       screen(
         'DEP-04',
@@ -3058,8 +3107,8 @@ dialog::backdrop {
         list(
           'Excluir dependente',
           [
-            { label: 'Maria Silva', detail: 'Filha · vínculo ativo', target: 'EXC-02' },
-            { label: 'João Silva', detail: 'Filho · vínculo ativo', target: 'EXC-02' },
+            { label: 'Maria Silva', detail: 'CPF: •••.•••.•••-09 · Filha · vínculo ativo', target: 'EXC-02' },
+            { label: 'João Silva', detail: 'CPF: •••.•••.•••-10 · Filho · vínculo ativo', target: 'EXC-02' },
           ],
           'Consultar efeitos',
         ),
@@ -3828,7 +3877,7 @@ dialog::backdrop {
         'Pedido de cancelamento',
         'Quero cancelar minha assistência.',
         'Posso ajudar. Vou identificar o contrato e consultar os efeitos do cancelamento.',
-        { actions: [action('Continuar', 'CAN-02'), action('Falar com alguém', 'HUM-01')] },
+        { actions: [action('Continuar', 'CAN-13'), action('Falar com alguém', 'HUM-01')] },
       ),
       screen(
         'CAN-02',
@@ -3949,6 +3998,33 @@ dialog::backdrop {
         'Não foi possível determinar a data e os efeitos agora. A solicitação precisa de resolução antes da confirmação.',
         { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
       ),
+      screen(
+        'CAN-13',
+        'Motivo do cancelamento (opcional)',
+        'Quero cancelar minha assistência.',
+        'Se quiser, conte por que está cancelando. Sua resposta é opcional e não impede o cancelamento.',
+        { ...list('Motivo (opcional)', [
+          { label: 'O valor não compensa', target: 'CAN-14' },
+          { label: 'Não utilizei o benefício', target: 'CAN-14' },
+          { label: 'Contratei outro serviço', target: 'CAN-14' },
+          { label: 'Desisti da contratação', target: 'CAN-14' },
+          { label: 'Outro motivo', target: 'CAN-14' },
+        ], 'Continuar'), actions: [action('Prefiro não informar', 'CAN-05')], rule: 'Motivo opcional; não condicionar a continuidade do cancelamento à resposta.' },
+      ),
+      screen('CAN-14', 'Motivo registrado', '{{cancelReason}}', 'Obrigado por compartilhar. Vamos revisar os efeitos do cancelamento antes de qualquer confirmação.', { actions: [action('Revisar efeitos', 'CAN-05')] }),
+    ],
+  );
+
+  journey(
+    'FIM',
+    'Encerrar conversa',
+    'Encerrar',
+    'Finaliza o atendimento atual sem cancelar contrato ou apagar solicitações.',
+    'Confirmação explícita e distinção clara entre conversa e operação de produto.',
+    'Encerrar o chat não altera contrato, benefícios, pagamentos ou solicitações em andamento.',
+    [
+      screen('FIM-01', 'Confirmar encerramento da conversa', 'Quero encerrar o atendimento.', 'Você quer finalizar esta conversa? Isso não cancela sua assistência nem apaga pedidos em andamento.', { actions: [action('Sim, encerrar conversa', 'FIM-02'), action('Continuar atendimento', 'NAV-01')] }),
+      screen('FIM-02', 'Atendimento encerrado', 'Sim, encerrar conversa.', 'Atendimento encerrado. Sua assistência e eventuais solicitações não foram alteradas. Quando precisar, é só iniciar uma nova conversa.', { actions: [action('Começar nova conversa', 'ENT-02')] }),
     ],
   );
 
@@ -4752,7 +4828,7 @@ dialog::backdrop {
       step.journey = group.code;
       // Deny by default: only these informational screens are public.
       step.requiresAuth = ![
-        'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09',
+        'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09', 'FAQ-01', 'FAQ-02', 'FAQ-03', 'FAQ-04', 'FAQ-05', 'FIM-01', 'FIM-02',
         'NAV-01', 'DES-01', 'DES-02', 'DES-03', 'DES-04', 'DES-05', 'DES-06',
         'DES-09', 'DES-10', 'DES-11', 'HUM-01', 'HUM-02', 'HUM-03',
         'AUD-01', 'AUD-03', 'AUD-04',
@@ -4793,6 +4869,9 @@ dialog::backdrop {
     birth: '12/03/2014',
     maskedDocument: '•••.•••.•••-09',
     relationship: 'Filha',
+    phone: '',
+    biologicalSex: '',
+    cancelReason: '',
     postal: '01000-000',
     address: 'Rua Exemplo, 100',
     city: 'São Paulo / SP',
@@ -5062,6 +5141,7 @@ dialog::backdrop {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
         target = choice.target;
+        if (step.id === 'CAN-13') memory.cancelReason = choice.label;
         if (step.id === 'CON-01' || step.id === 'SOL-01') selectedContract = choice.label;
         if (step.id === 'DES-05') selectedPlan = choice.label;
       }

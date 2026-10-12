@@ -1,6 +1,6 @@
 # Atlas da experiência no WhatsApp
 
-Protótipo HTML independente com **23 jornadas e 268 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+Protótipo HTML independente com **25 jornadas e 278 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
 
 ## Autenticação obrigatória
 
@@ -20,11 +20,13 @@ As assistências fornecidas são exclusivamente:
 
 Seguro Celular, proteção de bens e jornadas de sinistro não fazem parte deste escopo. Contratação, dependentes, pagamentos, documentos e atendimento são jornadas de gestão das assistências, não serviços adicionais. Esta definição substitui as hipóteses anteriores de catálogo; documentos técnicos compartilhados e fontes históricas externas não foram alterados nesta revisão.
 
-A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. Os dados são aproveitados na revisão seguinte, sem um questionário sequencial. Sexo/gênero não são inferidos.
+A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. `DEP-34` pergunta explicitamente celular e sexo biológico, campos encontrados no legado; nunca infere sexo/gênero. A obrigatoriedade e as opções desses campos precisam de validação do produto. `DEP-06` reúne os dados para revisão.
+
+As lacunas cobertas do legado incluem ainda a central de dúvidas (`FAQ-01` a `FAQ-05`), motivos opcionais de cancelamento (`CAN-13`), encerramento de conversa separado de cancelamento (`FIM-01` e `FIM-02`), card do titular após autenticação e CPF mascarado na seleção de exclusão. A coleta nativa de contato do WhatsApp não foi reproduzida; nascimento do titular permanece substituído pela autenticação aprovada com CPF + código.
 
 ## Navegação
 
-`comparativo-legado.html` é o relatório independente de comparação entre o Figma e a experiência nova. Abra diretamente no navegador: possui 45 itens classificados por lacunas, regras alteradas, jornadas novas, ampliações e hipóteses, com busca, filtro de origem, comparação lado a lado, impressão e links para as 34 telas originais. O relatório funciona offline; links externos exigem internet e os links do atlas dependem do arquivo adjacente.
+`comparativo-legado.html` é o relatório independente de comparação entre o Figma e a experiência nova. Abra diretamente no navegador: possui 45 itens classificados como lacunas remanescentes, lacunas equalizadas, regras alteradas, jornadas novas, ampliações e hipóteses, com busca, filtro de origem, comparação lado a lado, impressão e links para as 34 telas originais. O relatório funciona offline; links externos exigem internet e os links do atlas dependem do arquivo adjacente.
 
 - Catálogo lateral de jornadas; busca por título, conteúdo e identificador.
 - Seleção de estados, filtros de percurso principal/variações e navegação anterior/próxima.

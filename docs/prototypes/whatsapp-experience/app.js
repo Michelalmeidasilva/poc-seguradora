@@ -12,6 +12,9 @@
     birth: '12/03/2014',
     maskedDocument: '•••.•••.•••-09',
     relationship: 'Filha',
+    phone: '',
+    biologicalSex: '',
+    cancelReason: '',
     postal: '01000-000',
     address: 'Rua Exemplo, 100',
     city: 'São Paulo / SP',
@@ -281,6 +284,7 @@
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
         target = choice.target;
+        if (step.id === 'CAN-13') memory.cancelReason = choice.label;
         if (step.id === 'CON-01' || step.id === 'SOL-01') selectedContract = choice.label;
         if (step.id === 'DES-05') selectedPlan = choice.label;
       }
