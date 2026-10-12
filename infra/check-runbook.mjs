@@ -1,38 +1,26 @@
-// Consistency check of the deploy runbook (docs/deploy.md) against the repository. No
-// dependencies, no shell: it only reads files. Checks:
-//   (a) every repository path the runbook names (`infra/...`, `docs/...`, `apps/...`,
-//       `.github/workflows/...`, and relative Markdown links) exists;
-//   (b) every Terraform variable it names (`var.<name>`, `-var <name>=`, `-var="<name>=`,
-//       `TF_VAR_<name>` in any case, top-level keys of ```hcl blocks) is declared in
-//       infra/terraform/variables.tf;
-//   (c) every `vars.<NAME>` of .github/workflows/deploy.yml appears in the runbook and in its
-//       repository variable table (the first table after a heading "Variáveis do repositório"),
-//       and every name in that table is used by deploy.yml; every `workflow_dispatch` input of
-//       deploy.yml is named in the runbook;
-//   (d) every address in `-target=`, `-replace=` or `terraform taint` is declared in
-//       infra/terraform/*.tf;
-//   (e) the required sections exist (headings).
-// Usage: node infra/check-runbook.mjs [--root <repo root>]
+// Check the local deployment runbook against repository files and tool-free CLI help.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { parseHelp } from './check-skill.mjs';
 
 const RUNBOOK = 'docs/deploy.md';
 const VARIABLES_TF = 'infra/terraform/variables.tf';
 const TERRAFORM_DIR = 'infra/terraform';
-const DEPLOY_WORKFLOW = '.github/workflows/deploy.yml';
+const ENV_EXAMPLE = 'infra/.env.example';
 
 export const REQUIRED_SECTIONS = [
-  ['sumário', /sum[aá]rio/i],
-  ['checklist rápido', /checklist r[aá]pido/i],
-  ['bootstrap', /bootstrap/i],
-  ['primeiro apply', /primeiro apply/i],
-  ['github', /github/i],
+  ['pré-requisitos', /pr[eé]-requisitos/i],
+  ['configuração', /configura[cç][aã]o/i],
+  ['primeiro deploy', /primeiro deploy/i],
+  ['deploy por serviço', /deploy por servi[cç]o/i],
+  ['rollback', /rollback/i],
   ['smoke', /smoke/i],
   ['TRUST_PROXY_HOPS', /TRUST_PROXY_HOPS/],
-  ['rollback', /rollback/i],
   ['custos', /custos?\b/i],
   ['destruição', /destrui[cç][aã]o/i],
+  ['limites', /limites/i],
   ['pendências', /pend[eê]ncias/i],
 ];
 
@@ -98,47 +86,79 @@ function declaredAddresses(root) {
   return addresses;
 }
 
-/** Input names of `on: workflow_dispatch: inputs:` (keys one level below `inputs:`). */
-function dispatchInputs(workflow) {
-  const names = [];
-  let dispatchIndent = -1;
-  let inputsIndent = -1;
-  for (const line of workflow.split('\n')) {
-    if (line.trim() === '' || /^\s*#/.test(line)) continue;
-    const indent = line.length - line.trimStart().length;
-    if (inputsIndent >= 0 && indent <= inputsIndent) inputsIndent = -1;
-    if (dispatchIndent >= 0 && indent <= dispatchIndent) dispatchIndent = -1;
-    if (/^\s*workflow_dispatch:\s*$/.test(line)) dispatchIndent = indent;
-    else if (dispatchIndent >= 0 && inputsIndent < 0 && /^\s*inputs:\s*$/.test(line)) {
-      inputsIndent = indent;
-    } else if (inputsIndent >= 0) {
-      const key = /^\s*([A-Za-z_][A-Za-z0-9_-]*):/.exec(line);
-      if (key && indent === inputsIndent + 2) names.push(key[1]);
+function checkCLI(root, text, errors, counts) {
+  const help = spawnSync('bash', ['infra/deploy.sh', 'help'], { cwd: root, encoding: 'utf8' });
+  if (help.status !== 0) {
+    errors.push(`deploy.sh help failed (exit ${help.status ?? 'unavailable'})`);
+    return;
+  }
+  const surface = parseHelp(help.stdout);
+  for (const [kind, names] of Object.entries(surface)) {
+    if (!names.size) errors.push(`help has no ${kind} listing`);
+  }
+  const documentedCommands = new Set();
+  // Only flags in local CLI invocations belong to deploy.sh; Terraform flags remain separate.
+  for (const match of text.matchAll(
+    /(?:bash\s+infra\/deploy\.sh|pnpm\s+run\s+infra:deploy)\s+([^`\n|]+)/g,
+  )) {
+    const tokens = match[1].trim().split(/\s+/);
+    const first = tokens.shift();
+    const command = first === 'infra' ? `infra ${tokens.shift() ?? ''}` : first;
+    if (/^<.*>$/.test(command)) continue;
+    documentedCommands.add(command);
+    if (!surface.cmd.has(command)) errors.push(`unknown command ${command}`);
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (token.startsWith('#')) break;
+      if (token.startsWith('--')) {
+        if (!surface.flag.has(token)) errors.push(`unknown flag ${token}`);
+        if (['--tag', '--existing-tag', '--url', '--confirm-project', '--env-file'].includes(token))
+          i++;
+      } else if (
+        ['build', 'deploy', 'rollback', 'status'].includes(command) &&
+        token !== 'all' &&
+        !/^<.*>$/.test(token)
+      ) {
+        if (!surface.service.has(token)) errors.push(`unknown service ${token}`);
+      }
     }
   }
-  return names;
+  // Standalone flags in code spans are also part of the documented CLI surface.
+  for (const match of text.matchAll(/`(--[a-z][a-z0-9-]*)`/g)) {
+    if (!surface.flag.has(match[1])) errors.push(`unknown flag ${match[1]}`);
+  }
+  for (const match of text.matchAll(/\bsvc-[a-z][a-z0-9-]*/g)) {
+    if (match[0] === 'svc-X') continue; // Future Dockerfile convention, not a service name.
+    if (!surface.service.has(match[0])) errors.push(`unknown service ${match[0]}`);
+  }
+  for (const command of surface.cmd) {
+    if (!documentedCommands.has(command)) errors.push(`command ${command} not documented`);
+  }
+  counts.commands = documentedCommands.size;
 }
 
-/** Repository variable names listed in the first table after "Variáveis do repositório". */
-function variableTable(prose) {
-  const start = prose.findIndex((l) => /^#{1,6}\s.*vari[aá]veis do reposit[oó]rio/i.test(l));
-  if (start < 0) return null;
-  const names = [];
-  let inTable = false;
+function checkEnv(root, prose, errors, counts) {
+  const declared = new Set(
+    matchesOf(readOrNull(join(root, ENV_EXAMPLE)) ?? '', /^([A-Z][A-Z0-9_]*)=/gm),
+  );
+  const start = prose.findIndex((line) => /^#{1,6}\s.*configura[cç][aã]o/i.test(line));
+  const named = new Set();
   for (const line of prose.slice(start + 1)) {
     if (/^#{1,6}\s/.test(line)) break;
-    if (line.trimStart().startsWith('|')) {
-      inTable = true;
-      const name = /^\s*\|\s*`([A-Z][A-Z0-9_]*)`/.exec(line);
-      if (name) names.push(name[1]);
-    } else if (inTable) break;
+    const match = /^\s*\|\s*`([A-Z][A-Z0-9_]*)`\s*\|/.exec(line);
+    if (match) named.add(match[1]);
   }
-  return names.length ? names : null;
+  for (const name of named)
+    if (!declared.has(name)) errors.push(`unknown env key ${name} in configuration table`);
+  for (const name of declared)
+    if (!named.has(name)) errors.push(`env key ${name} not documented in configuration table`);
+  if (!declared.size) errors.push(`${ENV_EXAMPLE} has no configuration keys`);
+  counts.envKeys = named.size;
 }
 
 export function analyzeRunbook(root) {
   const errors = [];
-  const counts = { paths: 0, variables: 0, repoVariables: 0, inputs: 0, addresses: 0 };
+  const counts = { paths: 0, variables: 0, envKeys: 0, commands: 0, addresses: 0 };
   const text = readOrNull(join(root, RUNBOOK));
   if (text === null) return { errors: [`${RUNBOOK} not found`], counts };
   const { blocks, prose } = parseMarkdown(text);
@@ -151,6 +171,7 @@ export function analyzeRunbook(root) {
   }
   for (const path of paths) {
     counts.paths++;
+    if (path === 'infra/.env' && existsSync(join(root, ENV_EXAMPLE))) continue;
     if (!existsSync(join(root, path))) errors.push(`path "${path}" does not exist in the repo`);
   }
 
@@ -176,40 +197,22 @@ export function analyzeRunbook(root) {
     }
   }
 
-  // (c) GitHub repository variables.
-  const workflow = readOrNull(join(root, DEPLOY_WORKFLOW)) ?? '';
-  const workflowVars = new Set(matchesOf(workflow, /\bvars\.([A-Za-z0-9_]+)/g));
-  for (const name of workflowVars) {
-    counts.repoVariables++;
-    if (!new RegExp(`\\b${name}\\b`).test(text)) {
-      errors.push(`repository variable ${name} (vars.${name} in ${DEPLOY_WORKFLOW}) is missing`);
-    }
-  }
-  const table = variableTable(prose);
-  if (!table) {
-    errors.push('no repository variable table (a heading "Variáveis do repositório" + a table)');
-  } else {
-    for (const name of table) {
-      if (!workflowVars.has(name)) {
-        errors.push(`variable table lists "${name}", not used by ${DEPLOY_WORKFLOW}`);
-      }
-    }
-    for (const name of workflowVars) {
-      if (!table.includes(name)) errors.push(`variable table does not list ${name}`);
-    }
-  }
-  for (const name of dispatchInputs(workflow)) {
-    counts.inputs++;
-    if (!new RegExp(`\\b${name}\\b`).test(text)) {
-      errors.push(`workflow_dispatch input ${name} of ${DEPLOY_WORKFLOW} is missing`);
-    }
+  // CLI and local configuration contract.
+  checkCLI(root, text, errors, counts);
+  checkEnv(root, prose, errors, counts);
+  if (
+    /deploy\.yml|\bWIF\b|environment:\s*production|\bvars\.[A-Za-z_]|vari[aá]veis[^\n]*GitHub|GitHub[^\n]*vari[aá]veis/i.test(
+      text,
+    )
+  ) {
+    errors.push('obsolete deployment reference (local operator flow required)');
   }
 
   // (d) resource addresses.
   const declared = declaredAddresses(root);
   for (const regex of ADDRESS_REFS) {
     for (const raw of matchesOf(text, regex)) {
-      const address = raw.replace(/^["']|["'`]$/g, '').replace(/\[[^\]]*\]$/, '');
+      const address = raw.replace(/^["']|["'`]+$/g, '').replace(/\[[^\]]*\]$/, '');
       if (address.includes('<')) continue;
       counts.addresses++;
       if (!declared.has(address)) {
@@ -245,7 +248,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
   console.log(
     `ok ${RUNBOOK}: ${counts.paths} paths, ${counts.variables} Terraform variables, ` +
-      `${counts.repoVariables} repository variables, ${counts.inputs} workflow inputs, ` +
+      `${counts.envKeys} env keys, ${counts.commands} commands, ` +
       `${counts.addresses} resource addresses`,
   );
 }

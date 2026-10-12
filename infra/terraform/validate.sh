@@ -111,8 +111,8 @@ expect google_artifact_registry_repository 1
 expect google_billing_budget 1
 expect google_iam_workload_identity_pool 0
 expect google_iam_workload_identity_pool_provider 0
-# The state bucket's IAM is bootstrap-only: a deployer with objectAdmin cannot read bucket IAM,
-# so managing it here would break CI refresh with 403.
+# The state bucket is bootstrap-only: Terraform stores its own state there and never manages
+# its lifecycle. This avoids deleting the backend while destroying the stack.
 if grep -nE '^(resource|data) "google_storage_bucket_iam_' ./*.tf; then
   fail "google_storage_bucket_iam_* must not be managed by this stack (lines above)"
 else

@@ -7,13 +7,13 @@
 - [x] CLI local por serviço, configuração validada e testes offline; revisão concluída em cda5c75
 - [x] Terraform com seis serviços, imagens independentes e sem identidades de CI
 - [x] Skills deploy-service e monorepo-services, links e verificadores (72 fixtures locais e verificadores reais passando)
-- [ ] Runbook local consistente e workflow de deploy removido
+- [x] Runbook local consistente (20 fixtures e checker real passando) e workflow de deploy removido (77fad33, CI genérico/actionlint passando)
 
 ## Qualidade
 
-- [ ] Verificação final de tipos, lint, formato, arquitetura, testes e build
-- [ ] Terraform validado offline e workflow de CI validado
-- [ ] Compose com smoke e testes do nginx
+- [x] Verificação final de tipos, lint, formato, arquitetura, testes e build (suíte inteira sem mudar assertions; depcruise com Node suportado)
+- [x] Terraform validado offline (fmt/init sem backend/validate + estrutura) e workflow de CI validado com self-tests/actionlint
+- [x] Compose com smoke e testes do nginx (evidência do controlador: infra/test-nginx.sh exit 0, /private/tmp/plan8-nginx.log; nenhuma mudança em app/compose/nginx depois)
 - [ ] Revisão final e atualização do workboard
 
 ## Pendências e decisões
