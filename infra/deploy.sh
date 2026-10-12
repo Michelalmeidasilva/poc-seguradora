@@ -417,13 +417,14 @@ git_tag() { # default image tag: <short-sha>, or <short-sha>-dirty-<yyyymmddHHMM
 }
 
 # Docker has no documented distinct exit code for missing manifests. Recognize only
-# explicit manifest absence; every other failure stops the entire preflight.
+# explicit manifest absence; every other failure stops the entire preflight and shows docker's
+# stderr (registry/auth/network messages; no secrets).
 image_exists() {
   local error
   if error="$(docker buildx imagetools inspect "$1" 2>&1 >/dev/null)"; then return 0; fi
   case "$error" in
     "ERROR: $1: not found"|"ERROR: $1: manifest unknown"|"ERROR: manifest unknown: "*) return 1 ;;
-    *) die "$EXIT_PRECONDITION" "não foi possível verificar a imagem no registro: $1 (autenticação, rede ou registro; nenhuma imagem foi publicada)" ;;
+    *) die "$EXIT_PRECONDITION" "não foi possível verificar a imagem no registro: $1 (autenticação, rede ou registro; nenhuma imagem foi publicada). Erro do docker: ${error:-(sem mensagem)}" ;;
   esac
 }
 
@@ -818,18 +819,19 @@ check_tag() { # check_tag <flag> <value>
   matches "$2" '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$' || die "$EXIT_USAGE" "$1 inválida: '$2' (tag Docker)"
 }
 SELECTED=""
-select_services() { # select_services <name...|all>: validates, sets SELECTED
-  local s
+select_services() { # select_services <name...|all>: validates every argument, sets SELECTED
+  local s all=0
   SELECTED=""
   [ "$#" -gt 0 ] || die "$EXIT_USAGE" "informe o(s) serviço(s) ou all. Válidos: $(valid_services)"
   for s in "$@"; do
     if [ "$s" = all ]; then
-      SELECTED="$(valid_services)"
-      return 0
+      all=1
+      continue
     fi
     service_index "$s" >/dev/null || die "$EXIT_USAGE" "serviço desconhecido '$s'. Válidos: $(valid_services)(ou all)"
     SELECTED="$SELECTED $s"
   done
+  if [ "$all" = 1 ]; then SELECTED="$(valid_services)"; fi
 }
 check_url() {
   [ -z "$OPT_URL" ] || matches "$OPT_URL" '^https?://[^[:space:]]+$' || die "$EXIT_USAGE" "--url deve começar com http:// ou https://"

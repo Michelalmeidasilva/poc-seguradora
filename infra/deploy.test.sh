@@ -364,6 +364,19 @@ t_unknown_service_lists_valid() {
   no_mutation
 }
 
+t_unknown_service_after_all() {
+  local args s
+  for args in "deploy all gatewya --yes" "deploy all gatewya" "build all gatewya --yes" "status all gatewya" "deploy gateway all gatewya --yes --no-smoke"; do
+    : >"$LOG"
+    # shellcheck disable=SC2086 # intentional validated argument list splitting
+    run_deploy "sim" $args
+    assert_rc 2
+    assert_out "gatewya"
+    for s in web gateway chatbot svc-cotacao svc-apolice svc-sinistro; do assert_out "$s"; done
+    refute_log '^(docker|gcloud|terraform)'
+  done
+}
+
 t_unknown_flag_and_bad_combos() {
   run_deploy "<EOF>" deploy gateway --frobnicate
   assert_rc 2
@@ -448,6 +461,20 @@ t_registry_errors_fail_closed() {
       assert_rc 3
       no_mutation
     done
+  done
+}
+
+t_registry_error_message_is_shown() {
+  local args
+  EXTRA_ENV=("FAKE_INSPECT_ERROR=ERROR: fake registry weirdness XYZ-42 (unrecognised)")
+  for args in 'build gateway --yes' 'deploy gateway --existing-tag old --yes --no-smoke'; do
+    : >"$LOG"
+    # shellcheck disable=SC2086 # intentional validated argument list splitting
+    run_deploy "<EOF>" $args
+    assert_rc 3
+    assert_out "fake registry weirdness XYZ-42 (unrecognised)"
+    assert_out "não foi possível verificar a imagem no registro"
+    no_mutation
   done
 }
 
