@@ -68,21 +68,21 @@
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
 
-## Plano 7 (deploy)
+## Plano 7 (deploy) — atualizado pelo Plano 8
 
 O que existe (verificado localmente, nada aplicado no GCP):
 
 - `infra/docker-compose.yml`: produto inteiro local (`web` → `gateway` → `chatbot` → `fake-services`), com health checks.
 - `infra/smoke.mjs`: smoke de ponta a ponta pela URL pública (sete passos; falha nomeia o hop), passa contra o compose.
 - `infra/test-nginx.sh`: troca de IP do gateway sem reiniciar o nginx, config renderizado, cabeçalhos e `Host`/`Origin` no upstream.
-- `infra/terraform/`: Cloud Run (quatro serviços), rede, contas de serviço, secret, WIF e orçamento; validado offline (`validate.sh`).
-- `.github/workflows/ci.yml` (verificação + build das imagens) e `deploy.yml` (deploy aprovado no environment `production` + smoke); `infra/lint-workflows.sh`.
+- `infra/terraform/`: Cloud Run com seis serviços e imagens independentes, rede, seis contas de runtime, secret e orçamento; validado offline (`validate.sh`).
+- `.github/workflows/ci.yml` continua com verificação + build sem push; deploy por CI substituído no Plano 8 pelo `infra/deploy.sh` local por serviço; verificadores genéricos e actionlint em `infra/lint-workflows.sh`.
 - Runbook `docs/deploy.md` (conferido por `infra/check-runbook.mjs`).
 
 Pendências (detalhes na seção Pendências do runbook):
 
 - Primeiro `terraform apply` e primeiro deploy reais: validar ingress interno + Direct VPC egress, `TRUST_PROXY_HOPS`, URLs computadas e cold start.
-- Mapeamento do WIF (`attribute.environment`) não verificado contra o GCP.
+- Após atualizar uma imagem pelo script, confirmar que o plano Terraform não mostra alterações de imagem/client/client_version; configuração continua pelo Terraform. Probes HTTP /health de liveness pendentes (startup TCP com placeholder).
 - ID token entre serviços, `svc-*` reais, domínio próprio/Cloud Armor/uptime checks, versões fixadas das imagens base.
 
 ## Qualidade

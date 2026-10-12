@@ -45,7 +45,7 @@
 ## Pendências e decisões
 
 - Serviços internos: os testes usam um servidor fake que implementa o contrato; rodar contra os serviços reais quando existirem.
-- Autenticação chatbot → serviços (Cloud Run IAM, ID token) não implementada; ingress interno e IAM ficam para o plano de deploy.
+- Autenticação chatbot → serviços por ID token não implementada; Terraform do Plano 8 configura ingress interno com allUsers e Direct VPC egress, ainda não verificados no GCP.
 - A validação de CPF verifica só o formato (11 dígitos), porque os fixtures dos serviços usam CPFs fictícios sem dígito verificador válido.
 - Validar os JSONs dos Flows (cotação e demonstração) no Playground da Meta; hoje só são verificados pelos testes deste repositório.
 - Protocolo: falta um evento para o servidor decidir a próxima tela depois de `data_exchange` (hoje o chatbot não responde nada e a web avança de forma otimista); erros de `data_exchange` também não chegam ao servidor.
@@ -54,6 +54,7 @@
 - Valores de mídia são aceitos em payloads de `navigate` (a Meta proíbe); Escape e seletores nativos só verificados no Chromium (web).
 - Ids de botões (quick-reply) são escolhidos pelo cliente: só são restringidos às listas ofertadas nos estados que carregam lista; a 'identificação' por CPF é decorativa na POC (sem autenticação real).
 - Os clientes não limitam o tamanho do corpo de resposta dos serviços (internos e confiáveis); revisar se algum dia forem externos.
+- Deploy local por serviço (Plano 8): `bash infra/deploy.sh deploy chatbot` atualiza só a imagem; configuração/escala pelo Terraform. Cada serviço interno tem deploy independente, com imagem FAKE até seu dono adicionar Dockerfile (raiz como contexto, porta 8080, GET /health). Probes HTTP de liveness e serviços reais pendentes; deploy/rollback/cold start podem perder diálogo em memória.
 - Dockerfile (verificado no Plano 7): a imagem é construída no compose (`infra/docker-compose.yml`, contexto na raiz), fica saudável pelo `/health` e passa no smoke de ponta a ponta contra o `fake-services` (`node infra/smoke.mjs http://localhost:8080`: `chatbot`, `demo-flow` e `quote` provam gateway → chatbot → serviços). O deploy no Cloud Run (ingress interno + Direct VPC egress) está no runbook `docs/deploy.md` e ainda não foi aplicado.
 - Botão 'tentar de novo' e entrada 'status do sinistro' no menu não implementados (o menu aceita no máximo 3 quick replies).
 - A mensagem da segunda via mostra só a data de validade do link.
