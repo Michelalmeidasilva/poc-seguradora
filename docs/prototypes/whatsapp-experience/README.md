@@ -24,6 +24,8 @@ A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, na
 
 ## Navegação
 
+`comparativo-legado.html` é o relatório independente de comparação entre o Figma e a experiência nova. Abra diretamente no navegador: possui 45 itens classificados por lacunas, regras alteradas, jornadas novas, ampliações e hipóteses, com busca, filtro de origem, comparação lado a lado, impressão e links para as 34 telas originais. O relatório funciona offline; links externos exigem internet e os links do atlas dependem do arquivo adjacente.
+
 - Catálogo lateral de jornadas; busca por título, conteúdo e identificador.
 - Seleção de estados, filtros de percurso principal/variações e navegação anterior/próxima.
 - Botões da conversa, listas e formulários levam a estados do protótipo.

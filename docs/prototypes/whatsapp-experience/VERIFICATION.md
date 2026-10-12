@@ -2,6 +2,8 @@
 
 Verificações realizadas em 11/10/2026, no protótipo local:
 
+- Comparativo independente: 45 itens, sete fluxos legados e 34 links para telas Figma; filtro de lacunas (9), jornadas novas (16), origem Plataforma (6), busca por celular (2), ausência de links para estados inexistentes, impressão e largura de 390 pixels validados no navegador sem erros JavaScript. Nenhuma jornada modificada pelo relatório.
+
 - Catálogo: 23 jornadas, 268 estados, 34 referências legadas e 46 estados com seleção/formulário/revisão.
 - Autenticação: 238 estados pessoais bloqueados antes da verificação, incluindo links diretos e legado. CPF inválido e código inválido rejeitados; CPF sozinho não libera acesso; navegação para sucesso não autentica. Retomada exata do pedido, expiração automática após 15 minutos e recarregamento verificados. Galeria sem dados pessoais antes do acesso.
 - Regressão reproduzível: `auth-browser-test.js`, executado com Playwright `browser_run_code_unsafe` contra o servidor local. O teste falhou antes da implementação e passou depois.
