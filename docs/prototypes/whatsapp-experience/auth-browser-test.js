@@ -1,59 +1,95 @@
-// Run with Playwright browser_run_code_unsafe, filename pointing to this file.
+// Run: node docs/prototypes/whatsapp-experience/auth-browser-test.js
 /* global window, document, Event */
-// The tool expects a function expression, not an exported module.
-/* eslint-disable @typescript-eslint/no-unused-expressions */
-async (page) => {
-  const base = 'http://127.0.0.1:8765/atlas-whatsapp.html';
-  const check = (value, message) => { if (!value) throw new Error(message); };
-  await page.goto(`${base}?auth-test=${Date.now()}#DEP-33`);
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-01', 'Direct personal link must require authentication');
-  check(!(await page.locator('#chat').innerText()).includes('João da Silva'), 'No personal data before authentication');
-  await page.evaluate(() => window.PROTOTYPE.go('IDE-03'));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-01', 'Success screen cannot authenticate by navigation');
-  await page.evaluate(() => window.PROTOTYPE.go('IDE-08'));
-  await page.locator('input[name="authCpf"]').fill('00000000000');
-  await page.locator('#flow-form').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-08', 'Invalid CPF must not continue');
-  await page.locator('input[name="authCpf"]').fill('52998224725');
-  await page.locator('#flow-form button[type="submit"]').click();
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-02', 'CPF alone must still require code');
-  await page.locator('input[name="verification"]').fill('999999');
-  await page.locator('#flow-form').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-04', 'Invalid code must fail');
-  await page.evaluate(() => window.PROTOTYPE.go('IDE-02'));
-  await page.locator('input[name="verification"]').fill('123456');
-  await page.locator('#flow-form button[type="submit"]').click();
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-03', 'Valid code completes demonstration authentication');
-  await page.locator('#chat button').first().click();
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'DEP-33', 'Resume the original request');
-  await page.evaluate(() => window.PROTOTYPE.go('IDE-05'));
-  await page.evaluate(() => window.PROTOTYPE.go('CON-02'));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-01', 'Expired session must block personal data');
-  await page.evaluate(() => window.PROTOTYPE.go('DES-03'));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'DES-03', 'Public services remain accessible');
+import assert from 'node:assert/strict';
+import { URL } from 'node:url';
+import { log } from 'node:console';
+import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(new URL('../../../apps/web/package.json', import.meta.url));
+const { chromium } = require('@playwright/test');
+
+const server = createServer((_request, response) => {
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+  response.end(readFileSync(new URL('./atlas-whatsapp.html', import.meta.url)));
+});
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+let browser;
+try {
+  browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  const base = `http://127.0.0.1:${server.address().port}/`;
+  const current = () => page.evaluate(() => window.PROTOTYPE.getCurrent());
+  const go = (id) => page.evaluate((target) => window.PROTOTYPE.go(target), id);
+  const submitCpf = async (cpf) => {
+    await go('IDE-08');
+    await page.locator('input[name="authCpf"]').fill(cpf);
+    await page.locator('#flow-form').evaluate((form) =>
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  };
+  await page.goto(`${base}#DEP-33`);
+  assert.equal(await current(), 'IDE-01', 'Direct personal link requires the CPF gate');
+  assert.ok(!(await page.locator('#chat').innerText()).includes('João da Silva'));
+  await go('IDE-03');
+  assert.equal(await current(), 'IDE-01', 'Navigation to success cannot open the gate');
+  for (const cpf of ['', '123', '123456789012', 'abc12345678901', '123.456.789-0', '123 456 789 01']) {
+    await submitCpf(cpf);
+    assert.equal(await current(), 'IDE-08', `Malformed CPF must be rejected: ${cpf}`);
+    assert.ok(await page.locator('#flow-error').isVisible());
+  }
+  for (const cpf of ['00000000000', '111.111.111-11', '12345678901', '987.654.321-00']) {
+    await submitCpf(cpf);
+    assert.equal(await current(), 'IDE-03', `Any correctly formatted CPF opens the demo gate: ${cpf}`);
+    assert.equal(await page.locator('input[name="verification"]').count(), 0);
+    assert.ok(!/identidade verificada|titular identificado/i.test(await page.locator('#chat').innerText()));
+    await page.locator('#chat button').first().click();
+    assert.equal(await current(), 'DEP-33', 'Resume the original request');
+    await go('IDE-05');
+    await go('DEP-33');
+    assert.equal(await current(), 'IDE-01', 'Expired session blocks personal screens');
+  }
+  await go('DES-03');
+  assert.equal(await current(), 'DES-03', 'Public service discovery remains accessible');
   const protectedCount = await page.evaluate(() => {
     let count = 0;
     for (const step of Object.values(window.EXPERIENCE.index)) {
       if (!step.requiresAuth) continue;
       window.PROTOTYPE.go(step.id);
-      if (window.PROTOTYPE.getCurrent() !== 'IDE-01') throw new Error(`Authentication bypass: ${step.id}`);
+      if (window.PROTOTYPE.getCurrent() !== 'IDE-01') throw new Error(`Gate bypass: ${step.id}`);
       count++;
     }
     window.PROTOTYPE.renderGallery();
     if (document.getElementById('gallery').textContent.includes('Ana Silva')) throw new Error('Gallery leaks personal data');
     return count;
   });
-  check(protectedCount > 200, 'Personal catalog coverage');
+  assert.ok(protectedCount > 150, 'Personal catalog coverage');
   await page.clock.install();
-  await page.evaluate(() => window.PROTOTYPE.go('IDE-02'));
-  await page.locator('input[name="verification"]').fill('123456');
-  await page.locator('#flow-form button[type="submit"]').click();
-  await page.evaluate(() => window.PROTOTYPE.go('CON-02'));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'CON-02', 'Code-only path for previously identified account');
+  await submitCpf('000.000.000-00');
+  await go('CON-02');
+  assert.equal(await current(), 'CON-02');
+  const renderedCount = await page.evaluate(() => {
+    let count = 0;
+    for (const step of Object.values(window.EXPERIENCE.index)) {
+      if (['IDE-05', 'IDE-06', 'IDE-07'].includes(step.id)) continue;
+      window.PROTOTYPE.go(step.id);
+      if (window.PROTOTYPE.getCurrent() !== step.id) throw new Error(`Render blocked: ${step.id}`);
+      count++;
+    }
+    window.PROTOTYPE.renderGallery();
+    if (/LEG-/.test(document.getElementById('gallery').textContent)) throw new Error('Legacy gallery screens');
+    return count;
+  });
+  await go('CON-02');
   await page.clock.fastForward(15 * 60 * 1000 + 1);
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-05', 'Session expires automatically');
+  assert.equal(await current(), 'IDE-05', 'Session expires automatically');
   await page.reload();
-  await page.evaluate(() => window.PROTOTYPE.go('CON-02'));
-  check(await page.evaluate(() => window.PROTOTYPE.getCurrent()) === 'IDE-01', 'Reload requires authentication again');
-  return 'Authentication regression checks passed';
+  await go('CON-02');
+  assert.equal(await current(), 'IDE-01', 'Reload requires CPF again');
+  assert.deepEqual(errors, [], 'No JavaScript rendering errors');
+  log(`CPF regression passed: malformed inputs rejected, any formatted CPF accepted, ${protectedCount} protected screens, ${renderedCount} screens rendered, expiry/reload/gallery verified.`);
+} finally {
+  await browser?.close();
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 }

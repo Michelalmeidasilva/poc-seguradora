@@ -1,28 +1,23 @@
-# Verificação do protótipo
+# Verificação do protótipo — 13/10/2026
 
-Verificações realizadas em 12/10/2026, no protótipo local:
+Esta revisão remove as 34 telas do grupo LEG do atlas e preserva as 24 jornadas / 247 telas novas, incluindo todos os 64 estados marcados como alternativos (entre eles os 54 anteriormente apontados). O comparativo histórico permanece em `comparativo-legado.html`, separado do catálogo navegável.
 
-- Comparativo independente: 45 itens, sete fluxos legados e 34 links para telas Figma; categorias: 1 lacuna remanescente, 7 equalizadas, 7 regras alteradas, 16 jornadas novas, 8 ampliações e 6 hipóteses. Largura de 390 pixels sem overflow.
+## Verificações desta revisão
 
-- Catálogo: 25 jornadas, 281 estados, 34 referências legadas e 49 estados com seleção/formulário/revisão.
-- Autenticação: 241 estados pessoais bloqueados antes da verificação, incluindo links diretos e legado. CPF inválido e código inválido rejeitados; CPF sozinho não libera acesso; navegação para sucesso não autentica. Retomada exata do pedido, expiração automática após 15 minutos e recarregamento verificados. Galeria sem dados pessoais antes do acesso.
-- Regressão reproduzível: `auth-browser-test.js`, executado com Playwright `browser_run_code_unsafe` contra o servidor local. O teste falhou antes da implementação e passou depois.
-- Suíte geral: `pnpm test` passou fora do sandbox; a primeira execução restrita falhou em testes HTTP por bloqueio de sockets locais (EPERM).
-- Integridade: IDs únicos, destinos existentes, estrutura dos componentes e elementos DOM esperados.
-- Descoberta de serviços: `DES-01` mantém a lista WhatsApp Flow; `DES-12`–`DES-14` apresentam detalhes em mensagens conversacionais com dois quick replies (“Ver opções” e “Voltar aos serviços”). Títulos abaixo do limite de 20 caracteres e dentro do máximo de três respostas rápidas por mensagem. Rotas e renderização conferidas no navegador.
-- Renderização: todos os 281 estados renderizados no navegador sem exceções JavaScript.
-- Mensagem única (DEP-33/DEP-34): nome João da Silva, nascimento, CPF mascarado e parentesco preservados; celular e sexo biológico são perguntados explicitamente antes da revisão DEP-06. Valores informados reaparecem na revisão; sexo/gênero não são inferidos. Telas sem transbordamento a 390 pixels.
-- FAQ (FAQ-01–05): os quatro tópicos legados navegam corretamente; conteúdo de carências não inventa prazo.
-- Cancelamento: motivo selecionado é preservado no reconhecimento; opção “Prefiro não informar” segue à revisão sem bloquear o fluxo.
-- Encerramento e privacidade: conversa termina sem autenticação, mas informa que contrato e pedidos não são alterados; lista de exclusão exibe somente CPF mascarado.
-- Inclusão: formulário → revisão → correção de nome pela conversa → nova revisão → processamento → resultado; nome corrigido preservado.
-- Aceite: inicia desmarcado; a confirmação permanece bloqueada até o aceite explícito.
-- Escopo: somente Telemedicina, Assistência Funeral (titular e dependentes) e Assistência Farmácia (descontos em redes credenciadas). Seguro Celular e os 18 estados de sinistro foram retirados.
-- Galeria: 281 telas disponíveis; alternância entre temas claro e escuro aplicada.
-- Arquivo único: os 281 estados também renderizados em `atlas-whatsapp.html`, servido localmente, sem exceções JavaScript.
-- Rascunho: nome e nascimento preservados ao fechar e reabrir formulário; data exibida corretamente na revisão.
-- Escolha de plano: Individual preservado na oferta e revisão, com preço ilustrativo correspondente.
-- Responsividade: todos os estados verificados em larguras de 320 e 390 pixels sem transbordamento horizontal. Layout desktop inspecionado a 1440 pixels.
-- Dados: uso somente de exemplos fictícios; arquivos não transmitidos; nenhuma API chamada pelo protótipo.
+- RED: `node docs/prototypes/whatsapp-experience/verify.mjs` falhou com `legacy group must not appear in the new prototype` antes de alterar catálogo e aplicação. Uma execução isolada da nova asserção OTP também falhou com `obsolete OTP authentication must not appear`.
+- RED comportamental: `node docs/prototypes/whatsapp-experience/auth-browser-test.js` falhou contra o atlas antigo porque `00000000000` permaneceu em IDE-08 em vez de liberar IDE-03.
+- GREEN: `node docs/prototypes/whatsapp-experience/verify.mjs` valida 24 jornadas / 247 telas, IDs únicos, todos os destinos, estrutura dos componentes, ausência de LEG e OTP e igualdade entre o catálogo-fonte e o catálogo embutido no standalone.
+- Navegador: `node docs/prototypes/whatsapp-experience/auth-browser-test.js` exercita formatos inválidos, qualquer CPF de 11 dígitos ou XXX.XXX.XXX-XX (inclusive sequências repetidas e sem checksum válido), retomada do pedido, links diretos, navegação para sucesso, galeria, expiração de 15 minutos e recarregamento.
+- GREEN no Chromium: 207 telas pessoais bloqueadas, 244 telas renderizadas sem exceções JavaScript; expiração, retomada, galeria e recarregamento passaram. A expressão regular do arquivo-fonte também foi executada isoladamente em Node: CPF com pontos/hífen e sem pontuação aceito; letras, espaços internos e tamanho incorreto rejeitados.
+- ESLint dos quatro arquivos JavaScript/MJS alterados e `node scripts/workboard-check.mjs` passaram.
+- `pnpm test` foi executado e **falhou** no chatbot: 589 testes passaram e três falharam. Em `src/domain/assistance-catalog.test.ts`, falharam “matches canonical IDs, content, modes, actions, and destinations with only the IDE exception” (catálogo gerado ainda contém textos/destinos antigos) e “keeps the canonical source stable and executable without importing browser globals in domain code” (expectativa antiga de 281 IDs). Em `src/e2e.test.ts`, “routes every canonical assistance ID to its expected runtime content and actions” falhou por divergência de destino em ENT-05. A sincronização do catálogo gerado e dessas expectativas exige alteração em apps/chatbot, fora do escopo autorizado desta entrega. As etapas seguintes da suíte geral não foram executadas após essa falha.
+- O CPF libera somente a sessão demonstrativa; não consulta cadastro, não identifica titular e não verifica identidade. IDE-02 foi reaproveitada como orientação de formato; IDE-06 renova o acesso por CPF; erro, expiração e divergência continuam disponíveis.
+- `node docs/prototypes/whatsapp-experience/export.mjs` regenera o arquivo único offline. O teste de navegador percorre 244 telas; os três estados que encerram a sessão são cobertos no fluxo de expiração ou ficam disponíveis para inspeção manual.
+- Limitação operacional: o sandbox bloqueou o servidor local e a escrita do gerador no worktree com EPERM; essas verificações foram executadas com permissão ampliada.
+- Nenhum arquivo fora de `docs/prototypes/whatsapp-experience` integra esta alteração. WORKBOARD e o relatório preexistente task-1-report permanecem intocados.
 
-As inspeções validam o comportamento demonstrativo e a integridade do catálogo. Não validam regras contratuais, fidelidade pixel a pixel ao aplicativo WhatsApp ou compatibilidade com uma versão específica de WhatsApp Flows. Esses itens dependem da validação do provedor e do produto antes do Figma final.
+## Evidências anteriores
+
+As inspeções registradas em 12/10/2026 cobriram layout desktop/mobile, inclusão de dependente em mensagem única, revisão/correção, FAQ, cancelamento, documentos, temas e responsividade. Elas antecedem esta revisão e não representam nova inspeção visual de todas as telas modificadas. As referências legadas dessas inspeções foram removidas do catálogo atual.
+
+O protótipo contém somente Telemedicina, Assistência Funeral e Assistência Farmácia. Dados, preços e protocolos são fictícios. As verificações não validam regras contratuais ou compatibilidade com uma versão específica de WhatsApp Flows.

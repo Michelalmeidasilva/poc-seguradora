@@ -1,14 +1,14 @@
 # Atlas da experiência no WhatsApp
 
-Protótipo HTML independente com **25 jornadas e 281 estados**, incluindo os **34 estados legados**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
+Protótipo HTML independente com **24 jornadas e 247 estados novos**. Abra `atlas-whatsapp.html` diretamente no navegador: é um arquivo único, sem instalação, rede ou backend. `index.html` é a versão de desenvolvimento, que usa os arquivos adjacentes. Para servir localmente: `python3 -m http.server 8765 --directory docs/prototypes/whatsapp-experience`.
 
 ## Autenticação obrigatória
 
-Nenhuma jornada pessoal abre sem autenticação: contratação, contrato, dependentes, pagamentos, documentos, solicitações e uso de assistências vinculadas. A regra cobre links diretos, catálogo, galeria e referências legadas. Conteúdo informativo público e orientação inicial permanecem livres.
+Nenhuma jornada pessoal abre sem autenticação: contratação, contrato, dependentes, pagamentos, documentos, solicitações e uso de assistências vinculadas. A regra cobre links diretos, catálogo e galeria. Conteúdo informativo público e orientação inicial permanecem livres.
 
-O CPF localiza o cadastro, mas não autentica sozinho. Use **529.982.247-25**, exclusivamente fictício, em `IDE-08`; depois confirme com o código demonstrativo **123456** em `IDE-02`. “Já tenho código” representa um cadastro previamente identificado. Navegar para a tela de sucesso não libera acesso. Após validar, o pedido original é retomado; a sessão demonstrativa dura 15 minutos e recarregar exige autenticação novamente.
+Qualquer CPF fictício com **11 dígitos** ou no formato **XXX.XXX.XXX-XX** é aceito em `IDE-08`. A validação confere somente o formato; não calcula dígitos verificadores, não consulta cadastro e não confirma identidade. Não há etapa de código. Navegar para a tela de sucesso não libera acesso. Após enviar o CPF, o pedido original é retomado; a sessão demonstrativa dura 15 minutos em memória e recarregar exige informar CPF novamente.
 
-Esta é uma simulação UX, não segurança real: dados e código estão no HTML. Em produção, validação, vínculo do código, envio por canal cadastrado, expiração, limite de tentativas e autorização de cada operação devem ser impostos no servidor. Nunca use dados reais aqui.
+Esta é uma simulação UX com dados fictícios no HTML. O CPF funciona como porta de entrada demonstrativa, sem autenticação real.
 
 ## Serviços fornecidos
 
@@ -26,7 +26,7 @@ Em `DES-01`, “Conhecer produtos disponíveis” apresenta Assistência Funeral
 
 A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. `DEP-34` pergunta explicitamente celular e sexo biológico, campos encontrados no legado; nunca infere sexo/gênero. A obrigatoriedade e as opções desses campos precisam de validação do produto. `DEP-06` reúne os dados para revisão.
 
-As lacunas cobertas do legado incluem ainda a central de dúvidas (`FAQ-01` a `FAQ-05`), motivos opcionais de cancelamento (`CAN-13`), encerramento de conversa separado de cancelamento (`FIM-01` e `FIM-02`), card do titular após autenticação e CPF mascarado na seleção de exclusão. A coleta nativa de contato do WhatsApp não foi reproduzida; nascimento do titular permanece substituído pela autenticação aprovada com CPF + código.
+As lacunas cobertas do legado incluem ainda a central de dúvidas (`FAQ-01` a `FAQ-05`), motivos opcionais de cancelamento (`CAN-13`), encerramento de conversa separado de cancelamento (`FIM-01` e `FIM-02`), acesso demonstrativo após CPF e CPF mascarado na seleção de exclusão. A coleta nativa de contato do WhatsApp não foi reproduzida; nascimento do titular permanece substituído pela entrada demonstrativa aprovada somente por CPF.
 
 ## Navegação
 
@@ -42,11 +42,11 @@ As lacunas cobertas do legado incluem ainda a central de dúvidas (`FAQ-01` a `F
 
 ## Limites do desenho
 
-O catálogo registra as decisões da conversa e os estados previstos, além de reconstruir os 34 estados do documento legado. Não é uma reprodução pixel a pixel do Figma original nem uma integração com a Meta. Flows são aproximações visuais e precisam ser ajustados aos componentes e versões suportados pelo provedor real.
+O catálogo registra as decisões da conversa e os estados previstos, sem reconstruir as telas antigas. Não é uma reprodução pixel a pixel do Figma original nem uma integração com a Meta. Flows são aproximações visuais e precisam ser ajustados aos componentes e versões suportados pelo provedor real.
 
 Todos os nomes, preços, datas, contratos e protocolos são fictícios. Não inserir dados pessoais reais. O exemplo familiar usa titular e até três dependentes somente para tornar a composição visual explícita; esse limite **não é uma regra validada**. Arquivos selecionados não são enviados, armazenados ou lidos; apenas o nome fica na memória da página. Recarregar apaga os dados demonstrativos.
 
-Canal de envio do código, duração real de sessão, preços, carências, limites, data de cancelamento, restituição, meios de pagamento e acesso aos prestadores ainda precisam ser validados. `CAD` e `PRE` são propostas para lacunas, não decisões aprovadas. Atendimento a interessados também é hipótese.
+Duração real de sessão, preços, carências, limites, data de cancelamento, restituição, meios de pagamento e acesso aos prestadores ainda precisam ser validados. `CAD` e `PRE` são propostas para lacunas, não decisões aprovadas. Atendimento a interessados também é hipótese.
 
 Os estados são cenários independentes para revisão, com condições ilustrativas em cada tela. Navegação pelo catálogo pode saltar etapas de preenchimento para inspeção, mas nunca a autenticação. Texto livre usa regras demonstrativas e não um LLM; não calcula elegibilidade nem executa operações. Documentos são exemplos sem validade contratual. Não há chamadas de rede ou telemetria.
 
@@ -67,4 +67,6 @@ Depois de alterar os arquivos-fonte, rode `node docs/prototypes/whatsapp-experie
 
 ## Verificação
 
-`node docs/prototypes/whatsapp-experience/verify.mjs` verifica IDs, destinos, estrutura de componentes e os 34 estados legados. A interface também deve ser inspecionada no navegador para verificar renderização, formulários e responsividade.
+`node docs/prototypes/whatsapp-experience/verify.mjs` verifica IDs, destinos, estrutura de componentes, ausência de telas legadas e ausência de autenticação por código. A interface também deve ser inspecionada no navegador para verificar renderização, formulários e responsividade.
+
+Execute `node docs/prototypes/whatsapp-experience/auth-browser-test.js` para testar no Chromium headless com Playwright instalado em `apps/web`. O script serve o atlas em uma porta local temporária e encerra navegador e servidor ao terminar. O comparativo histórico permanece independente e não é uma jornada navegável do atlas.
