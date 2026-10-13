@@ -11,6 +11,22 @@ import type {
   SecondCopy,
   ServiceFailure,
 } from '../domain/models';
+import type {
+  AddDependentCommand,
+  AssistanceBenefit,
+  AssistanceBilling,
+  AssistanceDocument,
+  AssistanceDependent,
+  AssistancePreferences,
+  AssistanceRequest,
+  AssistanceSessionSnapshot,
+  ChangeModalityCommand,
+  CreateAssistanceRequestCommand,
+  RegularizeBillingCommand,
+  RemoveDependentCommand,
+  UpdateDependentCommand,
+  UpdatePreferencesCommand,
+} from './assistance-service';
 
 export interface LlmProvider {
   /** Classifies a user message. Implementations must not throw for ordinary input. */
@@ -34,6 +50,75 @@ export interface ServicesPort {
   createQuote(request: QuoteRequest, ctx: CallContext): Outcome<Quote>;
   openClaim(request: ClaimRequest, ctx: CallContext): Outcome<ClaimOpened>;
   getClaim(protocolo: string, ctx: CallContext): Outcome<Claim>;
+}
+
+/** Expected outcomes from the demonstrative assistance adapter. */
+export type AssistanceFailure = 'not_found' | 'conflict' | 'invalid' | 'unavailable';
+
+type AssistanceOutcome<T> = Promise<Result<T, AssistanceFailure>>;
+
+/** Typed read/write contract for assistance journeys, separate from quote/policy/claim services. */
+export interface AssistancePort {
+  getSessionSnapshot(
+    sessionId: string,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceSessionSnapshot>;
+  listBenefits(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceBenefit[]>;
+  listDocuments(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceDocument[]>;
+  listDependents(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceDependent[]>;
+  addDependent(
+    sessionId: string,
+    command: AddDependentCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceDependent>;
+  updateDependent(
+    sessionId: string,
+    command: UpdateDependentCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceDependent>;
+  removeDependent(
+    sessionId: string,
+    command: RemoveDependentCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<void>;
+  changeModality(
+    sessionId: string,
+    command: ChangeModalityCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<void>;
+  renewAssistance(
+    sessionId: string,
+    command: { confirmed: true },
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
+  cancelAssistance(
+    sessionId: string,
+    command: { confirmed: true; reason: string },
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
+  getBilling(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceBilling>;
+  regularizeBilling(
+    sessionId: string,
+    command: RegularizeBillingCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceBilling>;
+  getPreferences(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistancePreferences>;
+  updatePreferences(
+    sessionId: string,
+    command: UpdatePreferencesCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistancePreferences>;
+  listRequests(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceRequest[]>;
+  createRequest(
+    sessionId: string,
+    command: CreateAssistanceRequestCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
+  getRequest(
+    sessionId: string,
+    requestId: string,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
 }
 
 export interface DialogStore {

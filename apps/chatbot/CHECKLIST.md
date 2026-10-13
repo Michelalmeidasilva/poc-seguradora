@@ -12,6 +12,12 @@
 
 - [x] Gate demonstrativo aceita somente 11 dígitos ASCII ou CPF com pontuação canônica, normaliza para 11 dígitos sem checksum/lookup, retorna passo e estado sincronizados, libera jornadas pessoais apenas após formato aceito e descarta a entrada bruta
 
+## Plano WhatsApp Assistance Experience — Task 4
+
+- [x] `AssistancePort` tipado e separado de `ServicesPort`, com leituras e comandos confirmados publicados para consumo da Task 5
+- [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas e retorno `Result` idempotente
+- [x] Composição manual injeta e expõe a porta de assistência; testes de isolamento, expiração, capacidade, idempotência, mutações, falhas e composição
+
 ## Estrutura
 
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
