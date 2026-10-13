@@ -103,6 +103,27 @@ test('reload restores the history without duplicating messages', async ({ page }
   await expect(page.getByText('oi', { exact: true })).toHaveCount(1);
 });
 
+test('keeps a CPF canary visible only in the active turn, not persisted chat history', async ({ page }) => {
+  const canary = '987.654.321-00';
+  await say(page, `Meu CPF é ${canary}`);
+  await expect(page.getByRole('group', { name: 'Sua mensagem' }).getByText(`Meu CPF é ${canary}`)).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(sessionStorage)
+      .map((key) => sessionStorage.getItem(key) ?? '')
+      .join('\n')))
+    .toContain('***.***.***-00');
+
+  const persisted = await page.evaluate(() => Object.keys(sessionStorage)
+    .map((key) => sessionStorage.getItem(key) ?? '')
+    .join('\n'));
+  expect(persisted).not.toContain(canary);
+  expect(persisted).not.toContain('98765432100');
+
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Sua mensagem' }).getByText('Meu CPF é ***.***.***-00')).toBeVisible();
+  await expect(page.getByText(canary, { exact: false })).toHaveCount(0);
+});
+
 test('reconnects after the stream drops and receives later events without duplicates', async ({
   page,
 }) => {

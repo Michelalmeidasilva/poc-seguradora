@@ -206,6 +206,8 @@ function reply(session, event) {
     } else if (said === 'sessao') {
       session.valid = false;
       publish(session, text('Sessão invalidada.'));
+    } else if (event.type === 'user.text' && /(?:\b\d{11}\b|\b\d{3}\.\d{3}\.\d{3}-\d{2}\b)/.test(event.payload.text)) {
+      publish(session, text('Recebi sua mensagem. Vamos continuar com segurança.'));
     } else {
       publish(
         session,

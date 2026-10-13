@@ -79,6 +79,12 @@
 - [x] Composer demonstrativo oferece somente quatro cenários de áudio locais; nenhum caminho de gravação, microfone, upload ou requisição de mídia na tela do chat
 - [x] E2E cobre os quatro IDs e respostas determinísticas, sem chamada a API de mídia
 
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [x] Playwright verifica CPF-canário visível somente no turno ativo, mascarado no `sessionStorage` e restaurado já mascarado
+- [x] Gateway simulado não ecoa mensagens com CPF; E2E confirma que o canário não aparece no histórico persistido nem após recarga
+- [x] Suíte Playwright completa executada com Chromium
+
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 
 O que existe (verificado localmente, nada aplicado no GCP):

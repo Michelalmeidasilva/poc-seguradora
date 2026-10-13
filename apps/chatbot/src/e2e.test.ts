@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Intent } from './domain/dialog';
+import { assistanceCatalog } from './domain/assistance-catalog';
 import { GuardedLlmProvider } from './infra/guarded-llm-provider';
+import { MockAssistance } from './infra/mock-assistance';
+import { runAssistanceTurn } from './application/assistance-turn';
+import { nextAssistanceState } from './domain/assistance-journey';
 import {
   choiceReq,
   findEvent,
@@ -20,10 +24,108 @@ import {
 
 let bot: RunningChatbot;
 afterEach(async () => {
-  await bot.close();
+  await bot?.close();
 });
 
 describe('chatbot end to end (fake internal services)', () => {
+  it('routes every canonical assistance ID to its expected runtime content and actions', async () => {
+    const port = new MockAssistance({ capacity: 8, ttlMs: 60_000 });
+    const missing: string[] = [];
+    const unknown: string[] = [];
+
+    for (const step of assistanceCatalog.steps) {
+      const transition = nextAssistanceState(
+        { journeyId: '', screenId: '', gateApproved: true },
+        { type: 'open', target: step.id },
+      );
+      if (!assistanceCatalog.byId[transition.step.id] || transition.state.screenId !== step.id) unknown.push(step.id);
+      if (step.journeyId !== 'IDE' && transition.step.bot !== step.bot) missing.push(`${step.id}: catalog content`);
+      if (transition.step.actions.map((action) => action.target).join('|') !== step.actions.map((action) => action.target).join('|')) {
+        missing.push(`${step.id}: action metadata`);
+      }
+      const result = await runAssistanceTurn(
+        { type: 'open', target: step.id },
+        {
+          port,
+          sessionId: 'catalog-coverage',
+          context: { correlationId: `catalog-${step.id}`, idempotencyKey: `catalog-${step.id}` },
+          state: { journeyId: '', screenId: '', gateApproved: true },
+        },
+      );
+      if (!result.ok || result.value.state.screenId !== step.id) {
+        missing.push(step.id);
+        continue;
+      }
+
+      if (step.mode === 'document') {
+        if (!result.value.replies.some((reply) => reply.type === 'message.document')) missing.push(`${step.id}: document`);
+      } else if (step.mode === 'chat' || step.mode === 'audio') {
+        if (!result.value.replies.some((reply) => reply.type === 'message.text')) missing.push(`${step.id}: content`);
+      } else if (!result.value.replies.some((reply) =>
+        reply.type === 'message.flow' && reply.payload.flowId === step.id && reply.payload.body === transition.step.bot,
+      )) {
+        missing.push(`${step.id}: flow content`);
+      }
+      for (const action of step.actions) {
+        if (step.mode === 'document') continue;
+        if (!result.value.replies.some((reply) =>
+          reply.type === 'message.quick_replies' &&
+          reply.payload.options.some((option) =>
+            option.id === action.target &&
+            (step.journeyId === 'IDE' || option.title === action.label),
+          ),
+        )) missing.push(`${step.id}: action ${action.target}`);
+      }
+    }
+
+    expect({
+      groups: assistanceCatalog.groups.length,
+      ids: assistanceCatalog.ids.length,
+      uniqueIds: new Set(assistanceCatalog.ids).size,
+    }).toEqual({ groups: 24, ids: 247, uniqueIds: 247 });
+    expect(unknown, `unknown runtime targets: ${unknown.join(', ')}`).toEqual([]);
+    expect(missing, `unreachable or mismatched IDs: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('serves public assistance and validates a private CPF gate over the HTTP API', async () => {
+    bot = await startChatbot();
+
+    for (const [choice, session, product] of [
+      ['0', 'public-funeral', 'Assistência Funeral'],
+      ['1', 'public-pharmacy', 'Assistência Farmácia'],
+      ['2', 'public-telemedicine', 'Telemedicina'],
+    ] as const) {
+      const publicStart = await turn(bot.url, textReq('O que vocês oferecem?', { session }));
+      expect(findEvent(publicStart.events, 'message.flow').payload.flowId).toBe('DES-01');
+      const publicChoice = await turn(
+        bot.url,
+        flowSubmitReq({ choice }, { session, flowId: 'DES-01' }),
+      );
+      expect(textsOf(publicChoice.events)).toContain(product);
+    }
+
+    const privateStart = await turn(bot.url, textReq('Quero ver meu contrato.', { session: 'private' }));
+    expect(findEvent(privateStart.events, 'message.flow').payload.flowId).toBe('IDE-01');
+    const cpfForm = await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
+    expect(findEvent(cpfForm.events, 'message.flow').payload.flowId).toBe('IDE-08');
+    const malformed = await turn(
+      bot.url,
+      flowSubmitReq({ cpf: '12345' }, { session: 'private', flowId: 'IDE-08' }),
+    );
+    expect(textsOf(malformed.events)).toContain('11 dígitos');
+    await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
+    const accepted = await turn(
+      bot.url,
+      flowSubmitReq({ cpf: '52998224725' }, { session: 'private', flowId: 'IDE-08' }),
+    );
+    expect(findEvent(accepted.events, 'message.flow').payload.flowId).toBe('CON-01');
+    expect(JSON.stringify([privateStart.events, cpfForm.events, malformed.events, accepted.events]))
+      .not.toContain('52998224725');
+    expect(bot.fake.requests.filter((request) =>
+      ['/v1/cotacoes', '/v1/apolices', '/v1/sinistros'].includes(request.path),
+    )).toEqual([]);
+  });
+
   it('answers a greeting with typing indicators, text and the main menu', async () => {
     bot = await startChatbot();
     const r = await turn(bot.url, textReq('oi'));

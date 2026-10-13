@@ -34,6 +34,12 @@
 - [x] Escolha de lista validada por índice e destino canônico; correção de revisão retorna sem mutação e preserva os dados anteriores; placeholder de seleção rejeitado; mutação terminal é executada uma única vez
 - [x] Quatro IDs de áudio do catálogo continuam sendo os únicos cenários aceitos pelo chatbot
 
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [x] E2E de runtime percorre 24 grupos e 247 IDs únicos; valida destino runtime, modalidade/conteúdo servido e ações sem imprimir dados do usuário
+- [x] E2E HTTP em `/v1/chat/events` cobre os três produtos públicos, bloqueio de CPF malformado, retry e CPF aceito somente por formato; respostas não incluem o CPF e não chamam rotas fake de cotação/apólice/sinistro
+- [x] Smoke Compose da pilha web → gateway → chatbot → fake-services: 7/7 passos, incluindo replay
+
 ## Estrutura
 
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)
