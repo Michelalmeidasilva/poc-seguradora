@@ -1,6 +1,12 @@
 # Checklist: chatbot
 
-Última atualização: 2026-10-11
+Última atualização: 2026-10-12
+
+## Plano WhatsApp Assistance Experience — Task 2
+
+- [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE` e teste de deriva por execução do IIFE canônico
+- [x] Transições puras das jornadas com gate CPF, descoberta pública, quick replies válidos/obsoletos, destinos inválidos e sem guardar CPF inicial
+- [x] Parser de dependente limitado a nome, CPF, nascimento e parentesco explicitamente informados; correção preserva os outros campos e não infere sexo/gênero
 
 ## Estrutura
 

@@ -1,0 +1,84 @@
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import { describe, expect, it } from 'vitest';
+import { assistanceCatalog } from './assistance-catalog';
+
+const source = readFileSync(
+  new URL('../../../../docs/prototypes/whatsapp-experience/catalog.js', import.meta.url),
+  'utf8',
+);
+const canonicalWindow: { EXPERIENCE?: { groups: unknown[]; index: Record<string, unknown> } } = {};
+runInNewContext(source, { window: canonicalWindow });
+const canonical = canonicalWindow.EXPERIENCE!;
+
+describe('assistance journey catalog', () => {
+  it('contains the 24 functional groups and 247 unique executable IDs', () => {
+    expect(assistanceCatalog.groups).toHaveLength(24);
+    expect(assistanceCatalog.ids).toHaveLength(247);
+    expect(new Set(assistanceCatalog.ids).size).toBe(247);
+    expect(assistanceCatalog.ids.some((id) => id.startsWith('LEG-'))).toBe(false);
+  });
+
+  it('matches canonical IDs, content, modes, actions, and destinations with only the IDE exception', () => {
+    const expected = Object.values(canonical.index).filter(
+      (step) => !(step as { id: string }).id.startsWith('LEG-'),
+    );
+    expect(assistanceCatalog.steps).toHaveLength(247);
+    for (const original of expected as Array<Record<string, unknown>>) {
+      const actual = assistanceCatalog.byId[String(original.id)];
+      expect(actual, `missing ${String(original.id)}`).toBeDefined();
+      if (!actual) throw new Error(`missing ${String(original.id)}`);
+      if (String(original.id).startsWith('IDE-')) {
+        expect(actual.journeyId).toBe('IDE');
+        expect(actual.bot).not.toMatch(/c[oó]digo|otp|identidade verificada/i);
+        expect(actual.destinations).not.toContain('IDE-09');
+        const sourceActions = (original.actions as Array<{ label: string; target: string }>).map((action) => ({
+          ...action,
+          target: action.target === 'IDE-01' || action.target === 'IDE-02' ? 'IDE-08' : action.target,
+        }));
+        expect(actual.actions).toEqual(sourceActions);
+        if (original.id === 'IDE-08') {
+          expect((actual.flow as { fields: Array<{ name: string }> }).fields.map((field) => field.name)).toEqual(['cpf']);
+        }
+      } else {
+        expect({
+          id: actual.id, journeyId: actual.journeyId, title: actual.title,
+          user: actual.user, bot: actual.bot, mode: actual.mode,
+          requiresAuth: actual.requiresAuth, actions: actual.actions,
+          ...(actual.flow === undefined ? {} : { flow: actual.flow }),
+        }).toEqual({
+          id: original.id, journeyId: original.journey, title: original.title,
+          user: original.user, bot: original.bot, mode: original.mode,
+          requiresAuth: original.requiresAuth, actions: original.actions,
+          ...(original.flow === undefined ? {} : { flow: original.flow }),
+        });
+      }
+    }
+  });
+
+  it('has valid non-LEG destinations and no more than three screen actions', () => {
+    for (const step of assistanceCatalog.steps) {
+      expect(step.actions.length).toBeLessThanOrEqual(3);
+      for (const target of step.destinations) {
+        expect(target.startsWith('LEG-')).toBe(false);
+        expect(assistanceCatalog.byId[target], `${step.id} -> ${target}`).toBeDefined();
+      }
+    }
+  });
+
+  it('limits public product discovery to telemedicine, funeral, and pharmacy', () => {
+    const publicText = assistanceCatalog.steps
+      .filter((step) => !step.requiresAuth && ['DES', 'FAQ', 'UTI', 'FUN'].includes(step.journeyId))
+      .map((step) => `${step.user ?? ''} ${step.bot}`)
+      .join(' ')
+      .toLocaleLowerCase('pt-BR');
+    expect(publicText).toContain('telemedicina');
+    expect(publicText).toContain('farmácia');
+    expect(publicText).toContain('funeral');
+    expect(publicText).not.toMatch(/seguro auto|seguro residencial|seguro de vida/);
+  });
+
+  it('keeps the canonical source stable and executable without importing browser globals in domain code', () => {
+    expect(Object.keys(canonical.index)).toHaveLength(281);
+  });
+});
