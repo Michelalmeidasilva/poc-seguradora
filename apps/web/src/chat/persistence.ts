@@ -25,6 +25,25 @@ function withoutFlowData(item: UserItem): UserItem {
   return { ...item, content: { type: 'flow_submit', flowId, summary } };
 }
 
+/** Preserve punctuation and the last two digits of recognized CPF values. */
+function maskCpf(text: string): string {
+  return text.replace(
+    /(?<!\d)(?:\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})(?!\d)/g,
+    (cpf) => cpf.slice(0, -2).replace(/\d/g, '*') + cpf.slice(-2),
+  );
+}
+
+/** Mask copied user text, including Flow summaries; leave the active item untouched. */
+function withoutRawCpf(item: UserItem): UserItem {
+  if (item.content?.type === 'text') {
+    return { ...item, content: { ...item.content, text: maskCpf(item.content.text) } };
+  }
+  if (item.content?.type === 'flow_submit') {
+    return { ...item, content: { ...item.content, summary: maskCpf(item.content.summary) } };
+  }
+  return item;
+}
+
 /** A draft may live in the current tab's reducer state, never in replayable storage/history. */
 function expireDraftFlow(item: BotItem): BotItem {
   if (item.event.type !== 'message.flow') return item;
@@ -64,7 +83,7 @@ function toStorable(item: ChatItem): ChatItem {
     delete voice.objectUrl;
     return { ...item, status, content: voice };
   }
-  return { ...withoutFlowData(item), status };
+  return { ...withoutRawCpf(withoutFlowData(item)), status };
 }
 
 function writeChat(storage: Storage, state: ChatState): boolean {
@@ -113,7 +132,7 @@ export function loadChat(storage: Storage): ChatState | undefined {
     return undefined;
   }
   const items = (s.items.slice(-MAX_ITEMS) as ChatItem[]).map((i) =>
-    i.kind === 'user' ? withoutFlowData(i) : i.kind === 'bot' ? expireDraftFlow(i) : i,
+    i.kind === 'user' ? withoutRawCpf(withoutFlowData(i)) : i.kind === 'bot' ? expireDraftFlow(i) : i,
   );
   const seen: Record<string, true> = {};
   for (const item of items) if (item.kind === 'bot') seen[item.id] = true;

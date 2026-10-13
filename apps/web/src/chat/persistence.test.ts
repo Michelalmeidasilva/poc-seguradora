@@ -17,6 +17,49 @@ const sample = (): ChatState => {
 };
 
 describe('persistence', () => {
+  const userText = (text: string): UserItem => ({
+    kind: 'user', id: uuid(99), ts: '2026-10-10T12:00:00.000Z',
+    status: 'sent', content: { type: 'text', text },
+  });
+
+  it.each([
+    ['Meu CPF é 98765432100.', 'Meu CPF é *********00.'],
+    ['CPF 987.654.321-00; confirme.', 'CPF ***.***.***-00; confirme.'],
+    ['Sem documento nesta mensagem.', 'Sem documento nesta mensagem.'],
+    ['Protocolo 123456789012 não é CPF.', 'Protocolo 123456789012 não é CPF.'],
+  ])('persists user text with recognized CPF masked: %s', (text, expected) => {
+    const live = chatReducer(sample(), { type: 'user_queued', item: userText(text) });
+    saveChat(sessionStorage, live);
+    expect(live.items.at(-1)).toMatchObject({ content: { text } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content.text).toBe(expected);
+    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ content: { text: expected } });
+  });
+
+  it('sanitizes old user text and rewrites storage before returning the restored state', () => {
+    const text = 'CPF 98765432100 e 123.456.789-01';
+    sessionStorage.setItem(KEY, JSON.stringify({
+      v: 1, sessionId: 's9', lastSeq: 0, items: [userText(text)],
+    }));
+    const loaded = loadChat(sessionStorage);
+    const expected = 'CPF *********00 e ***.***.***-01';
+    expect(loaded?.items[0]).toMatchObject({ content: { text: expected } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content.text).toBe(expected);
+    expect(sessionStorage.getItem(KEY)).not.toContain('98765432100');
+  });
+
+  it('does not expose old CPF text if the storage rewrite fails', () => {
+    sessionStorage.setItem(KEY, JSON.stringify({
+      v: 1, sessionId: 's9', lastSeq: 0, items: [userText('CPF 98765432100')],
+    }));
+    const broken = {
+      getItem: (key: string) => sessionStorage.getItem(key),
+      setItem: () => { throw new Error('QuotaExceededError'); },
+      removeItem: (key: string) => sessionStorage.removeItem(key),
+    } as unknown as Storage;
+    expect(loadChat(broken)).toBeUndefined();
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+
   const catalogSteps = catalog.groups.flatMap((group) =>
     group.steps.map(({ id, mode }) => ({ id, mode })),
   );
@@ -156,6 +199,32 @@ describe('persistence', () => {
       flowId: 'f',
       summary: 'ok',
     });
+    expect(sessionStorage.getItem(KEY)).not.toContain('"data"');
+  });
+
+  it('masks CPF in a flow summary and removes old payload data on save and load', () => {
+    const summary = 'CPF 987.654.321-00 confirmado';
+    const expected = 'CPF ***.***.***-00 confirmado';
+    const legacy = {
+      kind: 'user', id: uuid(30), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
+      content: { type: 'flow_submit', flowId: 'cotacao', summary, data: { cpf: '12345678901' } },
+    } as unknown as UserItem;
+    const live = chatReducer(sample(), { type: 'user_queued', item: legacy });
+    saveChat(sessionStorage, live);
+    expect(live.items.at(-1)).toMatchObject({ content: { summary } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content).toEqual({
+      type: 'flow_submit', flowId: 'cotacao', summary: expected,
+    });
+
+    sessionStorage.setItem(KEY, JSON.stringify({
+      v: 1, sessionId: 's9', lastSeq: 0, items: [legacy],
+    }));
+    expect(loadChat(sessionStorage)?.items[0]).toMatchObject({ content: { summary: expected } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content).toEqual({
+      type: 'flow_submit', flowId: 'cotacao', summary: expected,
+    });
+    expect(sessionStorage.getItem(KEY)).not.toContain('987.654.321-00');
+    expect(sessionStorage.getItem(KEY)).not.toContain('12345678901');
   });
 
   it.each(['DEP-06', 'external-review'])('does not persist volatile Flow initialData for %s', (flowId) => {

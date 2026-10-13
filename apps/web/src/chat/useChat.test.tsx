@@ -61,6 +61,22 @@ const activeGuard = () => ({
 });
 
 describe('useChat', () => {
+  it('keeps the raw CPF in the active bubble while debounce persists only a mask', async () => {
+    const f = fakeClient();
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+    await act(async () => {});
+    const text = 'Meu CPF é 98765432100';
+    act(() => result.current.sendText(text));
+    expect(result.current.state.items[0]).toMatchObject({ content: { text } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(result.current.state.items[0]).toMatchObject({ content: { text } });
+    const stored = sessionStorage.getItem('seguradora-chat:v1') ?? '';
+    expect(stored).not.toContain('98765432100');
+    expect(JSON.parse(stored).items[0].content.text).toBe('Meu CPF é *********00');
+  });
+
   it.each([
     ['AUD-01', 'complete'], ['AUD-03', 'partial'], ['AUD-04', 'failure'], ['AUD-05', 'complete'],
   ] as const)('sends local fixture %s with predictable %s outcome and no media or network API', async (id, outcome) => {

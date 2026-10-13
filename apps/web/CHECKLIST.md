@@ -41,6 +41,7 @@
 - [x] Task 7 round 1: revisão com valores seguros, correção pré-preenchida, CPF mascarado e dados iniciais ausentes de saves/loads persistidos
 - [x] Task 7 round 2: load regrava a sessão saneada antes de retornar; Flows dependentes do draft viram mensagem de expiração sem CTA na persistência, preservando o Flow ativo em memória
 - [x] Task 7 rounds 3–4: snapshots legados dos 15 reviews do catálogo, com uma tela terminal `REVIEW` e sem `initialData`, expiram para texto seguro sem CTA no save/load; IDs sincronizados por teste com o catálogo canônico; Flow externo equivalente permanece acionável e Flow ativo segue interativo. Com `initialData`, qualquer ID expira; falha de regravação impede restauração insegura.
+- [x] Task 8: CPF reconhecido em texto do usuário e resumo de Flow é mascarado só nas cópias persistidas; o estado ativo mantém o original. Saves legados são saneados e regravados antes da restauração; payload de `flow_submit` continua ausente do histórico.
 
 ### Decisões próprias (Plano 5)
 
