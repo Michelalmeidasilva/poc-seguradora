@@ -3,6 +3,8 @@ import { z } from 'zod';
 import type { CallContext, Clock, AssistanceFailure, AssistancePort } from '../application/ports';
 import type {
   AddDependentCommand,
+  AssistanceAddress,
+  AssistanceAddressCommand,
   AssistanceBenefit,
   AssistanceBilling,
   AssistanceDocument,
@@ -11,6 +13,7 @@ import type {
   AssistanceRequest,
   AssistanceRequestKind,
   AssistanceSessionSnapshot,
+  FuneralAssistanceCommand,
   ChangeModalityCommand,
   CreateAssistanceRequestCommand,
   RegularizeBillingCommand,
@@ -35,6 +38,8 @@ export type AssistanceOperation =
   | 'removeDependent'
   | 'changeModality'
   | 'renewAssistance'
+  | 'updateAddress'
+  | 'requestFuneralAssistance'
   | 'cancelAssistance'
   | 'regularizeBilling'
   | 'updatePreferences'
@@ -47,6 +52,8 @@ interface SessionState {
   documents: AssistanceDocument[];
   billing: AssistanceBilling;
   preferences: AssistancePreferences;
+  currentAddress: AssistanceAddress;
+  pendingAddressUpdate?: AssistanceAddress;
   requests: AssistanceRequest[];
   dependentSequence: number;
   requestSequence: number;
@@ -67,8 +74,8 @@ const dependentInput = z
     cpf: z.string().regex(/^\d{11}$/),
     birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     relationship: z.string().trim().min(1).max(40),
-    phone: z.string().trim().min(1).max(30).optional(),
-    biologicalSex: z.enum(['female', 'male', 'not_informed']).optional(),
+    phone: z.string().trim().min(1).max(30),
+    biologicalSex: z.enum(['female', 'male', 'not_informed']),
   })
   .strict();
 
@@ -77,8 +84,23 @@ const preferencesSchema = z
     contactChannel: z.enum(['whatsapp', 'email']),
     email: z.string().email().max(254),
     paperless: z.boolean(),
+    optionalDocs: z.boolean(),
+    optionalBenefits: z.boolean(),
   })
   .strict();
+
+const addressCommandSchema = z.object({
+  confirmed: z.literal(true),
+  postal: z.string().regex(/^\d{5}-?\d{3}$/),
+  address: z.string().trim().min(1).max(200),
+  city: z.string().trim().min(1).max(100),
+}).strict();
+
+const funeralCommandSchema = z.object({
+  confirmed: z.literal(true),
+  city: z.string().trim().min(1).max(100),
+  state: z.string().trim().min(2).max(50),
+}).strict();
 
 const fail = (reason: AssistanceFailure) => err<AssistanceFailure>(reason);
 
@@ -115,7 +137,8 @@ const baseFixture = (): SessionState => ({
     reference: 'REF-DEMO-001',
     message: 'Informação demonstrativa; nenhuma cobrança foi realizada.',
   },
-  preferences: { contactChannel: 'whatsapp', email: 'cliente@example.test', paperless: true },
+  preferences: { contactChannel: 'whatsapp', email: 'cliente@example.test', paperless: true, optionalDocs: true, optionalBenefits: false },
+  currentAddress: { postal: '01000-000', address: 'Rua Demonstrativa, 100', city: 'São Paulo/SP' },
   requests: [],
   dependentSequence: 0,
   requestSequence: 0,
@@ -129,6 +152,8 @@ const sessionSnapshot = (state: SessionState): AssistanceSessionSnapshot => ({
   documents: state.documents,
   billing: state.billing,
   preferences: state.preferences,
+  currentAddress: state.currentAddress,
+  ...(state.pendingAddressUpdate ? { pendingAddressUpdate: state.pendingAddressUpdate } : {}),
   requests: state.requests,
 });
 
@@ -223,6 +248,24 @@ export class MockAssistance implements AssistancePort {
     });
   }
 
+  async updateAddress(sessionId: string, command: AssistanceAddressCommand, ctx: CallContext) {
+    const parsed = addressCommandSchema.safeParse(command);
+    if (!parsed.success) return fail('invalid');
+    return this.mutate(sessionId, ctx, 'updateAddress', (state) => {
+      const { postal, address, city } = parsed.data;
+      state.pendingAddressUpdate = { postal, address, city };
+      return ok(structuredClone(this.addRequest(state, 'address_update', 'Solicitação demonstrativa de atualização cadastral recebida para verificação.')));
+    });
+  }
+
+  async requestFuneralAssistance(sessionId: string, command: FuneralAssistanceCommand, ctx: CallContext) {
+    const parsed = funeralCommandSchema.safeParse(command);
+    if (!parsed.success) return fail('invalid');
+    return this.mutate(sessionId, ctx, 'requestFuneralAssistance', (state) =>
+      ok(structuredClone(this.addRequest(state, 'funeral_assistance', 'Solicitação demonstrativa de assistência funeral recebida.'))),
+    );
+  }
+
   async cancelAssistance(
     sessionId: string,
     command: { confirmed: true; reason: string },
@@ -290,6 +333,8 @@ export class MockAssistance implements AssistancePort {
       'cancellation',
       'billing_regularization',
       'document',
+      'address_update',
+      'funeral_assistance',
       'human_handoff',
     ];
     if (!kinds.includes(command.kind)) return fail('invalid');

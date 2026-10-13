@@ -1,6 +1,6 @@
 # Checklist: chatbot
 
-Última atualização: 2026-10-12
+Última atualização: 2026-10-13
 
 ## Plano WhatsApp Assistance Experience — Task 2
 
@@ -17,6 +17,16 @@
 - [x] `AssistancePort` tipado e separado de `ServicesPort`, com leituras e comandos confirmados publicados para consumo da Task 5
 - [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas, `Result` idempotente e cache FIFO limitada a 256 chaves por sessão
 - [x] Composição manual injeta e expõe a porta de assistência; testes de isolamento, expiração, capacidade, idempotência, mutações, falhas e composição
+
+## Plano WhatsApp Assistance Experience — Task 5
+
+- [x] Orquestração das jornadas catalogadas para texto, quick reply, Flow, áudio de fixture e abertura, preservando o diálogo legado e o tratamento silencioso de `flow_data_exchange`
+- [x] Validação estrita de Flow, tela atual e destinos canônicos; mutações somente no envio confirmado da revisão e falhas mantêm a tela atual
+- [x] Gate CPF persiste apenas `{journeyId, screenId, gateApproved}`, retoma o destino pessoal após aprovação e bloqueia leitura/escrita em qualquer tela protegida sem gate
+- [x] Operações tipadas dedicadas para endereço (estado atual + solicitação pendente de verificação), assistência funeral e preferências opcionais; telefone e sexo biológico obrigatórios no dependente
+- [x] Documentos limitados a `CON-07`, `UTI-09` e `CAN-08`; áudio restrito a IDs determinísticos do catálogo, sem transcrição ou upload
+- [x] Regressões de sessão, idempotência, leitura após escrita, falha sem transição de sucesso, validação, autorização e compatibilidade com o legado
+- [x] Verificação final: 575 testes do chatbot, typecheck, build, dependency-cruiser, ESLint dos arquivos alterados e `git diff --check`
 
 ## Estrutura
 

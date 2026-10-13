@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import pino from 'pino';
 import { HandleTurn } from './application/handle-turn';
+import { InMemoryAssistanceStateStore } from './application/assistance-turn';
 import type {
   AssistancePort,
   Clock,
@@ -63,6 +64,11 @@ export async function createChatbot(
       ttlMs: config.SESSION_TTL_SECONDS * 1000,
       now,
     });
+  const assistanceStates = new InMemoryAssistanceStateStore(
+    config.SESSION_CAPACITY,
+    config.SESSION_TTL_SECONDS * 1000,
+    now,
+  );
 
   const policy = () =>
     createServicePolicy({
@@ -102,6 +108,8 @@ export async function createChatbot(
     newId,
     now,
     logger,
+    assistance,
+    assistanceStates,
   });
 
   const app = await buildApp({ turns, logger, shutdownGraceMs: config.SHUTDOWN_GRACE_MS });

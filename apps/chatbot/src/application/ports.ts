@@ -15,11 +15,13 @@ import type {
   AddDependentCommand,
   AssistanceBenefit,
   AssistanceBilling,
+  AssistanceAddressCommand,
   AssistanceDocument,
   AssistanceDependent,
   AssistancePreferences,
   AssistanceRequest,
   AssistanceSessionSnapshot,
+  FuneralAssistanceCommand,
   ChangeModalityCommand,
   CreateAssistanceRequestCommand,
   RegularizeBillingCommand,
@@ -89,6 +91,16 @@ export interface AssistancePort {
   renewAssistance(
     sessionId: string,
     command: { confirmed: true },
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
+  updateAddress(
+    sessionId: string,
+    command: AssistanceAddressCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceRequest>;
+  requestFuneralAssistance(
+    sessionId: string,
+    command: FuneralAssistanceCommand,
     ctx: CallContext,
   ): AssistanceOutcome<AssistanceRequest>;
   cancelAssistance(

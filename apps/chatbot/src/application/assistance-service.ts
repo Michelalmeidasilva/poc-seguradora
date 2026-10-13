@@ -14,8 +14,8 @@ export interface AssistanceDependent {
   cpf: string;
   birthDate: string;
   relationship: string;
-  phone?: string;
-  biologicalSex?: 'female' | 'male' | 'not_informed';
+  phone: string;
+  biologicalSex: 'female' | 'male' | 'not_informed';
 }
 
 export interface AssistanceBenefit {
@@ -31,6 +31,12 @@ export interface AssistanceDocument {
   status: 'available' | 'generating';
 }
 
+export interface AssistanceAddress {
+  postal: string;
+  address: string;
+  city: string;
+}
+
 export interface AssistanceBilling {
   status: 'demonstrative' | 'pending';
   reference: string;
@@ -41,6 +47,8 @@ export interface AssistancePreferences {
   contactChannel: 'whatsapp' | 'email';
   email: string;
   paperless: boolean;
+  optionalDocs: boolean;
+  optionalBenefits: boolean;
 }
 
 export type AssistanceRequestKind =
@@ -49,6 +57,8 @@ export type AssistanceRequestKind =
   | 'cancellation'
   | 'billing_regularization'
   | 'document'
+  | 'address_update'
+  | 'funeral_assistance'
   | 'human_handoff';
 export type AssistanceRequestStatus = 'received' | 'processing' | 'completed';
 
@@ -67,6 +77,8 @@ export interface AssistanceSessionSnapshot {
   documents: AssistanceDocument[];
   billing: AssistanceBilling;
   preferences: AssistancePreferences;
+  currentAddress: AssistanceAddress;
+  pendingAddressUpdate?: AssistanceAddress;
   requests: AssistanceRequest[];
 }
 
@@ -90,6 +102,17 @@ export interface RemoveDependentCommand extends ConfirmedAssistanceCommand {
 
 export interface ChangeModalityCommand extends ConfirmedAssistanceCommand {
   modality: AssistanceModality;
+}
+
+export interface AssistanceAddressCommand extends ConfirmedAssistanceCommand {
+  postal: string;
+  address: string;
+  city: string;
+}
+
+export interface FuneralAssistanceCommand extends ConfirmedAssistanceCommand {
+  city: string;
+  state: string;
 }
 
 export interface RegularizeBillingCommand extends ConfirmedAssistanceCommand {
