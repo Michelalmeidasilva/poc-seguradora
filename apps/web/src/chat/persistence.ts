@@ -3,6 +3,12 @@ import { MAX_ITEMS, initialState, type BotItem, type ChatItem, type ChatState, t
 const KEY = 'seguradora-chat:v1';
 const KEEP = 200;
 const EXPIRED_FLOW_TEXT = 'Este formulário expirou ao recarregar. Reabra a etapa para continuar.';
+// Legacy generated catalog reviews depended on a volatile draft. Keep this local;
+// persistence tests check membership against the canonical catalog without a runtime dependency.
+const CATALOG_REVIEW_IDS = new Set([
+  'IDE-06', 'ADE-06', 'ADE-07', 'PAG-04', 'DEP-06', 'DEP-17', 'DEP-21',
+  'EXC-03', 'PLA-06', 'CAD-03', 'FUN-06', 'COB-05', 'CAN-05', 'REN-02', 'REN-03',
+]);
 
 interface Stored {
   v: 1;
@@ -22,9 +28,10 @@ function withoutFlowData(item: UserItem): UserItem {
 /** A draft may live in the current tab's reducer state, never in replayable storage/history. */
 function expireDraftFlow(item: BotItem): BotItem {
   if (item.event.type !== 'message.flow') return item;
-  const { initialData, flowJson } = item.event.payload;
+  const { initialData, flowJson, flowId } = item.event.payload;
   const screens = (flowJson as { screens?: unknown[] } | undefined)?.screens;
   const legacyTerminalReview =
+    CATALOG_REVIEW_IDS.has(flowId) &&
     Array.isArray(screens) &&
     screens.length === 1 &&
     typeof screens[0] === 'object' &&

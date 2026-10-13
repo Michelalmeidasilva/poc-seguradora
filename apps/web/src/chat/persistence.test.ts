@@ -3,6 +3,7 @@ import { botText, uuid } from '../test/fixtures';
 import { initialState, type ChatState, type UserItem } from './model';
 import { loadChat, saveChat } from './persistence';
 import { chatReducer } from './reducer';
+import catalog from '../../../chatbot/src/domain/assistance-catalog.generated.json';
 
 const KEY = 'seguradora-chat:v1';
 beforeEach(() => sessionStorage.clear());
@@ -16,6 +17,57 @@ const sample = (): ChatState => {
 };
 
 describe('persistence', () => {
+  const catalogSteps = catalog.groups.flatMap((group) =>
+    group.steps.map(({ id, mode }) => ({ id, mode })),
+  );
+  const legacyReview = (flowId: string) => chatReducer(sample(), {
+    type: 'server_event',
+    event: {
+      ...botText(3), type: 'message.flow',
+      payload: {
+        flowId, body: 'Revise', ctaLabel: 'Confirmar',
+        flowJson: { version: '7.1', screens: [{ id: 'REVIEW', terminal: true, layout: {
+          type: 'SingleColumnLayout', children: [{ type: 'Footer', label: 'Confirmar',
+            'on-click-action': { name: 'complete', payload: { confirmed: true } } }],
+        } }] },
+      },
+    },
+  });
+
+  it.each(catalogSteps)('scopes legacy detection to canonical review mode: $id ($mode)', ({ id, mode }) => {
+    const live = legacyReview(id);
+    // Exercise old raw snapshots and normal saves independently.
+    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
+    const expectedType = mode === 'review' ? 'message.text' : 'message.flow';
+    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ event: { type: expectedType } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1)).toMatchObject({ event: { type: expectedType } });
+    saveChat(sessionStorage, live);
+    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ event: { type: expectedType } });
+    expect(live.items.at(-1)).toMatchObject({ event: { type: 'message.flow', payload: { ctaLabel: 'Confirmar' } } });
+  });
+
+  it('preserves an unrelated terminal REVIEW Flow and its complete action after save/load', () => {
+    const live = legacyReview('external-review');
+    saveChat(sessionStorage, live);
+    expect(loadChat(sessionStorage)?.items).toEqual(live.items);
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items).toEqual(live.items);
+  });
+
+  it.each([false, true])('never restores an unsafe snapshot when rewriting fails (removal fails: %s)', (removalFails) => {
+    const live = legacyReview('DEP-06');
+    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
+    const broken = {
+      getItem: (key: string) => sessionStorage.getItem(key),
+      setItem: () => { throw new Error('QuotaExceededError'); },
+      removeItem: (key: string) => {
+        if (removalFails) throw new Error('SecurityError');
+        sessionStorage.removeItem(key);
+      },
+    } as unknown as Storage;
+    expect(loadChat(broken)).toBeUndefined();
+    if (!removalFails) expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+
   it('round-trips the session, the seq and the messages', () => {
     saveChat(sessionStorage, sample());
     const loaded = loadChat(sessionStorage);
@@ -106,11 +158,11 @@ describe('persistence', () => {
     });
   });
 
-  it('does not persist volatile Flow initialData in a server message', () => {
+  it.each(['DEP-06', 'external-review'])('does not persist volatile Flow initialData for %s', (flowId) => {
     const event = {
       v: 1 as const, id: uuid(4), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z',
       type: 'message.flow' as const,
-      payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'review' as const, values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' } } },
+      payload: { flowId, body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'review' as const, values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' } } },
     };
     const live = chatReducer(sample(), { type: 'server_event', event });
     saveChat(sessionStorage, live);
@@ -129,12 +181,12 @@ describe('persistence', () => {
     expect(expired?.event?.payload?.ctaLabel).toBeUndefined();
   });
 
-  it('scrubs volatile Flow initialData from legacy persisted messages on load', () => {
+  it.each(['DEP-06', 'external-review'])('scrubs volatile Flow initialData from legacy messages for %s', (flowId) => {
     sessionStorage.setItem(KEY, JSON.stringify({
       v: 1, sessionId: 's9', lastSeq: 3,
       items: [{ kind: 'bot', id: uuid(5), ts: '2026-10-10T12:00:00.000Z', event: {
         v: 1, id: uuid(6), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z', type: 'message.flow',
-        payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } } },
+        payload: { flowId, body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } } },
       } }],
     }));
     const loaded = loadChat(sessionStorage);
