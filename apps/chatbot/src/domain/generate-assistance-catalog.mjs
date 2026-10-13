@@ -7,7 +7,7 @@ const source = readFileSync(catalogUrl, 'utf8');
 const sandbox = { window: {} };
 runInNewContext(source, sandbox, { timeout: 1_000 });
 const canonical = sandbox.window.EXPERIENCE;
-if (!canonical || canonical.total !== 281) throw new Error('unexpected canonical catalog structure');
+if (!canonical || canonical.total !== 247) throw new Error('unexpected canonical catalog structure');
 
 const groups = canonical.groups
   .filter((group) => group.code !== 'LEG')

@@ -122,7 +122,7 @@ describe('chatbot end to end (fake internal services)', () => {
       return targets.filter((target, index) => targets.indexOf(target) !== index).map((target) => `${step.id}->${target}`);
     });
     expect(duplicateActionTargets, 'explicit action target duplicates').toEqual([
-      'IDE-01->IDE-08', 'IDE-03->CON-02', 'DEP-11->DEP-04',
+      'IDE-03->CON-02', 'DEP-11->DEP-04',
     ]);
     const unknownActionTargets = assistanceCatalog.steps.flatMap((step) => step.actions
       .filter((action) => !assistanceCatalog.byId[action.target]).map((action) => `${step.id}->${action.target}`));

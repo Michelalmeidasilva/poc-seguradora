@@ -109,19 +109,19 @@
           "id": "ENT-05",
           "title": "Pedido com dados pessoais",
           "user": "Quem está no meu plano?",
-          "bot": "Para consultar as pessoas vinculadas, preciso verificar sua identidade. Depois continuamos seu pedido.",
+          "bot": "Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.",
           "mode": "chat",
           "actions": [
             {
-              "label": "Verificar identidade",
-              "target": "IDE-02"
+              "label": "Informar CPF",
+              "target": "IDE-08"
             }
           ],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Público de clientes e interessados ainda é hipótese. Catálogo e permissões dependem do produto.",
           "intent": "Quem está no meu plano?",
-          "behavior": "Para consultar as pessoas vinculadas, preciso verificar sua identidade. Depois continuamos seu pedido.",
+          "behavior": "Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.",
           "next": "ENT-06",
           "journeyId": "ENT"
         },
@@ -165,7 +165,7 @@
           "id": "ENT-07",
           "title": "Nenhum contrato localizado",
           "user": "Quero ver minha assistência.",
-          "bot": "Não localizei uma assistência vinculada à identidade verificada. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.",
+          "bot": "Não localizei uma assistência vinculada nesta demonstração. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.",
           "mode": "chat",
           "actions": [
             {
@@ -550,17 +550,13 @@
             {
               "label": "Informar CPF",
               "target": "IDE-08"
-            },
-            {
-              "label": "Já tenho código",
-              "target": "IDE-08"
             }
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero consultar meu contrato.",
-          "behavior": "Antes de acessar dados pessoais ou do contrato, precisamos autenticar seu acesso. O CPF localiza o cadastro e o código confirma sua identidade. Depois retomamos seu pedido.",
+          "behavior": "Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.",
           "next": "IDE-02",
           "journeyId": "IDE"
         },
@@ -570,26 +566,17 @@
           "user": "",
           "bot": "Recebi o CPF para validar o formato da demonstração.",
           "mode": "chat",
-          "actions": [],
+          "actions": [
+            {
+              "label": "Informar CPF",
+              "target": "IDE-08"
+            }
+          ],
           "alternative": false,
-          "flow": {
-            "title": "Verificar identidade",
-            "fields": [
-              {
-                "name": "cpf",
-                "label": "CPF",
-                "required": true,
-                "sensitive": true
-              }
-            ],
-            "submit": "Verificar",
-            "target": "IDE-02",
-            "note": "Código de demonstração: 123456. Não informe dados reais."
-          },
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
-          "intent": "Vou verificar.",
-          "behavior": "Informe o código de acesso enviado pelo canal cadastrado. Na demonstração, use 123456. O envio real não acontece neste protótipo.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
+          "intent": "Como posso continuar?",
+          "behavior": "Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.",
           "next": "IDE-03",
           "journeyId": "IDE"
         },
@@ -611,9 +598,9 @@
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
-          "intent": "123456",
-          "behavior": "**Titular identificado**\nAna Silva\nCPF: •••.•••.•••-25\n\nIdentidade verificada. Vamos continuar sua solicitação.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
+          "intent": "CPF informado.",
+          "behavior": "Formato do CPF aceito. O acesso demonstrativo está liberado. Vamos continuar sua solicitação.",
           "next": "IDE-06",
           "journeyId": "IDE"
         },
@@ -635,8 +622,8 @@
           ],
           "alternative": true,
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
-          "intent": "O código não funcionou.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
+          "intent": "Não consegui continuar.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "IDE-06",
           "journeyId": "IDE"
@@ -649,13 +636,13 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Verificar novamente",
+              "label": "Informar CPF",
               "target": "IDE-08"
             }
           ],
           "alternative": true,
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero continuar.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "IDE-06",
@@ -669,14 +656,14 @@
           "mode": "review",
           "actions": [
             {
-              "label": "Confirmar identidade",
+              "label": "Informar CPF",
               "target": "IDE-08"
             }
           ],
           "alternative": false,
-          "behavior": "Após verificação, retornar à revisão da ação sensível, sem executá-la automaticamente.",
+          "behavior": "Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.",
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero confirmar o cancelamento.",
           "next": "IDE-08",
           "journeyId": "IDE"
@@ -695,7 +682,7 @@
           ],
           "alternative": true,
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Esse contrato não é meu.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "IDE-08",
@@ -710,7 +697,7 @@
           "actions": [],
           "alternative": false,
           "flow": {
-            "title": "Localizar cadastro",
+            "title": "Informar CPF",
             "fields": [
               {
                 "name": "cpf",
@@ -719,13 +706,13 @@
                 "sensitive": true
               }
             ],
-            "submit": "Continuar para código",
+            "submit": "Continuar",
             "target": "IDE-02"
           },
           "requiresAuth": false,
-          "rule": "Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.",
+          "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Vou informar meu CPF.",
-          "behavior": "Informe somente o CPF fictício 529.982.247-25 nesta demonstração. O CPF sozinho não libera o acesso: a próxima etapa exige o código.",
+          "behavior": "Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.",
           "next": null,
           "journeyId": "IDE"
         }
@@ -1263,7 +1250,7 @@
           "id": "ADE-02",
           "title": "Identificação na adesão",
           "user": "Vamos continuar.",
-          "bot": "Primeiro, precisamos verificar sua identidade. Se sua sessão estiver válida, esta etapa será aproveitada.",
+          "bot": "Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.",
           "mode": "chat",
           "actions": [
             {
@@ -1279,7 +1266,7 @@
           "requiresAuth": true,
           "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
           "intent": "Vamos continuar.",
-          "behavior": "Primeiro, precisamos verificar sua identidade. Se sua sessão estiver válida, esta etapa será aproveitada.",
+          "behavior": "Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.",
           "next": "ADE-03",
           "journeyId": "ADE"
         },
@@ -2117,7 +2104,7 @@
           "id": "CON-09",
           "title": "Nenhum contrato",
           "user": "Meus contratos",
-          "bot": "Não há contratos disponíveis para esta identidade. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.",
+          "bot": "Não há contratos disponíveis nesta demonstração. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.",
           "mode": "chat",
           "actions": [
             {
@@ -2195,7 +2182,7 @@
           "id": "DEP-01",
           "title": "Pedido de inclusão",
           "user": "Quero incluir minha filha.",
-          "bot": "Posso ajudar. Vou verificar sua identidade, o contrato e as condições para inclusão.",
+          "bot": "Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.",
           "mode": "chat",
           "actions": [
             {
@@ -2207,7 +2194,7 @@
           "requiresAuth": true,
           "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
           "intent": "Quero incluir minha filha.",
-          "behavior": "Posso ajudar. Vou verificar sua identidade, o contrato e as condições para inclusão.",
+          "behavior": "Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.",
           "next": "DEP-02",
           "journeyId": "DEP"
         },
@@ -2265,7 +2252,7 @@
           "id": "DEP-33",
           "title": "Mensagem única · dados compreendidos",
           "user": "Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.",
-          "bot": "Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nPara concluir o cadastro legado, preciso perguntar o celular e o sexo biológico. Não vou deduzir nenhum deles pelo nome.",
+          "bot": "Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nPara concluir o cadastro, preciso perguntar o celular e o sexo biológico. Não vou deduzir nenhum deles pelo nome.",
           "mode": "chat",
           "actions": [
             {
@@ -5863,7 +5850,7 @@
           "id": "SOL-10",
           "title": "Entrada por protocolo",
           "user": "Protocolo DEP-2026-0318",
-          "bot": "Vou consultar o pedido correspondente após verificar a identidade necessária.",
+          "bot": "Vou consultar o pedido correspondente após informar um CPF fictício.",
           "mode": "chat",
           "actions": [
             {
@@ -5879,7 +5866,7 @@
           "requiresAuth": true,
           "rule": "Histórico e disponibilidade de documentos dependem da política operacional.",
           "intent": "Protocolo DEP-2026-0318",
-          "behavior": "Vou consultar o pedido correspondente após verificar a identidade necessária.",
+          "behavior": "Vou consultar o pedido correspondente após informar um CPF fictício.",
           "next": null,
           "journeyId": "SOL"
         }

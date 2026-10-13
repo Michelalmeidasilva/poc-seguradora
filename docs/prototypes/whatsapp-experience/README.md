@@ -4,7 +4,7 @@ Protótipo HTML independente com **24 jornadas e 247 estados novos**. Abra `atla
 
 ## Autenticação obrigatória
 
-Nenhuma jornada pessoal abre sem autenticação: contratação, contrato, dependentes, pagamentos, documentos, solicitações e uso de assistências vinculadas. A regra cobre links diretos, catálogo e galeria. Conteúdo informativo público e orientação inicial permanecem livres.
+Nenhuma jornada pessoal abre sem o gate demonstrativo de CPF: contratação, contrato, dependentes, pagamentos, documentos, solicitações e uso de assistências vinculadas. A regra cobre links diretos, catálogo e galeria. Conteúdo informativo público e orientação inicial permanecem livres.
 
 Qualquer CPF fictício com **11 dígitos** ou no formato **XXX.XXX.XXX-XX** é aceito em `IDE-08`. A validação confere somente o formato; não calcula dígitos verificadores, não consulta cadastro e não confirma identidade. Não há etapa de código. Navegar para a tela de sucesso não libera acesso. Após enviar o CPF, o pedido original é retomado; a sessão demonstrativa dura 15 minutos em memória e recarregar exige informar CPF novamente.
 
@@ -30,7 +30,7 @@ As lacunas cobertas do legado incluem ainda a central de dúvidas (`FAQ-01` a `F
 
 ## Navegação
 
-`comparativo-legado.html` é o relatório independente de comparação entre o Figma e a experiência nova. Abra diretamente no navegador: possui 45 itens classificados como lacunas remanescentes, lacunas equalizadas, regras alteradas, jornadas novas, ampliações e hipóteses, com busca, filtro de origem, comparação lado a lado, impressão e links para as 34 telas originais. O relatório funciona offline; links externos exigem internet e os links do atlas dependem do arquivo adjacente.
+`comparativo-legado.html` é um registro histórico independente da comparação entre o Figma e uma versão anterior da proposta; não é uma tela nem define o catálogo atual. Os 45 itens preservam a análise histórica e os links para as 34 telas originais. O cabeçalho esclarece as diferenças: o atlas atual tem somente 24 jornadas/247 telas novas e o CPF é validado apenas por formato. O relatório funciona offline; links externos exigem internet e os links do atlas dependem do arquivo adjacente.
 
 - Catálogo lateral de jornadas; busca por título, conteúdo e identificador.
 - Seleção de estados, filtros de percurso principal/variações e navegação anterior/próxima.

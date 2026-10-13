@@ -99,6 +99,6 @@ describe('assistance journey catalog', () => {
   });
 
   it('keeps the canonical source stable and executable without importing browser globals in domain code', () => {
-    expect(Object.keys(canonical.index)).toHaveLength(281);
+    expect(Object.keys(canonical.index)).toHaveLength(247);
   });
 });

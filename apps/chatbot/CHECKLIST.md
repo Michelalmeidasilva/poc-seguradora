@@ -4,7 +4,7 @@
 
 ## Plano WhatsApp Assistance Experience — Task 2
 
-- [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE` e teste de deriva por execução do IIFE canônico
+- [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE`, artefato JSON sincronizado e teste de deriva por execução do IIFE canônico
 - [x] Transições puras das jornadas com gate CPF, descoberta pública, quick replies válidos/obsoletos, destinos inválidos e sem guardar CPF inicial
 - [x] Parser de dependente limitado a nome, CPF, nascimento e parentesco explicitamente informados (inclui “meu filho João … CPF dele é … ele nasceu …”); correção preserva os outros campos e não infere sexo/gênero
 
