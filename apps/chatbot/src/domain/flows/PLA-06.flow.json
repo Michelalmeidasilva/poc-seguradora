@@ -1,0 +1,74 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Revisar troca de plano",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira o novo plano e a data antes de confirmar."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Plano e preço"
+          },
+          {
+            "type": "TextBody",
+            "text": "Atual: Familiar · R$ 39,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Novo: Individual · R$ 29,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Participantes: Somente titular neste cenário"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Efeitos"
+          },
+          {
+            "type": "TextBody",
+            "text": "Data efetiva: 10/11/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Primeira nova cobrança: 10/11/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Até a mudança: Permanece o plano atual"
+          },
+          {
+            "type": "TextBody",
+            "text": "Carências: Conforme condições consultadas"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar troca",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Conhecer produtos",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Posso apresentar os produtos disponíveis. Qual assunto você quer conhecer?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Conhecer produtos",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Assistência Funeral",
+                "description": "Suporte ao titular e aos dependentes, conforme as condições do serviço."
+              },
+              {
+                "id": "1",
+                "title": "Assistência Farmácia",
+                "description": "Descontos em redes credenciadas, conforme as condições do serviço."
+              },
+              {
+                "id": "2",
+                "title": "Telemedicina",
+                "description": "Atendimento remoto no ambiente do prestador, conforme disponibilidade."
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Ver detalhes",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

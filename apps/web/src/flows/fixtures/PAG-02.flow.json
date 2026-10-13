@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Pagamento",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Escolha um meio disponível. A autorização para cobrança recorrente será apresentada antes de concluir."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Pagamento",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Cartão cadastrado",
+                "description": "Final 2048 · cobrança mensal autorizada no aceite"
+              },
+              {
+                "id": "1",
+                "title": "Outro meio disponível",
+                "description": "Exemplo de integração segura com a instituição"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

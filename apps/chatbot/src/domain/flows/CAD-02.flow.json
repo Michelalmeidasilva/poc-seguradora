@@ -1,0 +1,99 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Novo endereço",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Preencha o endereço desejado. A possibilidade de atualização será verificada."
+          },
+          {
+            "type": "TextInput",
+            "name": "postal",
+            "label": "CEP",
+            "required": true,
+            "helper-text": "00000-000",
+            "input-type": "text"
+          },
+          {
+            "type": "TextInput",
+            "name": "address",
+            "label": "Endereço e número",
+            "required": true,
+            "helper-text": "Rua, número",
+            "input-type": "text"
+          },
+          {
+            "type": "TextInput",
+            "name": "city",
+            "label": "Cidade e estado",
+            "required": true,
+            "helper-text": "Cidade / UF",
+            "input-type": "text"
+          },
+          {
+            "type": "Footer",
+            "label": "Revisar pedido",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "CEP: ${form.postal}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Endereço e número: ${form.address}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Cidade e estado: ${form.city}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "postal": "${form.postal}",
+                "address": "${form.address}",
+                "city": "${form.city}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

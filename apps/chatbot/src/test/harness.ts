@@ -53,9 +53,12 @@ export const choiceReq = (optionId: string, o: { session?: string; corr?: string
     o.corr ?? 'corr-choice',
   );
 
-export const flowSubmitReq = (data: Record<string, unknown>, o: { session?: string } = {}) =>
+export const flowSubmitReq = (
+  data: Record<string, unknown>,
+  o: { session?: string; flowId?: string } = {},
+) =>
   wrap(
-    { type: 'user.flow_submit', payload: { flowId: 'cotacao', data } },
+    { type: 'user.flow_submit', payload: { flowId: o.flowId ?? 'cotacao', data } },
     o.session ?? 's1',
     'corr-flow',
   );
@@ -78,7 +81,7 @@ export interface RunningChatbot {
 }
 
 export async function startChatbot(
-  o: { env?: Record<string, string>; overrides?: Omit<ChatbotOverrides, 'logger'> } = {},
+  o: { env?: Record<string, string>; overrides?: ChatbotOverrides } = {},
 ): Promise<RunningChatbot> {
   const fake = await startFakeServices();
   const { app } = await createChatbot(testConfig(fake.url, o.env), {

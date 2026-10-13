@@ -62,6 +62,10 @@ describe('ChatbotRequestSchema', () => {
 describe('parseChatbotLine', () => {
   it.each([
     ['message.text', { text: 'Olá!' }],
+    [
+      'message.document',
+      { documents: [{ id: 'policy-summary', title: 'Resumo', status: 'available' }] },
+    ],
     ['status.typing', { state: 'start' }],
     ['error', { code: 'internal_error', message: 'x', messageId: 'm1' }],
   ])('accepts %s without seq', (type, payload) => {

@@ -1,6 +1,6 @@
 # Checklist: protocol
 
-Última atualização: 2026-10-10
+Última atualização: 2026-10-13
 
 ## Estrutura
 - [x] Pacote com exports e tsconfig
@@ -15,7 +15,9 @@
 - [x] Schema servidor→cliente: message.template
 - [x] Schema servidor→cliente: message.carousel
 - [x] Schema servidor→cliente: message.quick_replies
+- [x] Schema servidor→cliente: message.document
 - [x] Schema servidor→cliente: message.flow
+- [x] `message.flow.initialData` opcional, limitado e validado com intenção explícita de revisão/correção
 - [x] Schema servidor→cliente: status.typing
 - [x] Schema servidor→cliente: status.delivered
 - [x] Schema servidor→cliente: status.read

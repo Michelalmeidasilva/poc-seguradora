@@ -1,0 +1,130 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Revisar inclusão",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira os dados e os efeitos da inclusão. Correções são feitas pela conversa."
+          },
+          {
+            "type": "TextInput",
+            "name": "name",
+            "label": "name",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "birth",
+            "label": "birth",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "maskedDocument",
+            "label": "maskedDocument",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "relationship",
+            "label": "relationship",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "phone",
+            "label": "phone",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "biologicalSex",
+            "label": "biologicalSex",
+            "visible": false
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Pessoa que será incluída"
+          },
+          {
+            "type": "TextBody",
+            "text": "Nome: ${form.name}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Nascimento: ${form.birth}"
+          },
+          {
+            "type": "TextBody",
+            "text": "CPF: ${form.maskedDocument}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Parentesco: ${form.relationship}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Celular: ${form.phone}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Sexo biológico: ${form.biologicalSex}"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Efeitos da inclusão"
+          },
+          {
+            "type": "TextBody",
+            "text": "Valor adicional: Sem adicional neste exemplo"
+          },
+          {
+            "type": "TextBody",
+            "text": "Mensalidade total: R$ 39,90"
+          },
+          {
+            "type": "TextBody",
+            "text": "Inclusão efetiva: 10/10/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Telemedicina: Conforme condições do benefício"
+          },
+          {
+            "type": "TextBody",
+            "text": "Vagas após inclusão: 1 vaga"
+          },
+          {
+            "type": "TextCaption",
+            "text": "Confira a disponibilidade de cada benefício nas condições do produto."
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar inclusão",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

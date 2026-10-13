@@ -23,6 +23,7 @@ export interface FlowSheetRequest {
   flowId: string;
   flowJson: Record<string, unknown>;
   header?: string | undefined;
+  initialData?: { intent: 'review' | 'correction'; values: Record<string, string | boolean> } | undefined;
 }
 
 export interface FlowSheetProps {
@@ -98,7 +99,7 @@ function FlowSession({
 }: FlowSheetProps & { flow: FlowJson }) {
   // Callback ref + state: the portal target exists before Layout (and its Footer) first renders.
   const [footerSlot, setFooterSlot] = useState<HTMLDivElement | null>(null);
-  const session = useFlowSheet(flow, request.flowId, { submit, exchange, onClose }, footerSlot);
+  const session = useFlowSheet(flow, request.flowId, { submit, exchange, onClose }, footerSlot, request.initialData?.values);
   const { screen, context } = session;
   const title =
     (typeof screen.title === 'string' ? interpolate(screen.title, context.scope) : '') ||

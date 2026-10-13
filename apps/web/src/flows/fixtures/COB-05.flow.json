@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Regularizar pendência",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira o valor atualizado e os efeitos antes de pagar."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Parcela"
+          },
+          {
+            "type": "TextBody",
+            "text": "Competência: Setembro de 2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Valor atualizado: R$ 39,90"
+          },
+          {
+            "type": "TextBody",
+            "text": "Encargos neste exemplo: R$ 0,00"
+          },
+          {
+            "type": "TextBody",
+            "text": "Efeito no contrato: Consultar após baixa confirmada"
+          },
+          {
+            "type": "Footer",
+            "label": "Iniciar pagamento",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Central de dúvidas",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Sobre qual assunto você quer saber?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Central de dúvidas",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Informações gerais",
+                "description": "O que são os serviços de assistência"
+              },
+              {
+                "id": "1",
+                "title": "Como utilizar",
+                "description": "Telemedicina, funeral e farmácia"
+              },
+              {
+                "id": "2",
+                "title": "Coberturas",
+                "description": "O que está incluído e o que não está"
+              },
+              {
+                "id": "3",
+                "title": "Carências",
+                "description": "Consultar condições do plano"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Ver resposta",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

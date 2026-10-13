@@ -1,6 +1,6 @@
 # Checklist: web
 
-Última atualização: 2026-10-11
+Última atualização: 2026-10-13
 
 ## Estrutura
 
@@ -18,6 +18,7 @@
 - [x] Estado do chat (reducer)
 - [x] Persistência do chat em sessionStorage e aba única (Web Locks)
 - [x] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
+- [x] Renderer de documentos demonstrativos com descrição do diálogo anunciada a leitores de tela e registry exaustivo para novos eventos `message.*`
 - [x] Tela de chat, composer e gravação de voz
 - [x] Tema claro e escuro, acessibilidade
 - [x] E2E (Playwright) com gateway simulado
@@ -37,6 +38,10 @@
 - [x] E2E de Flows: cotação ponta a ponta, demo percorrido só por teclado (com `data_exchange` e `complete`), Voltar/Fechar com confirmação e retorno do foco
 - [x] Cotação: `cpf` e `nascimento` são `sensitive` na tela `DADOS`; o resumo mostra `••••` e o E2E confere que nem a bolha nem o sessionStorage guardam os valores (só o `user.flow_submit` os leva ao gateway)
 - [x] Fonte única dos Flows: os JSON canônicos ficam em `apps/chatbot/src/domain/flows/`; `src/flows/fixtures/` guarda cópias só para os testes unitários, e `apps/chatbot/src/domain/flows-sync.test.ts` falha se as cópias divergirem
+- [x] Task 7 round 1: revisão com valores seguros, correção pré-preenchida, CPF mascarado e dados iniciais ausentes de saves/loads persistidos
+- [x] Task 7 round 2: load regrava a sessão saneada antes de retornar; Flows dependentes do draft viram mensagem de expiração sem CTA na persistência, preservando o Flow ativo em memória
+- [x] Task 7 rounds 3–4: snapshots legados dos 15 reviews do catálogo, com uma tela terminal `REVIEW` e sem `initialData`, expiram para texto seguro sem CTA no save/load; IDs sincronizados por teste com o catálogo canônico; Flow externo equivalente permanece acionável e Flow ativo segue interativo. Com `initialData`, qualquer ID expira; falha de regravação impede restauração insegura.
+- [x] Task 8: CPF reconhecido em texto do usuário, título de quick reply e resumo de Flow é mascarado só nas cópias persistidas; o estado ativo mantém o original. Saves legados são saneados e regravados antes da restauração; `optionId`/`replyToId` ficam intactos e payload de `flow_submit` continua ausente do histórico.
 
 ### Decisões próprias (Plano 5)
 
@@ -67,6 +72,18 @@
 - [x] Campos `sensitive` mascarados no resumo do Flow (cotação: `cpf`, `nascimento`) e conferidos no E2E
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
+
+## Plano WhatsApp Assistance Experience — Task 7
+
+- [x] 46 fixtures Flow sincronizadas com os JSONs canônicos; formulários navegam para revisão local com volta que preserva valores e submit único
+- [x] Composer demonstrativo oferece somente quatro cenários de áudio locais; nenhum caminho de gravação, microfone, upload ou requisição de mídia na tela do chat
+- [x] E2E cobre os quatro IDs e respostas determinísticas, sem chamada a API de mídia
+
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [x] Playwright verifica CPF-canário visível somente no turno ativo, mascarado no `sessionStorage` e restaurado já mascarado
+- [x] Gateway simulado não ecoa mensagens com CPF; E2E confirma que o canário não aparece no histórico persistido nem após recarga
+- [x] Suíte Playwright completa executada com Chromium
 
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 

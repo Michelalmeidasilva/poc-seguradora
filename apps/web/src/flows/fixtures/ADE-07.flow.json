@@ -1,0 +1,71 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Condições e aceite",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Os documentos completos estão disponíveis. O aceite é explícito e não vem pré-marcado."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Resumo"
+          },
+          {
+            "type": "TextBody",
+            "text": "Produto: Serviços de Assistência Familiar"
+          },
+          {
+            "type": "TextBody",
+            "text": "Valor: R$ 39,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Participantes: Somente titular nesta etapa"
+          },
+          {
+            "type": "TextBody",
+            "text": "Termo de adesão"
+          },
+          {
+            "type": "TextBody",
+            "text": "Condições do produto"
+          },
+          {
+            "type": "OptIn",
+            "name": "consent",
+            "label": "Confirmo os dados e aceito as condições contratuais apresentadas, incluindo a cobrança recorrente indicada.",
+            "required": true,
+            "init-value": false
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar contratação",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "consent": "${form.consent}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Opções de assistência",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Neste exemplo, há duas opções. Escolha uma para ver detalhes ou compare as diferenças."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Opções de assistência",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Individual",
+                "description": "R$ 29,90/mês · somente titular"
+              },
+              {
+                "id": "1",
+                "title": "Familiar",
+                "description": "R$ 39,90/mês · titular e dependentes elegíveis"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Ver condições",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

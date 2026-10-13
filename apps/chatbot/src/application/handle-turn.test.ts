@@ -10,9 +10,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { IDLE, type DialogState, type Intent } from '../domain/dialog';
 import { TurnLog } from '../domain/turn-log';
 import { aClaimOpened, aPolicy, aPolicySummary, aQuote, aSecondCopy } from '../test/fixtures';
+import type { AssistanceRequest } from './assistance-service';
 import { HandleTurn } from './handle-turn';
+import { InMemoryAssistanceStateStore } from './assistance-turn';
 import { idempotencyKeyFor } from './idempotency';
-import type { CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
+import type { AssistancePort, CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
 
 const silent: Logger = {
   debug: () => undefined,
@@ -66,6 +68,37 @@ const okServices = (): { [K in keyof ServicesPort]: ReturnType<typeof vi.fn> } &
   getClaim: vi.fn(async () => err('not_found' as const)),
 });
 
+const assistancePort = (requests: AssistanceRequest[] = []): AssistancePort => ({
+  getSessionSnapshot: async () => err('unavailable' as const),
+  listBenefits: async () => err('unavailable' as const),
+  listDocuments: async () => err('unavailable' as const),
+  listDependents: async () => err('unavailable' as const),
+  addDependent: async () => err('unavailable' as const),
+  updateDependent: async () => err('unavailable' as const),
+  removeDependent: async () => err('unavailable' as const),
+  changeModality: async () => err('unavailable' as const),
+  renewAssistance: async () => err('unavailable' as const),
+  updateAddress: async () => err('unavailable' as const),
+  requestFuneralAssistance: async () => err('unavailable' as const),
+  cancelAssistance: async () => err('unavailable' as const),
+  getBilling: async () => err('unavailable' as const),
+  regularizeBilling: async () => err('unavailable' as const),
+  getPreferences: async () => err('unavailable' as const),
+  updatePreferences: async () => err('unavailable' as const),
+  listRequests: async () => ok(requests),
+  createRequest: async (_sessionId, command) => {
+    const created: AssistanceRequest = {
+      id: `r${requests.length + 1}`,
+      kind: command.kind,
+      status: 'received',
+      message: command.message,
+    };
+    requests.push(created);
+    return ok(created);
+  },
+  getRequest: async () => err('unavailable' as const),
+});
+
 let counter = 0;
 const make = (
   over: {
@@ -74,6 +107,8 @@ const make = (
     dialogs?: DialogStore;
     capacity?: number;
     now?: number;
+    assistance?: AssistancePort;
+    assistanceStates?: InMemoryAssistanceStateStore;
   } = {},
 ) => {
   const dialogs = over.dialogs ?? memoryStore();
@@ -87,6 +122,8 @@ const make = (
     newId: () => uuid(5000 + ++counter),
     now: () => over.now ?? Date.parse('2026-10-10T12:00:00.000Z'),
     logger: silent,
+    assistance: over.assistance,
+    assistanceStates: over.assistanceStates,
   });
   return { handler, dialogs, services };
 };
@@ -585,5 +622,70 @@ describe('HandleTurn', () => {
       expect(second).toEqual([]);
       expect(calls.filter((c) => c.level === 'debug')).toHaveLength(1);
     });
+  });
+
+  it('routes valid assistance CPF submit, persists the exact domain state, and discards CPF', async () => {
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false });
+    const { handler, dialogs } = make({ assistance: assistancePort(), assistanceStates });
+    await collect(handler.run(text('12345678901', 44)));
+    expect(assistanceStates.get('s1')).toEqual({ journeyId: 'IDE', screenId: 'IDE-03', gateApproved: true });
+    expect(JSON.stringify(assistanceStates.get('s1'))).not.toContain('12345678901');
+    expect(dialogs.get('s1')).toEqual(IDLE);
+  });
+
+  it('replays a confirmed assistance operation without creating a second request', async () => {
+    const assistance = assistancePort();
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', { journeyId: 'HUM', screenId: 'HUM-05', gateApproved: true });
+    const { handler } = make({ assistance, assistanceStates });
+    const req = quickReply('HUM-08', 45);
+    const first = await collect(handler.run(req));
+    const replay = await collect(handler.run(req));
+    expect(replay).toEqual(first);
+    const requests = await assistance.listRequests('s1', { correlationId: 'corr-45', idempotencyKey: idempotencyKeyFor('s1', uuid(45)) });
+    expect(requests.ok && requests.value).toHaveLength(1);
+  });
+
+  it('serializes distinct confirmed submissions in one session against the latest review state', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+    const assistance = assistancePort();
+    assistance.addDependent = vi.fn(async () => {
+      calls++;
+      if (calls === 1) await gate;
+      return ok({ id: 'd1', name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' as const });
+    });
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', {
+      journeyId: 'DEP', screenId: 'DEP-06', gateApproved: true,
+      temporaryData: { name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' },
+    });
+    const { handler } = make({ assistance, assistanceStates });
+    const submission = (id: number) => request({ type: 'user.flow_submit', payload: { flowId: 'DEP-06', data: {} } }, id);
+    const first = collect(handler.run(submission(46)));
+    const second = collect(handler.run(submission(47)));
+    await Promise.resolve();
+    release?.();
+    await Promise.all([first, second]);
+    expect(assistance.addDependent).toHaveBeenCalledTimes(1);
+    expect(assistanceStates.get('s1')?.screenId).not.toBe('DEP-06');
+  });
+
+  it('routes a recognized legacy quote request after clearing assistance state', async () => {
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', { journeyId: 'CON', screenId: 'CON-07', gateApproved: true });
+    const services = okServices();
+    const { handler, dialogs } = make({
+      llm: { classify: async () => intent('quote') },
+      services,
+      assistanceStates,
+    });
+    const events = await collect(handler.run(text('quero fazer uma cotação', 48)));
+    expect(types(events)).toContain('message.flow');
+    expect(dialogs.get('s1')).toEqual({ name: 'quote.awaiting_flow' });
+    expect(assistanceStates.get('s1')).toBeUndefined();
+    expect(services.createQuote).not.toHaveBeenCalled();
   });
 });

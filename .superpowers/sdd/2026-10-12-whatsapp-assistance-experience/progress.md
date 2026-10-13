@@ -1,0 +1,135 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-10-12-whatsapp-assistance-experience.md
+
+## Preflight scan (before Task 1)
+
+| Scope | Tasks | Producer → consumer | Finding / ruling |
+|---|---|---|---|
+| Shared protocol contract | 1 → 5 → 6, 9 | Task 1 adds `message.document` / `DocumentPayload`; Task 5 emits it; Task 6 renders it; Task 9 drives it end to end. | Consistent event contract, but Task 1's document list schema and Task 6 empty state must remain consistent (1–10 strict items). |
+| Journey model | 2 → 3, 5, 7, 9 | Task 2 supplies catalog/state/parser; Task 3 adds CPF gate; Task 5 orchestrates; Task 7 builds Flows from IDs; Task 9 traverses IDs. | State boundaries align with SPEC; CPF initial value must never enter durable dialog state. |
+| Assistance adapter | 4 → 5, 9 | Task 4 creates `AssistancePort` and session fixture; Task 5 invokes it only on explicit confirmation; Task 9 tests isolation/replay. | No conflicting requirements. Method signatures are underspecified in Task 4; ruling: derive a small typed method set from SPEC §6.3 and the 24 catalog journeys, keep it domain-specific, and record final signatures in the implementation report before Task 5. Cost if wrong: interface churn across chatbot integration. |
+| Flow/audio contract | 2 → 7 → 5, 9 | Task 2 supplies step IDs/fields; Task 7 defines Flow JSON and audio fixture IDs; Task 5 routes terminal Flow/audio events; Task 9 exercises them. | Task ordering is not strictly topological: Task 5 precedes Task 7, although Task 5 consumes Flow/audio contract produced by Task 7. **Ruling:** execute Task 7 after Task 5 only for web presentation changes, but define chatbot's accepted Flow IDs and `user.voice` fixture IDs in Task 5 from the catalog, then require Task 7 to consume that contract. Cost if wrong: duplicate identifiers or integration rework. |
+| Web persistence | 7 ↔ 8 | Task 7 mentions `useVoiceRecorder.ts`; Task 8 may touch `useChat.ts` only if needed. | Files do not overlap by default; if a required fix changes an overlapping file, serialize and preserve changes. |
+| Test harness | 5/6/7/8 → 9 → 10 | Earlier tasks expose server/UI behavior; Task 9 adds end-to-end coverage; Task 10 audits visuals and full suite. | Consistent, but Task 9 must use existing gateway/compose unless evidence proves a new harness is needed. |
+| Task 1 self-consistency | 1 | Tests `message.document`, then schema, then protocol checklist. | Consistent; exact schema bounds are stated. |
+| Task 2 self-consistency | 2 | Tests 24 groups/247 IDs and proposes a typed catalog from a browser IIFE JS source. | Source `catalog.js` sets `window.EXPERIENCE`; it cannot be imported directly by chatbot TypeScript. **Ruling:** first inspect whether an existing build/sync test already extracts the canonical JS; implement a deterministic generator/test that materializes typed runtime data and fails on drift, without maintaining a hand-copied second source. If no safe boundary exists, change the canonical file minimally to expose a module-compatible value without altering browser behavior, under explicit prototype ownership coordination. Cost if wrong: coupling production domain to browser globals or stale catalog content. |
+| Task 3 self-consistency | 3 | Parser returns normalized 11-digit CPF in Result and stores only the gate flag. | Consistent with SPEC §7.1; preserve the accepted canonical format and no checksum. |
+| Task 4 self-consistency | 4 | Typed port, session mock, TTL, compose, checklist. | Consistent; TTL/capacity must follow validated existing config. |
+| Task 5 self-consistency | 5 | Orchestrates every event, assistance use case, legacy preservation, idempotence, audio/document. | Task is broad and its interface consumes Task 7's fixture details before Task 7. Use the preflight ruling above; do not add arbitrary microphone/audio behavior. |
+| Task 6 self-consistency | 6 | Renderer from Task 1 contract and accessibility tests. | Consistent; opening viewer stays local. |
+| Task 7 self-consistency | 7 | Chatbot Flow JSON and web fixtures/components plus composer/audio source. | Crosses `apps/chatbot` and `apps/web`; claim/reopen each workstream before editing and update each service checklist in its completion commit. Audio requirement forbids recording real audio, so disable actual microphone path for this feature rather than keeping it as a fallback. |
+| Task 8 self-consistency | 8 | Masks storage on serialize and restore while active message stays original. | Consistent; ensure old persisted snapshots are sanitized in memory before returning. |
+| Task 9 self-consistency | 9 | Full catalog traversal, E2E, privacy, two-session isolation, regression. | No standalone path ownership for `infra` unless changing it; prefer existing integration harness. A live 247-state end-to-end run may be slow, but it is required by SPEC acceptance. |
+| Task 10 self-consistency | 10 | Visual/accessibility/full repo verification and service checklists. | Consistent; screenshots cover functional states as required; do not commit generated screenshots unless the existing test convention tracks them. |
+
+## Execution notes
+
+- Isolated managed worktree: `/Users/user/.codex/worktrees/fd6d/seguradora-services`, branch `feat/whatsapp-assistance-implementation`.
+- Original checkout's untracked `.playwright-mcp/` directories are not part of this worktree or this plan; preserve them.
+- `git pull --ff-only origin feat/ux-discovery-services` could not run because no matching remote ref exists. Work proceeds from local commit `cad01e3`.
+- Workstream `protocol` was claimed by Codex in commit `04270a2` before source edits.
+
+## Task tracking
+
+- [x] Task 1: document event protocol — review PASS, full protocol suite 92/92, typecheck PASS
+- [x] Task 2: executable journey catalog and pure transitions — review PASS; chatbot suite 512/512, typecheck PASS; includes approved João phrase and exact public product allowlist
+- [x] Task 3: CPF-only gate — both fix rounds approved; final chatbot suite 523/523, typecheck/build/dependency-cruiser PASS
+- [x] Task 4: session-scoped AssistancePort mock — reviewer APPROVE after two fixes; chatbot suite 534/534, typecheck, ESLint and diff check PASS
+- [x] Task 5: chatbot orchestration — re-review APPROVE, 578/578; typecheck/build/lint/diff-check PASS
+- [x] Task 6: accessible document renderer — re-review APPROVE, 645/645; typecheck/lint/diff-check PASS
+- [x] Task 7: WhatsApp Flows and audio fixtures — four rounds de review/fix aprovados; 298/298 suíte focada web, chatbot 588/588, protocol 54/54, Playwright áudio 1/1, typechecks/lint/diff-check PASS
+- [x] Task 8: persisted-history privacy — scoped re-review APPROVE; quick-reply CPF titles and digit boundaries covered, no new breakage
+- [ ] Task 9: integration and E2E coverage
+- [ ] Task 10: visual/accessibility/final verification
+
+## Task 8 review and completion
+
+- Initial review by Ramanujan found an unmasked persisted `quick_reply.title`; ruling: redact all customer-authored visible text fields in stored/restored copies while preserving active state and static IDs.
+- Fix `af20d09` adds quick-reply title masking, legacy restoration and boundary tests. Scoped re-review by Turing: both findings ADDRESSED; no new important breakage.
+- Final evidence: web 923/923; typecheck, focused lint, diff checks and workboard check PASS. Task 8 complete.
+
+## Task 9 execution
+
+- Starting from approved Tasks 1–8 on `feat/whatsapp-assistance-implementation`; chatbot and web-chat paths are already owned by Codex in `WORKBOARD.md`.
+- Path ruling: prefer current in-repo test harnesses and keep changes within `apps/chatbot` and `apps/web/e2e`; touch `infra/` only if existing composition cannot satisfy the plan. No infra change is assumed.
+- Initial implementation commit: `3ecb4ea` (`test: cover assistance journeys end to end`); reported chatbot 590/590, web 923/923, Playwright 16/16, smoke 7/7. The sandbox's loopback `EPERM` was resolved by rerunning with local loopback permission.
+- Independent review: NOT APPROVED. Blocker: 247-ID test directly opens each ID and does not prove reachability or reject duplicate action targets. Important: dependent correction, session-persistent mutations, cancellation/request, audio/document/error/expiry/retry, idempotency/session isolation/unavailable fixture are not all exercised through integrated API/stack; logs/AssistancePort proof missing. Minor: smoke claim has no attached Task 9 output and does not traverse assistance-specific journeys.
+- Fix-round ruling: retain catalog structural validation but add graph traversal from declared valid entry points, check duplicate/missing/runtime destinations, and add focused API journeys for the missing service transitions plus structured-log canary and AssistancePort-vs-legacy-service assertions. If the local compose smoke cannot include full assistance, report that accurately and do not overstate checklist coverage. Cost if wrong: additional test setup/time; reduces false assurance from direct calls and layer-only evidence.
+- Fix rounds 1–2: `32337f8` adds graph traversal and flags 54 unreachable IDs plus 3 duplicate action targets; `5c93678` adds an HTTP dependent path with single mutation, log/event canary absence and no legacy ServicesPort calls. Chatbot suite 592/592, typecheck, diff-check and workboard-check passed per implementer. Re-review Maxwell: NOT APPROVE. The graph test accepts 54 orphan nodes and known duplicate actions; direct-open checks do not establish runtime reachability. Dependent journey reaches correction navigation but submits empty data and confirms unchanged draft, not a real field correction. API scenarios for session persistence/isolation, cancellation/request, audio/document, unavailable/retry/expiry/idempotency remain missing. The service checklist accurately remains unchecked and smoke is not counted as Task 9 acceptance.
+- Ruling: do not wire or reclassify orphaned product screens or duplicate CTAs without product direction. The implementation can retain measured blockers; user decision required before asserting the planned 247-ID reachability acceptance.
+
+## Task 1 review and fix loop
+
+- Review package: `review-04270a2..e9bcbfa.diff`; independent reviewer verdict: spec PASS; quality PASS with low finding that payload-root unknown fields lack a direct regression assertion.
+- Known verification gap from implementer: full protocol suite is 88/90 because `message.document` is missing from `UnsequencedServerEventSchema` and the `parseChatbotLine` accepted-event test fixtures in `packages/protocol/src/chatbot-contract.ts`.
+- Ruling: extend Task 1's allowed scope to `packages/protocol/src/chatbot-contract.ts` and its tests because the plan's Task 1 Step 4 requires all protocol tests pass and the SPEC requires inferred server event types to cover the new message. Fixing this is required before Task 1 completion; cost if wrong is a small protocol contract scope expansion, bounded to preserving the existing event's no-seq parsing.
+- Minor finding addressed in fix round 1 by an explicit test rejecting root-level `file` on `DocumentPayloadSchema`.
+- Fix round review: both prior observations ADDRESSED; no new breakage; overall PASS. Report status synchronized above.
+- Task 1 complete via `task-done` at commit `5f2b233`; final full protocol suite: 92/92 passed. The fix implementer also reported typecheck PASS.
+
+## Task 2 review and fix loop
+
+- Initial review package: `review-0235940..4c19bfd.diff`; reviewer verdict: spec compliance partial due to missing handling/test for the approved slide sentence; quality observation that public-service assertions did not prove an exact three-service allowlist; cross-task cannot-verify: gate approval persistence belongs to later application orchestration.
+- The original implementer added the approved sentence test and parser handling in commit `e46326e`, with RED/GREEN, chatbot suite 511/511 and typecheck PASS (per report).
+- Controller ruling for gate persistence: `HandleTurn`/application owns persisted `AssistanceState`; after Task 3 it receives an explicit `{step,state}` transition. Task 5 must atomically persist that returned state (never recompute/set the flag independently), and add a regression proving valid IDE-08 submit persists approval and permits personal continuation with no raw CPF in stored state. Cost if wrong: gate could loop or an unauthenticated session could be treated as approved.
+- Controller verification: executed canonical catalog IIFE in Node VM and confirmed 24 non-LEG groups / 247 functional IDs and mode counts; source is indeed browser-only `window.EXPERIENCE`, and the drift test executes it independently. The reviewer did not receive that source in the diff package, so this cannot be verified from its artifact alone.
+- Resolved Task 2 item: public chooser regression now asserts exactly the three approved labels and canonical targets.
+- Task 2 fix-round re-review: both findings ADDRESSED, no new breakage; overall APPROVE.
+- `task-done` completed Task 2 at head `df3831c`; final chatbot suite 512/512 and typecheck passed.
+Task 1: complete (commits 04270a2..5f2b233, tests: pnpm --filter @seguradora/protocol test --no-cache →    Duration  1.27s (transform 153ms, setup 0ms, collect 389ms, tests 66ms, environment 1ms, prepare 653ms))
+Task 2: complete (commits 0235940..df3831c, tests: pnpm --filter @seguradora/chatbot exec vitest run --cache=false →    Duration  4.63s (transform 2.02s, setup 0ms, collect 7.04s, tests 6.52s, environment 13ms, prepare 7.12s))
+
+## Task 3 execution
+
+- Task 3 brief/base: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-3-brief.md`, BASE `df3831ce7590831f0d2e7a74492e59e61620d65d`.
+- Ruling carried forward: replace Task 2's local CPF format predicate with `parseAssistanceCpf`; leave legacy `normalizeCpf` unchanged. Gate persistence stays with Task 5 and is separately tested there.
+
+## Task 3 review and fix loop
+
+- Initial review package: `review-df3831c..66a420b.diff`; reviewer found a high-severity state-machine dead end: accepted CPF selected IDE-03 but returned no updated `gateApproved`, so later personal destinations remained blocked. Medium finding: journey test separately called the CPF parser rather than proving state transitions via its behavior. Reviewer also could not verify all IDE visible copy.
+- Ruling (supersedes the earlier Task 2/Task 5 split): the pure journey transition must now return both the selected step and updated `AssistanceState`; valid IDE-08 CPF submit advances `screenId` to IDE-03 and sets only `gateApproved: true`, invalid input moves to IDE-04 with the flag false, and no CPF value enters state. The application in Task 5 persists this returned state. This supersedes the earlier ruling that Task 5 alone would infer/set the gate flag because review evidence showed that leaves the domain transition unusable. Cost if wrong: API change to Task 2/5 consumers and brief divergence, but avoids an auth-gate dead end.
+- Task 3 fix round 1 added `{step,state}` and correct gate state; re-review found an explicit raw-invalid-CPF assertion and exhaustive IDE visible-copy scan still missing.
+- Task 3 fix round 2 addressed both findings; re-review approved, and no new breakage was found.
+- `task-done` completed Task 3 at head `446649a`; final chatbot suite 523/523. Typecheck, build and dependency-cruiser passed per fresh implementer report.
+- Fix round 1 review: gate transition itself is resolved, but reviewer found two open items: explicit no-raw-CPF assertion for invalid input; IDE visible-copy test omitted `behavior`/other customer copy. Overall fix round not approved.
+- Required fix round 2: assert rejected CPF is absent from serialized returned transition; sanitize IDE `behavior` to CPF-only customer-safe copy and include `user`, `behavior`, and complete Flow content in the visible-copy assertion. Cost if wrong: historic OTP or identity claims could leak into a customer response later.
+Task 3: complete (commits df3831c..446649a, tests: pnpm --filter @seguradora/chatbot exec vitest run --no-cache →    Duration  4.78s (transform 1.62s, setup 0ms, collect 6.72s, tests 6.98s, environment 8ms, prepare 7.72s))
+
+## Task 4 execution
+
+- Task 4 brief/base: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-4-brief.md`, BASE `32549a936094f4a2bf8939db2c68ac6fd77ca582`.
+- Preflight interface ruling carried forward: define a small set of explicit typed port methods from SPEC §6.3; Task 5 must use those exact signatures and invoke mutations only after final confirmation.
+- Implemented in `9a2bf75`; independent review found leaked references from mutation results and unbounded idempotency entries. Fix `a74eadf` clones all mutable mutation results and bounds the per-session FIFO replay cache to 256 records by default (configurable). RED/GREEN tests prove both issues; independent fix-round re-review APPROVED.
+- Fresh validation after fixes: `pnpm --filter @seguradora/chatbot exec vitest run --no-cache` 534/534; typecheck, ESLint on changed adapter files, and `git diff --check` PASS. Loopback-based tests required elevated local permission; ordinary sandbox run was blocked with `EPERM` and was rerun successfully with permission.
+
+## Task 5 execution
+
+- Task 5 brief/base: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-5-brief.md`, base commit `31d7530`.
+- Implementer assigned the planned application/compose/typed journey paths and chatbot checklist. Critical inherited rulings: persist returned gate state exactly, keep legacy `ServicesPort` route unchanged, only mutate on explicit terminal confirmation, and keep Flow data-exchange silent.
+- Task 5 implementation commit: `9625e4e`, initially reported full suite 575/575. Independent review found three fixes needed: same-session concurrent event IDs could mutate a stale review; document lists were generic; assistance state shadowed legacy text without reset.
+- Fix commit `9558376` adds per-session FIFO execution, screen-specific document fixtures/contracts, and legacy fallback while preserving DEP-33/DEP-04 free text. Independent fix re-review APPROVED. I reran the full suite after fixes: 578/578; typecheck/build, corrected ESLint invocation and `git diff --check` PASS. Dependency-cruiser passed with Node 24 per implementer; local Node 25 is rejected by its runtime guard. The reviewer independently ran the focused tests (80/80) but its broader suite attempts were blocked by filesystem/loopback permissions.
+
+## Task 6 execution
+
+- Task 6 brief/base: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-6-brief.md`, base commit `9558376`.
+- `web-chat` is already claimed by Codex on this branch. UI direction follows the existing WhatsApp bubble/tokens, with a local document modal and visible demonstrative notice; no external document, PDF, or URL.
+- Task 6 implementation commit `cc7922b`; implementation reports web tests 645/645, typecheck, ESLint, diff-check PASS. Independent review found medium missing `aria-describedby` on the dialog notice and low non-exhaustive registry switch. Fix round assigned; review also approved local-only documents, focus management, schema boundary, tokens and responsive layout.
+- Fix `2a2c83e` adds `aria-describedby` and compile-time `assertNever(event)` exhaustiveness; independent re-review APPROVED. I reran web tests with write permission for the Vite temp cache: 46 files/645 passed; typecheck, lint and diff-check PASS. Task 6 complete.
+
+## Task 7 execution
+
+- Task 7 brief: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-7-brief.md`; `scripts/task-brief` could not initialize `.superpowers/sdd/.gitignore` under filesystem permissions, so the brief was written directly in the existing ignored workspace.
+- Workboard claims were committed in `aa191fa`: chatbot, web-flows, and web-chat ownership is active and non-overlapping; do not repeat the claim.
+- Implementer `Mendel` owns Task 7 across the three explicitly partitioned paths. Requirements include canonical Flow fixtures and demo-only deterministic audio with no microphone/media requests; do not touch the pre-existing modified `task-1-report.md`.
+- Implementation commits: `ea46ceb` (chatbot canonical Flows) and `5c32dbd` (web copies, demo audio, E2E). Implementer report records chatbot 583/583, web 650/650, audio E2E 1/1, typechecks/build/lint/diff-check PASS.
+- Task review by `Fermat`: NEEDS FIXES (Important): (1) cross-step review masks non-sensitive values and correction Flows reopen without prefill, despite the plan requiring correction to preserve fields; (2) generator forces all checkbox defaults false, changing catalog preference `PRE-02.optionalDocs.checked=true`. Minor: checklists overstate completion while cross-step limitation remains.
+- Ruling: keep prior form data volatile and session-scoped; display reviewable non-sensitive values in the review and prefill a correction Flow. Never persist Flow values in `sessionStorage`, logs, or replayable chat history; add focused sanitization tests if the volatile draft must cross the message boundary. Keep consent false by default but honor explicit catalog `checked` defaults for non-consent preferences. Update checklists only after end-to-end verification. Cost if wrong: rework at the transport/UI boundary, but avoids breaking user-confirmed defaults or leaking form data.
+- Fix round 1 commits: `5f44ecf` (protocol), `49d1c60` (chatbot), `fb4da39` (web-flows), `7605e91` (web-chat), `dcd3a53` (report). Reviewer re-review: preference defaults and active cross-step correction ADDRESSED, but an Important privacy gap remains: `loadChat` returns redacted state while raw legacy bytes remain in sessionStorage; and stored Flow messages lose draft data but keep an active confirmation CTA. Round 2 must rewrite storage immediately and make persisted draft-dependent Flow messages non-actionable (safe expired notice) so a reload cannot confirm unseen values. The checklist's privacy claim remains pending until this passes.
+- Round 2 commits: `652a16b` (web-chat), `d5a195c` (report). Re-review: legacy key is rewritten synchronously, but prior round-1 snapshots already had `initialData` removed while leaving the catalog review Flow CTA intact. Ruling: treat generated single-screen terminal `REVIEW` Flows as draft-dependent even when the old snapshot has no `initialData`; replace them with a safe expired notice on save/load. This intentionally expires a potentially static review rather than allowing confirmation of unseen session data. Add a legacy snapshot test for this shape; only mark the checklist complete after it passes.
+- Round 3 commits: `7e94073` (web-chat), `d7f5b39` (report). Re-review: immediate storage rewrite, legacy expiration and checklist were addressed, but structural detection also expired unrelated single-screen terminal `REVIEW` Flows. Ruling for round 4: scope legacy matching to the 15 exact catalog review IDs (`IDE-06`, `ADE-06`, `ADE-07`, `PAG-04`, `DEP-06`, `DEP-17`, `DEP-21`, `EXC-03`, `PLA-06`, `CAD-03`, `FUN-06`, `COB-05`, `CAN-05`, `REN-02`, `REN-03`) and test that this allowlist matches canonical review-mode catalog IDs plus a similarly shaped non-catalog Flow remains actionable after storage. This narrows false-positive expiry; drift cost is guarded by synchronization assertion.
+- Round 4 approved: `3e57768` restricts legacy expiry to the exact catalog review IDs; `c00975a` records evidence. Fresh review confirmed all 15 IDs match the canonical catalog, every catalog state is covered by persistence tests, external review Flow action survives save/load, draft-bearing Flow expires regardless of ID, checklist is accurate, and there is no new breakage. Task 7 complete; no need to revisit its earlier commits beyond the upcoming whole-branch review.
+
+## Task 8 execution
+
+- Task 8 brief: `.superpowers/sdd/2026-10-12-whatsapp-assistance-experience/task-8-brief.md`; workstream `web-chat` remains claimed by codex (no new Workboard edit/claim needed).
+- Base head: `c00975a`; preserve Task 7's Flow-draft redaction/expiration and immediate safe rewrite behavior while extending the stored-message transform to CPF recognition.
+- Task 8 review by Ramanujan: NEEDS FIXES (Important): persisted user `quick_reply.title` is not masked. Ruling: apply CPF masking to every user-authored visible text field in UserContent (`text.text`, `quick_reply.title`, `flow_submit.summary`) in stored copies/restoration; retain static identifiers (`optionId`, `replyToId`) unchanged. Add save/legacy-load canary coverage and explicit digit-boundary cases for punctuated and simple formats. Cost if wrong: modestly broader redaction of visible user text; prevents an overlooked persistence field from leaking CPF.

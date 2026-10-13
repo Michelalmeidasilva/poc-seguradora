@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Trocar plano",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Estas são as opções elegíveis. Você decide após comparar os efeitos."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Trocar plano",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Individual",
+                "description": "R$ 29,90/mês · somente titular"
+              },
+              {
+                "id": "1",
+                "title": "Manter Familiar",
+                "description": "R$ 39,90/mês · composição familiar"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Comparar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

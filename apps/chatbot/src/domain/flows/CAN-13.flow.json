@@ -1,0 +1,58 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Motivo (opcional)",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Se quiser, conte por que está cancelando. Sua resposta é opcional e não impede o cancelamento."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Motivo (opcional)",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "O valor não compensa"
+              },
+              {
+                "id": "1",
+                "title": "Não utilizei o benefício"
+              },
+              {
+                "id": "2",
+                "title": "Contratei outro serviço"
+              },
+              {
+                "id": "3",
+                "title": "Desisti da contratação"
+              },
+              {
+                "id": "4",
+                "title": "Outro motivo"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

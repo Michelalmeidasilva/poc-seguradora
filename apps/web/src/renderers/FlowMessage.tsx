@@ -9,6 +9,7 @@ export interface FlowPayload {
   footer?: string | undefined;
   ctaLabel: string;
   flowJson: Record<string, unknown>;
+  initialData?: { intent: 'review' | 'correction'; values: Record<string, string | boolean> } | undefined;
 }
 
 export function FlowMessage({
@@ -35,6 +36,7 @@ export function FlowMessage({
             flowJson: payload.flowJson,
             header: payload.header,
             body: payload.body,
+            initialData: payload.initialData,
           })
         }
       >

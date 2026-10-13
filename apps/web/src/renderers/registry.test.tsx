@@ -137,6 +137,28 @@ describe('renderBotMessage', () => {
     expect(screen.getByRole('button', { name: 'Começar' })).toBeInTheDocument();
   });
 
+  it('renders document events in an incoming bubble and opens only available documents locally', async () => {
+    const event: ServerEvent = {
+      ...base,
+      id: uuid(10),
+      seq: 10,
+      type: 'message.document',
+      payload: {
+        documents: [
+          { id: 'contract', title: 'Resumo do contrato', status: 'available' },
+          { id: 'receipt', title: 'Comprovante', status: 'generating' },
+        ],
+      },
+    };
+    const { container } = render(<>{renderBotMessage(item(event), ctx())}</>);
+
+    expect(container.querySelector('.bubble--in')).not.toBeNull();
+    expect(screen.getByText('Em geração')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Abrir Comprovante' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir Resumo do contrato' }));
+    expect(screen.getByRole('dialog', { name: 'Resumo do contrato' })).toBeInTheDocument();
+  });
+
   it('never plays a blob: URL coming from the server path', () => {
     const voice = {
       kind: 'bot',

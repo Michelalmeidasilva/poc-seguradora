@@ -1,0 +1,43 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Selecionar assistência",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Para qual contrato deseja incluir sua filha?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Selecionar assistência",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Serviços de Assistência Familiar",
+                "description": "Ativa · contrato final 2048"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

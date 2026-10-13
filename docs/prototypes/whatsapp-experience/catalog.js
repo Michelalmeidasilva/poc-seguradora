@@ -61,16 +61,16 @@
   ];
   const contracts = [
     {
-      label: 'Assistência Saúde',
+      label: 'Serviços de Assistência',
       detail: 'Familiar · ativa · contrato final 2048',
       target: 'CON-02',
     },
     {
-      label: 'Assistência Saúde',
+      label: 'Serviços de Assistência',
       detail: 'Individual · ativa · contrato final 1092',
       target: 'CON-02',
     },
-    { label: 'Assistência Saúde', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
+    { label: 'Serviços de Assistência', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
   ];
   const dependentReview = () => [
     { title: 'Pessoa que será incluída', rows: person },
@@ -130,7 +130,7 @@
       screen(
         'ENT-04',
         'Informação sem identificação',
-        'O que é a assistência saúde?',
+        'O que são os serviços de assistência?',
         'É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver opções', 'DES-05'), action('Tirar dúvidas', 'FAQ-01')] },
       ),
@@ -138,8 +138,8 @@
         'ENT-05',
         'Pedido com dados pessoais',
         'Quem está no meu plano?',
-        'Para consultar as pessoas vinculadas, preciso verificar sua identidade. Depois continuamos seu pedido.',
-        { actions: [action('Verificar identidade', 'IDE-02')] },
+        'Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.',
+        { actions: [action('Informar CPF', 'IDE-08')] },
       ),
       screen(
         'ENT-06',
@@ -152,7 +152,7 @@
         'ENT-07',
         'Nenhum contrato localizado',
         'Quero ver minha assistência.',
-        'Não localizei uma assistência vinculada à identidade verificada. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.',
+        'Não localizei uma assistência vinculada nesta demonstração. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.',
         {
           ...variant(),
           actions: [
@@ -193,13 +193,13 @@
         'Quero tirar uma dúvida.',
         'Sobre qual assunto você quer saber?',
         { ...list('Central de dúvidas', [
-          { label: 'Informações gerais', detail: 'O que é a Assistência Saúde', target: 'FAQ-02' },
+          { label: 'Informações gerais', detail: 'O que são os serviços de assistência', target: 'FAQ-02' },
           { label: 'Como utilizar', detail: 'Telemedicina, funeral e farmácia', target: 'FAQ-03' },
           { label: 'Coberturas', detail: 'O que está incluído e o que não está', target: 'FAQ-04' },
           { label: 'Carências', detail: 'Consultar condições do plano', target: 'FAQ-05' },
         ], 'Ver resposta'), actions: [action('Menu', 'NAV-01')] },
       ),
-      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'A Assistência Saúde reúne exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-03', 'Como utilizar', 'Como uso os serviços?', 'A Telemedicina é acessada no ambiente do prestador; a Assistência Funeral oferece suporte ao titular e dependentes; a Assistência Farmácia dá acesso a descontos em redes credenciadas. Disponibilidade e instruções específicas devem ser consultadas para o seu plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01'), action('Consultar meus benefícios', 'UTI-01')] }),
       screen('FAQ-04', 'Coberturas', 'Quais são as coberturas?', 'Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-05', 'Carências', 'Quais são as carências?', 'A carência aplicável depende do serviço e das condições vigentes do seu plano. Não vou estimar um prazo: consulte seu contrato ou autentique para verificarmos a condição aplicável.', { actions: [action('Ver contrato', 'CON-01'), action('Voltar aos tópicos', 'FAQ-01')] }),
@@ -314,71 +314,56 @@
     'IDE',
     'Identificação e sessão',
     'Começar',
-    'Autenticação obrigatória antes de qualquer jornada pessoal, com retorno ao pedido original.',
-    'CPF localiza o cadastro; código confirma o acesso. Sessão válida pode ser reutilizada.',
-    'Demonstração local: CPF fictício 529.982.247-25 e código 123456. Canal real, segurança e duração de sessão serão definidos com o banco.',
+    'CPF obrigatório antes de qualquer jornada pessoal, com retorno ao pedido original.',
+    'Qualquer CPF no formato de 11 dígitos ou XXX.XXX.XXX-XX libera a sessão demonstrativa. Sem consulta cadastral ou verificação de identidade.',
+    'Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.',
     [
       screen(
         'IDE-01',
-        'Identificação necessária',
+        'CPF necessário',
         'Quero consultar meu contrato.',
-        'Antes de acessar dados pessoais ou do contrato, precisamos autenticar seu acesso. O CPF localiza o cadastro e o código confirma sua identidade. Depois retomamos seu pedido.',
-        { actions: [action('Informar CPF', 'IDE-08'), action('Já tenho código', 'IDE-02')] },
+        'Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.',
+        { actions: [action('Informar CPF', 'IDE-08')] },
       ),
       screen(
         'IDE-02',
-        'Verificação de demonstração',
-        'Vou verificar.',
-        'Informe o código de acesso enviado pelo canal cadastrado. Na demonstração, use 123456. O envio real não acontece neste protótipo.',
-        form(
-          'Verificar identidade',
-          [
-            {
-              name: 'verification',
-              label: 'Código demonstrativo',
-              placeholder: 'Digite 123456',
-              required: true,
-              pattern: '123456',
-            },
-          ],
-          'Verificar',
-          'IDE-03',
-          { note: 'Código de demonstração: 123456. Não informe dados reais.' },
-        ),
+        'Como informar o CPF',
+        'Como posso continuar?',
+        'Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.',
+        { actions: [action('Informar CPF', 'IDE-08')] },
       ),
       screen(
         'IDE-03',
-        'Identidade verificada',
-        '123456',
-        '**Titular identificado**\nAna Silva\nCPF: •••.•••.•••-25\n\nIdentidade verificada. Vamos continuar sua solicitação.',
+        'Acesso demonstrativo liberado',
+        'CPF informado.',
+        'Formato do CPF aceito. O acesso demonstrativo está liberado. Vamos continuar sua solicitação.',
         { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
       ),
       screen(
         'IDE-04',
-        'Verificação não concluída',
-        'O código não funcionou.',
-        'Não foi possível concluir a verificação. Confira o código ou peça uma nova tentativa.',
+        'Formato de CPF incorreto',
+        'Não consegui continuar.',
+        'Confira o formato do CPF: use 11 números ou o formato XXX.XXX.XXX-XX.',
         {
           ...variant(),
-          actions: [action('Tentar novamente', 'IDE-02'), action('Pedir ajuda', 'HUM-01')],
+          actions: [action('Tentar novamente', 'IDE-08'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
       screen(
         'IDE-05',
         'Sessão expirada',
         'Quero continuar.',
-        'Sua sessão de identificação expirou. Os dados da solicitação estão salvos. Vamos verificar sua identidade novamente.',
-        { ...variant(), actions: [action('Verificar novamente', 'IDE-02')] },
+        'Sua sessão demonstrativa expirou. Os dados da solicitação estão salvos nesta página. Informe o CPF novamente para continuar.',
+        { ...variant(), actions: [action('Informar CPF', 'IDE-08')] },
       ),
       screen(
         'IDE-06',
-        'Confirmação adicional',
+        'Renovar acesso',
         'Quero confirmar o cancelamento.',
-        'Esta ação exige uma confirmação adicional de identidade. Depois, você poderá revisar o cancelamento.',
+        'Informe o CPF para renovar o acesso demonstrativo. Depois, você poderá revisar o cancelamento.',
         {
-          actions: [action('Confirmar identidade', 'IDE-02')],
-          behavior:
-            'Após verificação, retornar à revisão da ação sensível, sem executá-la automaticamente.',
+          actions: [action('Informar CPF', 'IDE-08')],
+          behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
       screen(
@@ -390,12 +375,12 @@
       ),
       screen(
         'IDE-08',
-        'CPF para localizar cadastro',
+        'Informar CPF',
         'Vou informar meu CPF.',
-        'Informe somente o CPF fictício 529.982.247-25 nesta demonstração. O CPF sozinho não libera o acesso: a próxima etapa exige o código.',
-        form('Localizar cadastro', [
-          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '529.982.247-25', required: true },
-        ], 'Continuar para código', 'IDE-02'),
+        'Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.',
+        form('Informar CPF', [
+          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '000.000.000-00', required: true },
+        ], 'Continuar', 'IDE-03'),
       ),
     ],
   );
@@ -478,13 +463,53 @@
           'Conhecer produtos',
           [
             {
-              label: 'Assistência Saúde',
-              detail: 'Serviços e benefícios para o dia a dia',
-              target: 'DES-03',
+              label: 'Assistência Funeral',
+              detail: 'Suporte ao titular e aos dependentes, conforme as condições do serviço.',
+              target: 'DES-12',
+            },
+            {
+              label: 'Assistência Farmácia',
+              detail: 'Descontos em redes credenciadas, conforme as condições do serviço.',
+              target: 'DES-13',
+            },
+            {
+              label: 'Telemedicina',
+              detail: 'Atendimento remoto no ambiente do prestador, conforme disponibilidade.',
+              target: 'DES-14',
             },
           ],
-          'Ver produto',
+          'Ver detalhes',
         ),
+      ),
+      screen(
+        'DES-12',
+        'Detalhes · Assistência Funeral',
+        'Quero saber mais sobre a Assistência Funeral.',
+        'A Assistência Funeral oferece suporte ao titular e aos dependentes. A utilização depende das condições, limites e elegibilidade previstos no serviço contratado.',
+        {
+          actions: [action('Ver opções', 'DES-05'), action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não prometer cobertura, valores, carência ou procedimentos sem confirmação das condições vigentes.',
+        },
+      ),
+      screen(
+        'DES-13',
+        'Detalhes · Assistência Farmácia',
+        'Quero saber mais sobre a Assistência Farmácia.',
+        'A Assistência Farmácia oferece descontos em redes credenciadas. As redes participantes e as condições de uso devem ser confirmadas antes da utilização.',
+        {
+          actions: [action('Ver opções', 'DES-05'), action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não informar percentual, preço ou rede específica sem confirmação das condições vigentes.',
+        },
+      ),
+      screen(
+        'DES-14',
+        'Detalhes · Telemedicina',
+        'Quero saber mais sobre a Telemedicina.',
+        'A Telemedicina acontece no ambiente do prestador, conforme disponibilidade, limites e condições do serviço contratado.',
+        {
+          actions: [action('Ver opções', 'DES-05'), action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador.',
+        },
       ),
       screen(
         'DES-02',
@@ -501,8 +526,8 @@
       screen(
         'DES-03',
         'Apresentação do produto',
-        'Quero conhecer a assistência saúde.',
-        'A Assistência Saúde oferece somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
+        'Quero conhecer os serviços de assistência.',
+        'Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver planos', 'DES-05')] },
       ),
       screen(
@@ -561,7 +586,7 @@
         'DES-08',
         'Oferta consultada',
         'Quero o Familiar.',
-        '**Assistência Saúde Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
+        '**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
         {
           actions: [
             action('Revisar contratação', 'ADE-01'),
@@ -608,14 +633,14 @@
         'ADE-01',
         'Plano escolhido',
         'Quero contratar o Familiar.',
-        'Você escolheu Assistência Saúde Familiar. Vamos conferir os dados e condições antes de confirmar.',
+        'Você escolheu Serviços de Assistência Familiar. Vamos conferir os dados e condições antes de confirmar.',
         { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-05')] },
       ),
       screen(
         'ADE-02',
         'Identificação na adesão',
         'Vamos continuar.',
-        'Primeiro, precisamos verificar sua identidade. Se sua sessão estiver válida, esta etapa será aproveitada.',
+        'Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.',
         {
           actions: [
             action('Continuar com autenticação', 'ADE-03'),
@@ -669,7 +694,7 @@
             {
               title: 'Produto e participantes',
               rows: [
-                ['Produto', 'Assistência Saúde'],
+                ['Produto', 'Serviços de Assistência'],
                 ['Plano', 'Familiar'],
                 ['Titular', 'Ana Silva'],
                 ['Dependentes agora', 'Nenhum; incluir depois'],
@@ -712,7 +737,7 @@
             {
               title: 'Resumo',
               rows: [
-                ['Produto', 'Assistência Saúde Familiar'],
+                ['Produto', 'Serviços de Assistência Familiar'],
                 ['Valor', 'R$ 39,90/mês'],
                 ['Participantes', 'Somente titular nesta etapa'],
               ],
@@ -744,7 +769,7 @@
         'ADE-09',
         'Contratação concluída',
         'Qual é o resultado?',
-        '**Contratação concluída**\nAssistência Saúde Familiar · ativa.\nVigência: 10/10/2026.\nProtocolo: ADE-2026-2048.\nConsulte as condições de cada benefício antes de utilizar.',
+        '**Contratação concluída**\nServiços de Assistência Familiar · ativa.\nVigência: 10/10/2026.\nProtocolo: ADE-2026-2048.\nConsulte as condições de cada benefício antes de utilizar.',
         {
           actions: [
             action('Ver documentos', 'CON-07'),
@@ -936,8 +961,8 @@
       screen(
         'CON-02',
         'Resumo ativo',
-        'Assistência Saúde',
-        '**Assistência Saúde · Familiar**\nSituação: ativa.\nVigência: desde 10/10/2026.\nMensalidade: R$ 39,90.\nPessoas vinculadas: titular e 1 dependente.\nConsulte carências e limites ao usar cada benefício.',
+        'Serviços de Assistência',
+        '**Serviços de Assistência · Familiar**\nSituação: ativa.\nVigência: desde 10/10/2026.\nMensalidade: R$ 39,90.\nPessoas vinculadas: titular e 1 dependente.\nConsulte carências e limites ao usar cada benefício.',
         {
           actions: [
             action('Usar benefícios', 'UTI-01'),
@@ -979,7 +1004,7 @@
       screen(
         'CON-06',
         'Contrato encerrado',
-        'Assistência Saúde encerrado',
+        'Serviços de Assistência encerrado',
         'Este contrato foi encerrado em 10/09/2026. Você pode consultar documentos e solicitações ainda disponíveis.',
         {
           ...variant(),
@@ -1015,7 +1040,7 @@
         'CON-09',
         'Nenhum contrato',
         'Meus contratos',
-        'Não há contratos disponíveis para esta identidade. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.',
+        'Não há contratos disponíveis nesta demonstração. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.',
         {
           ...variant(),
           actions: [action('Ver solicitação', 'SOL-08'), action('Conhecer produtos', 'DES-01')],
@@ -1053,7 +1078,7 @@
         'DEP-01',
         'Pedido de inclusão',
         'Quero incluir minha filha.',
-        'Posso ajudar. Vou verificar sua identidade, o contrato e as condições para inclusão.',
+        'Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.',
         { actions: [action('Continuar inclusão', 'DEP-02')] },
       ),
       screen(
@@ -1065,7 +1090,7 @@
           'Selecionar assistência',
           [
             {
-              label: 'Assistência Saúde Familiar',
+              label: 'Serviços de Assistência Familiar',
               detail: 'Ativa · contrato final 2048',
               target: 'DEP-03',
             },
@@ -1076,7 +1101,7 @@
       screen(
         'DEP-03',
         'Consultar vagas e condições',
-        'Assistência Saúde Familiar',
+        'Serviços de Assistência Familiar',
         'Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
         {
           actions: [
@@ -1089,7 +1114,7 @@
         'DEP-33',
         'Mensagem única · dados compreendidos',
         'Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.',
-        'Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nPara concluir o cadastro legado, preciso perguntar o celular e o sexo biológico. Não vou deduzir nenhum deles pelo nome.',
+        'Entendi os dados do João:\n\n**Nome:** João da Silva\n**CPF:** •••.•••.•••-10\n**Nascimento:** 12/03/2004\n**Parentesco:** filho\n\nPara concluir o cadastro, preciso perguntar o celular e o sexo biológico. Não vou deduzir nenhum deles pelo nome.',
         {
           seed: {
             name: 'João da Silva',
@@ -1169,7 +1194,7 @@
         'DEP-09',
         'Inclusão concluída',
         'Consultar resultado',
-        '**Inclusão concluída**\n{{name}} está vinculada à Assistência Saúde Familiar.\nData efetiva: 10/10/2026.\nProtocolo: DEP-2026-0318.\nA utilização segue as condições de cada benefício.',
+        '**Inclusão concluída**\n{{name}} está vinculada aos Serviços de Assistência Familiar.\nData efetiva: 10/10/2026.\nProtocolo: DEP-2026-0318.\nA utilização segue as condições de cada benefício.',
         {
           actions: [
             action('Ver benefícios', 'UTI-01'),
@@ -1524,7 +1549,7 @@
         'EXC-11',
         'Agendamento desfeito',
         'Consultar resultado',
-        'O agendamento de exclusão foi desfeito. Maria permanece vinculada à Assistência Saúde Familiar.\nProtocolo: EXC-2026-0092.',
+        'O agendamento de exclusão foi desfeito. Maria permanece vinculada aos Serviços de Assistência Familiar.\nProtocolo: EXC-2026-0092.',
         { actions: [action('Ver participantes', 'DEP-10')] },
       ),
       screen(
@@ -2031,7 +2056,7 @@
         'COB-01',
         'Resumo financeiro',
         'Quero ver meus pagamentos.',
-        '**Assistência Saúde Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
+        '**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
         {
           actions: [
             action('Ver pendência', 'COB-02'),
@@ -2231,7 +2256,7 @@
             {
               title: 'Encerramento',
               rows: [
-                ['Contrato', 'Assistência Saúde Familiar'],
+                ['Contrato', 'Serviços de Assistência Familiar'],
                 ['Data efetiva neste cenário', '10/10/2026'],
                 ['Acesso aos benefícios', 'Até a data efetiva consultada'],
                 ['Pessoas afetadas', 'Titular e dependentes'],
@@ -2392,7 +2417,7 @@
             {
               title: 'Nova vigência',
               rows: [
-                ['Produto', 'Assistência Saúde'],
+                ['Produto', 'Serviços de Assistência'],
                 ['Novo valor', 'R$ 42,90/mês'],
                 ['Início', '11/11/2026'],
                 ['Primeira cobrança', 'Data informada pelo sistema'],
@@ -2475,7 +2500,7 @@
       screen(
         'SOL-02',
         'Lista por contrato',
-        'Assistência Saúde Familiar',
+        'Serviços de Assistência Familiar',
         'Estas são as solicitações do contrato selecionado.',
         list(
           'Minhas solicitações',
@@ -2561,7 +2586,7 @@
         'SOL-10',
         'Entrada por protocolo',
         'Protocolo DEP-2026-0318',
-        'Vou consultar o pedido correspondente após verificar a identidade necessária.',
+        'Vou consultar o pedido correspondente após informar um CPF fictício.',
         { actions: [action('Ver pedido', 'DEP-09'), action('Verificação necessária', 'IDE-01')] },
       ),
     ],
@@ -2880,263 +2905,6 @@
     ],
   );
 
-  journey(
-    'LEG',
-    'Referência legada',
-    'Referência',
-    '34 estados documentados no legado, reconstruídos para comparação com a proposta conversacional.',
-    'Referência histórica. Inconsistências documentais aparecem no painel de revisão e não viram regra futura.',
-    'Reconstrução documental, não cópia pixel a pixel dos frames Figma. IDs 143 e 150 não constam no inventário fornecido.',
-    [
-      screen(
-        'LEG-137',
-        '137 · Boas-vindas e CPF',
-        'Oi',
-        'Olá, boas-vindas ao WhatsApp de Assistência Saúde Digio 💙\nAqui você pode consultar informações sobre sua assistência e gerenciar dependentes.\nPara começar, qual é o número do seu CPF?',
-      ),
-      screen('LEG-138', '138 · Envio do CPF', '000.000.000-00', 'CPF recebido para consulta.'),
-      screen(
-        'LEG-139',
-        '139 · Solicitar nascimento',
-        'CPF informado',
-        'Qual é sua data de nascimento?',
-      ),
-      screen('LEG-140', '140 · Envio do nascimento', '01/09/2002', 'Data de nascimento recebida.'),
-      screen(
-        'LEG-141',
-        '141 · Compartilhar contato',
-        'Data informada',
-        'Compartilhe seu número de celular para prosseguirmos com a jornada.',
-        { actions: [action('Compartilhar contato', 'LEG-142')] },
-      ),
-      screen(
-        'LEG-142',
-        '142 · Titular identificado',
-        'Contato compartilhado',
-        '**Ana Maria**\nTitular identificado · Digio.\nComo deseja prosseguir?',
-        { actions: [action('Conversar', 'LEG-144')] },
-      ),
-      screen('LEG-144', '144 · Abrir menu', 'Conversar', 'Como deseja prosseguir?', {
-        actions: [action('Selecione uma opção', 'LEG-145')],
-      }),
-      screen(
-        'LEG-145',
-        '145 · Menu de opções',
-        'Selecione uma opção',
-        'Selecione o serviço que deseja gerenciar.',
-        list(
-          'Menu principal legado',
-          [
-            { label: 'Tirar dúvidas', target: 'LEG-146' },
-            { label: 'Gerenciar dependentes', target: 'LEG-151' },
-            { label: 'Alterar plano — em breve', disabled: true },
-            { label: 'Cancelar assistência', target: 'LEG-166' },
-          ],
-          'Selecionar opção',
-        ),
-      ),
-      screen('LEG-146', '146 · Tirar dúvidas', 'Tirar dúvidas', 'Vamos consultar um tópico.'),
-      screen('LEG-147', '147 · Solicitar tópico', 'Tirar dúvidas', 'O que deseja consultar?', {
-        actions: [action('Selecionar tópico', 'LEG-148')],
-      }),
-      screen(
-        'LEG-148',
-        '148 · Lista de tópicos',
-        'Selecionar tópico',
-        'Escolha o assunto que deseja entender.',
-        list(
-          'Tópicos de dúvidas',
-          ['Informações gerais', 'Utilização da assistência', 'Coberturas', 'Carências'].map(
-            (label) => ({ label, target: 'LEG-149' }),
-          ),
-          'Ver detalhes',
-        ),
-      ),
-      screen(
-        'LEG-149',
-        '149 · Coberturas',
-        'Coberturas',
-        'Você tem acesso a Telemedicina, Assistência Funeral com suporte ao titular e aos dependentes e Assistência Farmácia com descontos em redes credenciadas, conforme seu plano.\nEste serviço não é plano de saúde e não cobre procedimentos hospitalares.',
-        { actions: [action('Menu', 'LEG-144'), action('Encerrar', 'ENT-02')] },
-      ),
-      screen(
-        'LEG-151',
-        '151 · Gerenciar dependentes',
-        'Gerenciar dependentes',
-        'Vamos consultar as ações disponíveis.',
-      ),
-      screen(
-        'LEG-152',
-        '152 · Ações de dependentes',
-        'Gerenciar dependentes',
-        'O que deseja fazer?',
-        {
-          actions: [
-            action('Consultar', 'LEG-153'),
-            action('Incluir', 'LEG-155'),
-            action('Excluir', 'LEG-159'),
-          ],
-        },
-      ),
-      screen(
-        'LEG-153',
-        '153 · Consultar dependentes',
-        'Consultar dependentes',
-        'Consultando as pessoas vinculadas.',
-      ),
-      screen(
-        'LEG-154',
-        '154 · Lista de dependentes',
-        'Consultar',
-        'Maria José da Silva · filha.\nCarlos Alberto Menezes · cônjuge.\nVocê possui 2 vagas disponíveis neste exemplo do legado.',
-        { actions: [action('Menu', 'LEG-144'), action('Encerrar', 'ENT-02')] },
-      ),
-      screen(
-        'LEG-155',
-        '155 · Iniciar inclusão',
-        'Incluir dependentes',
-        'Vamos receber os dados da pessoa.',
-      ),
-      screen(
-        'LEG-156',
-        '156 · Solicitar cinco dados',
-        'Incluir',
-        'Informe nome completo, CPF, celular, data de nascimento e sexo biológico do dependente.',
-      ),
-      screen(
-        'LEG-157',
-        '157 · Dados em bloco',
-        'Maria José Silva\n000.000.000-00\n(11) 90000-0000\n12/03/2004\nFeminino',
-        'Dados recebidos para validação.',
-      ),
-      screen(
-        'LEG-158',
-        '158 · Inclusão confirmada',
-        'Dados enviados',
-        'O dependente atende aos critérios e foi incluído. Você pode cadastrar até 4 pessoas no pacote, segundo o texto legado.',
-        {
-          actions: [
-            action('Incluir outro', 'LEG-155'),
-            action('Menu', 'LEG-144'),
-            action('Encerrar', 'ENT-02'),
-          ],
-        },
-      ),
-      screen(
-        'LEG-159',
-        '159 · Iniciar exclusão',
-        'Excluir dependentes',
-        'Vamos selecionar a pessoa.',
-      ),
-      screen(
-        'LEG-160',
-        '160 · Solicitar seleção',
-        'Excluir',
-        'Selecione qual dependente deseja excluir.',
-        { actions: [action('Selecionar dependente', 'LEG-161')] },
-      ),
-      screen(
-        'LEG-161',
-        '161 · Lista de exclusão',
-        'Selecionar dependente',
-        'Escolha a pessoa que será desvinculada.',
-        list(
-          'Excluir dependente',
-          [
-            'Maria José da Silva',
-            'João da Silva',
-            'Carlos Alberto Menezes',
-            'Lourenço de Assis',
-          ].map((label) => ({ label, target: 'LEG-162' })),
-          'Continuar',
-        ),
-      ),
-      screen(
-        'LEG-162',
-        '162 · Pessoa escolhida',
-        'Maria José da Silva',
-        'Pessoa selecionada para exclusão.',
-      ),
-      screen(
-        'LEG-163',
-        '163 · Alerta e confirmação',
-        'Maria José da Silva',
-        'Deseja excluir Maria José da Silva? O legado informa encerramento imediato do acesso aos benefícios.',
-        { actions: [action('Excluir', 'LEG-164'), action('Manter', 'LEG-152')] },
-      ),
-      screen(
-        'LEG-164',
-        '164 · Confirmar exclusão',
-        'Excluir dependente',
-        'Processando a solicitação.',
-      ),
-      screen(
-        'LEG-165',
-        '165 · Protocolo de exclusão',
-        'Excluir dependente',
-        'Solicitação realizada.\nProtocolo: 123456789.\nDependente: Maria José da Silva.\nA data efetiva do documento de referência precisa ser corrigida.',
-        {
-          actions: [action('Excluir outro', 'LEG-159'), action('Menu', 'LEG-144')],
-          rule: 'O documento original contém 31/02/2026, data inválida. Não replicada como data válida.',
-        },
-      ),
-      screen(
-        'LEG-166',
-        '166 · Iniciar cancelamento',
-        'Cancelar assistência',
-        'Vamos consultar o cancelamento.',
-      ),
-      screen(
-        'LEG-167',
-        '167 · Alerta de perdas',
-        'Cancelar assistência',
-        'Após o cancelamento, você e seus dependentes perderão acesso às coberturas contratadas. Como deseja prosseguir?',
-        { actions: [action('Manter assistência', 'LEG-144'), action('Sim, cancelar', 'LEG-168')] },
-      ),
-      screen(
-        'LEG-168',
-        '168 · Confirmar desistência',
-        'Sim, cancelar assistência',
-        'Vamos registrar o motivo.',
-      ),
-      screen(
-        'LEG-169',
-        '169 · Solicitar motivo',
-        'Cancelar',
-        'Para continuar, selecione o motivo do cancelamento.',
-        { actions: [action('Selecionar motivo', 'LEG-170')] },
-      ),
-      screen(
-        'LEG-170',
-        '170 · Lista de motivos',
-        'Selecionar motivo',
-        'Conte por que está cancelando.',
-        list(
-          'Motivo do cancelamento',
-          [
-            'O valor não compensa',
-            'Não utilizei o benefício',
-            'Contratei outro serviço',
-            'Desisti da contratação',
-            'Outro motivo',
-          ].map((label) => ({ label, target: 'LEG-171' })),
-          'Confirmar cancelamento',
-        ),
-      ),
-      screen('LEG-171', '171 · Motivo enviado', 'Outro motivo', 'Motivo recebido.'),
-      screen(
-        'LEG-172',
-        '172 · Encerramento',
-        'Outro motivo',
-        'Sua assistência será cancelada.\nProtocolo: 123456789.\nVigência e restituição dependem da regra aplicável. O documento legado apresenta informações divergentes de prazo e destino.',
-        {
-          actions: [action('Encerrar atendimento', 'ENT-02')],
-          rule: 'Legado diverge entre conta/cartão e 20 dias/20 dias úteis. Requer validação; não assumido como regra.',
-        },
-      ),
-    ],
-  );
-
   const index = {};
   for (const group of groups) {
     group.steps.forEach((step, position) => {
@@ -3145,7 +2913,7 @@
       step.requiresAuth = ![
         'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09', 'FAQ-01', 'FAQ-02', 'FAQ-03', 'FAQ-04', 'FAQ-05', 'FIM-01', 'FIM-02',
         'NAV-01', 'DES-01', 'DES-02', 'DES-03', 'DES-04', 'DES-05', 'DES-06',
-        'DES-09', 'DES-10', 'DES-11', 'HUM-01', 'HUM-02', 'HUM-03',
+        'DES-09', 'DES-10', 'DES-11', 'DES-12', 'DES-13', 'DES-14', 'HUM-01', 'HUM-02', 'HUM-03',
         'AUD-01', 'AUD-03', 'AUD-04',
       ].includes(step.id) && group.code !== 'IDE';
       step.position = position;

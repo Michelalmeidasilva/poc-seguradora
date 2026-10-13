@@ -27,6 +27,15 @@ describe('FlowMessage', () => {
       flowJson: payload.flowJson,
       header: 'Cotação',
       body: 'Vamos fazer sua cotação.',
+      initialData: undefined,
     });
+  });
+
+  it('passes only the explicit volatile review/correction draft to the Flow host', async () => {
+    const initialData = { intent: 'correction' as const, values: { name: 'Ana', document: '98765432109' } };
+    const onOpen = vi.fn();
+    render(<FlowMessage payload={{ ...payload, initialData }} onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Começar' }));
+    expect(onOpen.mock.calls[0]?.[0].initialData).toEqual(initialData);
   });
 });

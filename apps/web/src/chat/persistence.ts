@@ -1,7 +1,14 @@
-import { MAX_ITEMS, initialState, type ChatItem, type ChatState, type UserItem } from './model';
+import { MAX_ITEMS, initialState, type BotItem, type ChatItem, type ChatState, type UserItem } from './model';
 
 const KEY = 'seguradora-chat:v1';
 const KEEP = 200;
+const EXPIRED_FLOW_TEXT = 'Este formulário expirou ao recarregar. Reabra a etapa para continuar.';
+// Legacy generated catalog reviews depended on a volatile draft. Keep this local;
+// persistence tests check membership against the canonical catalog without a runtime dependency.
+const CATALOG_REVIEW_IDS = new Set([
+  'IDE-06', 'ADE-06', 'ADE-07', 'PAG-04', 'DEP-06', 'DEP-17', 'DEP-21',
+  'EXC-03', 'PLA-06', 'CAD-03', 'FUN-06', 'COB-05', 'CAN-05', 'REN-02', 'REN-03',
+]);
 
 interface Stored {
   v: 1;
@@ -18,11 +25,60 @@ function withoutFlowData(item: UserItem): UserItem {
   return { ...item, content: { type: 'flow_submit', flowId, summary } };
 }
 
+/** Preserve punctuation and the last two digits of recognized CPF values. */
+function maskCpf(text: string): string {
+  return text.replace(
+    /(?<!\d)(?:\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})(?!\d)/g,
+    (cpf) => cpf.slice(0, -2).replace(/\d/g, '*') + cpf.slice(-2),
+  );
+}
+
+/** Mask copied user-visible content; leave the active item and static identifiers untouched. */
+function withoutRawCpf(item: UserItem): UserItem {
+  if (item.content?.type === 'text') {
+    return { ...item, content: { ...item.content, text: maskCpf(item.content.text) } };
+  }
+  if (item.content?.type === 'quick_reply') {
+    return { ...item, content: { ...item.content, title: maskCpf(item.content.title) } };
+  }
+  if (item.content?.type === 'flow_submit') {
+    return { ...item, content: { ...item.content, summary: maskCpf(item.content.summary) } };
+  }
+  return item;
+}
+
+/** A draft may live in the current tab's reducer state, never in replayable storage/history. */
+function expireDraftFlow(item: BotItem): BotItem {
+  if (item.event.type !== 'message.flow') return item;
+  const { initialData, flowJson, flowId } = item.event.payload;
+  const screens = (flowJson as { screens?: unknown[] } | undefined)?.screens;
+  const legacyTerminalReview =
+    CATALOG_REVIEW_IDS.has(flowId) &&
+    Array.isArray(screens) &&
+    screens.length === 1 &&
+    typeof screens[0] === 'object' &&
+    screens[0] !== null &&
+    'id' in screens[0] &&
+    screens[0].id === 'REVIEW' &&
+    'terminal' in screens[0] &&
+    screens[0].terminal === true;
+  if (!initialData && !legacyTerminalReview) return item;
+  return {
+    ...item,
+    event: {
+      ...item.event,
+      type: 'message.text',
+      payload: { text: EXPIRED_FLOW_TEXT },
+    } as BotItem['event'],
+  };
+}
+
 /**
  * Makes an item safe to store: no blob URLs (they die with the page), no flow submission data
  * and no in-flight statuses.
  */
 function toStorable(item: ChatItem): ChatItem {
+  if (item.kind === 'bot') return expireDraftFlow(item);
   if (item.kind !== 'user') return item;
   const status = item.status === 'sending' ? 'failed' : item.status;
   if (item.content.type === 'voice') {
@@ -30,11 +86,11 @@ function toStorable(item: ChatItem): ChatItem {
     delete voice.objectUrl;
     return { ...item, status, content: voice };
   }
-  return { ...withoutFlowData(item), status };
+  return { ...withoutRawCpf(withoutFlowData(item)), status };
 }
 
-export function saveChat(storage: Storage, state: ChatState): void {
-  if (!state.sessionId) return;
+function writeChat(storage: Storage, state: ChatState): boolean {
+  if (!state.sessionId) return false;
   const stored: Stored = {
     v: 1,
     sessionId: state.sessionId,
@@ -43,9 +99,15 @@ export function saveChat(storage: Storage, state: ChatState): void {
   };
   try {
     storage.setItem(KEY, JSON.stringify(stored));
+    return true;
   } catch {
     // storage full or unavailable: the chat keeps working without persistence
+    return false;
   }
+}
+
+export function saveChat(storage: Storage, state: ChatState): void {
+  writeChat(storage, state);
 }
 
 export function loadChat(storage: Storage): ChatState | undefined {
@@ -73,9 +135,19 @@ export function loadChat(storage: Storage): ChatState | undefined {
     return undefined;
   }
   const items = (s.items.slice(-MAX_ITEMS) as ChatItem[]).map((i) =>
-    i.kind === 'user' ? withoutFlowData(i) : i,
+    i.kind === 'user' ? withoutRawCpf(withoutFlowData(i)) : i.kind === 'bot' ? expireDraftFlow(i) : i,
   );
   const seen: Record<string, true> = {};
   for (const item of items) if (item.kind === 'bot') seen[item.id] = true;
-  return { ...initialState(), sessionId: s.sessionId, lastSeq: s.lastSeq, items, seen };
+  const restored = { ...initialState(), sessionId: s.sessionId, lastSeq: s.lastSeq, items, seen };
+  // Rewrite synchronously before exposing a restored state so old drafts/CTAs cannot replay.
+  if (!writeChat(storage, restored)) {
+    try {
+      storage.removeItem(KEY);
+    } catch {
+      // If storage is inaccessible, do not restore this session into the UI.
+    }
+    return undefined;
+  }
+  return restored;
 }

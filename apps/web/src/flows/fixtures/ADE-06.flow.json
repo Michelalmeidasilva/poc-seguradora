@@ -1,0 +1,98 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Revisar contratação",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Revise todos os dados e condições. Se precisar corrigir alguma informação, podemos voltar à conversa."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Produto e participantes"
+          },
+          {
+            "type": "TextBody",
+            "text": "Produto: Serviços de Assistência"
+          },
+          {
+            "type": "TextBody",
+            "text": "Plano: Familiar"
+          },
+          {
+            "type": "TextBody",
+            "text": "Titular: Ana Silva"
+          },
+          {
+            "type": "TextBody",
+            "text": "Dependentes agora: Nenhum; incluir depois"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Preço e cobrança"
+          },
+          {
+            "type": "TextBody",
+            "text": "Total mensal: R$ 39,90"
+          },
+          {
+            "type": "TextBody",
+            "text": "Meio: Cartão cadastrado •• 2048"
+          },
+          {
+            "type": "TextBody",
+            "text": "Primeira cobrança: 10/10/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Recorrência: Mensal, mediante autorização"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Utilização e encerramento"
+          },
+          {
+            "type": "TextBody",
+            "text": "Início da vigência: Após confirmação da emissão"
+          },
+          {
+            "type": "TextBody",
+            "text": "Carências e limites: Consultar condições do produto"
+          },
+          {
+            "type": "TextBody",
+            "text": "Cancelamento: Primeira data permitida pelo produto"
+          },
+          {
+            "type": "TextCaption",
+            "text": "Assistência não é plano de saúde. Condições ilustrativas, sujeitas à validação."
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Ver documentos e aceite",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

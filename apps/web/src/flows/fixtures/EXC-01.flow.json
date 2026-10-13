@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Excluir dependente",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Vou conferir a pessoa e as condições antes de apresentar a confirmação."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Excluir dependente",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Maria Silva",
+                "description": "CPF: •••.•••.•••-09 · Filha · vínculo ativo"
+              },
+              {
+                "id": "1",
+                "title": "João Silva",
+                "description": "CPF: •••.•••.•••-10 · Filho · vínculo ativo"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Consultar efeitos",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

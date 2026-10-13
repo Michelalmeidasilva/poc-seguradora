@@ -1,6 +1,44 @@
 # Checklist: chatbot
 
-Última atualização: 2026-10-11
+Última atualização: 2026-10-13
+
+## Plano WhatsApp Assistance Experience — Task 2
+
+- [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE`, artefato JSON sincronizado e teste de deriva por execução do IIFE canônico
+- [x] Transições puras das jornadas com gate CPF, descoberta pública, quick replies válidos/obsoletos, destinos inválidos e sem guardar CPF inicial
+- [x] Parser de dependente limitado a nome, CPF, nascimento e parentesco explicitamente informados (inclui “meu filho João … CPF dele é … ele nasceu …”); correção preserva os outros campos e não infere sexo/gênero
+
+## Plano WhatsApp Assistance Experience — Task 3
+
+- [x] Gate demonstrativo aceita somente 11 dígitos ASCII ou CPF com pontuação canônica, normaliza para 11 dígitos sem checksum/lookup, retorna passo e estado sincronizados, libera jornadas pessoais apenas após formato aceito e descarta a entrada bruta
+
+## Plano WhatsApp Assistance Experience — Task 4
+
+- [x] `AssistancePort` tipado e separado de `ServicesPort`, com leituras e comandos confirmados publicados para consumo da Task 5
+- [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas, `Result` idempotente e cache FIFO limitada a 256 chaves por sessão
+- [x] Composição manual injeta e expõe a porta de assistência; testes de isolamento, expiração, capacidade, idempotência, mutações, falhas e composição
+
+## Plano WhatsApp Assistance Experience — Task 5
+
+- [x] Orquestração das jornadas catalogadas para texto, quick reply, Flow, áudio de fixture e abertura, preservando o diálogo legado e o tratamento silencioso de `flow_data_exchange`
+- [x] Validação estrita de Flow, tela atual e destinos canônicos; mutações somente no envio confirmado da revisão e falhas mantêm a tela atual
+- [x] Gate CPF persiste apenas `{journeyId, screenId, gateApproved}`, retoma o destino pessoal após aprovação e bloqueia leitura/escrita em qualquer tela protegida sem gate
+- [x] Operações tipadas dedicadas para endereço (estado atual + solicitação pendente de verificação), assistência funeral e preferências opcionais; telefone e sexo biológico obrigatórios no dependente
+- [x] Documentos limitados a `CON-07`, `UTI-09` e `CAN-08`; áudio restrito a IDs determinísticos do catálogo, sem transcrição ou upload
+- [x] Regressões de sessão, idempotência, leitura após escrita, falha sem transição de sucesso, validação, autorização e compatibilidade com o legado
+- [x] Verificação final: 578 testes do chatbot, typecheck, build, dependency-cruiser, ESLint dos arquivos alterados e `git diff --check`
+
+## Plano WhatsApp Assistance Experience — Task 7
+
+- [x] 46 Flows JSON versionados para todos os estados `list`, `form` e `review`, gerados do catálogo e servidos pelo chatbot; cópias web sincronizadas e validadas pelo schema/runtime; revisão/correção mantém valores comuns, mascara CPF e não reutiliza draft em outro fluxo
+- [x] Escolha de lista validada por índice e destino canônico; correção de revisão retorna sem mutação e preserva os dados anteriores; placeholder de seleção rejeitado; mutação terminal é executada uma única vez
+- [x] Quatro IDs de áudio do catálogo continuam sendo os únicos cenários aceitos pelo chatbot
+
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [ ] E2E enumera os 247 IDs e seus modos/conteúdos/ações, mas não comprova alcance total: a travessia a partir dos 24 `group.steps[0]` ainda registra 54 telas sem caminho; essas telas não são declaradas cobertas nem têm destinos inventados. Bloqueio de produto: decidir quais entradas de grupo são válidas ou quais telas alternativas devem existir e resolver os alvos duplicados em `IDE-01`, `IDE-03` e `DEP-11`. O teste registra esse baseline; revisão Task 9 permanece pendente.
+- [ ] Um cenário HTTP cobre a frase única de dependente, revisão, navegação pela correção, confirmação com exatamente uma mutação `addDependent`, ausência do CPF-canário em respostas/logs e zero chamadas à `ServicesPort` legada. A API existente não aceita edição de campo no ramo `DEP-14`/`DEP-16`; assim, a confirmação exercita os dados originais do rascunho, não uma correção efetiva. Permanecem sem cobertura integrada por HTTP: alteração/leitura persistente e isolamento de sessões, cancelamento/solicitação, áudio fixture/documento e indisponibilidade/retry/expiração/idempotência de mutação.
+- [x] Smoke Compose 7/7 da pilha web → gateway → chatbot → fake-services é evidência da pilha geral; não percorre jornadas de assistência e não conta como aceite Task 9
 
 ## Estrutura
 

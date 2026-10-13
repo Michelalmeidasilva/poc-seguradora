@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Revisar pagamento",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira a cobrança recorrente antes de continuar."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Cobrança"
+          },
+          {
+            "type": "TextBody",
+            "text": "Total: R$ 39,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Meio escolhido: Cartão •• 2048"
+          },
+          {
+            "type": "TextBody",
+            "text": "Primeira cobrança: 10/10/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Recorrência: Mensal"
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar para revisão",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

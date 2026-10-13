@@ -29,22 +29,14 @@
   let galleryVisible = false;
   let light = false;
   let additions = [];
-  let selectedContract = 'Assistência Saúde';
+  let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
   let identityReturn = 'CON-02';
   let authenticatedUntil = 0;
   let sessionTimer;
   const isAuthenticated = () => Date.now() < authenticatedUntil;
   function validCpf(value) {
-    const digits = String(value).replace(/\D/g, '');
-    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
-    for (let size = 9; size <= 10; size++) {
-      let sum = 0;
-      for (let i = 0; i < size; i++) sum += Number(digits[i]) * (size + 1 - i);
-      const digit = (sum * 10) % 11 % 10;
-      if (digit !== Number(digits[size])) return false;
-    }
-    return true;
+    return /^(?:[0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2})$/.test(String(value).trim());
   }
   let toastTimer;
   const modeLabels = {
@@ -81,7 +73,7 @@
       toast('Esta interação depende de definição do produto.');
       return;
     }
-    if (['IDE-01', 'IDE-02'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
+    if (['IDE-01', 'IDE-02', 'IDE-08'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
       if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
       else if (current === 'DES-10') identityReturn = 'ADE-01';
     }
@@ -159,12 +151,12 @@
       .join('');
   }
   function screenBot(step) {
-    if (step.journey === 'SOL' && selectedContract !== 'Assistência Saúde') {
+    if (step.journey === 'SOL' && selectedContract !== 'Serviços de Assistência') {
       if (step.id === 'SOL-02')
         return `Estas são as solicitações do contrato selecionado: ${selectedContract}.`;
     }
     if (step.id === 'DES-08' && selectedPlan === 'Individual')
-      return '**Assistência Saúde Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
+      return '**Serviços de Assistência Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
     return step.bot;
   }
   function renderChat(step) {
@@ -257,20 +249,12 @@
       let target = flow.target;
       if (step.id === 'IDE-08') {
         const cpf = String(data.get('authCpf') || '');
-        if (!validCpf(cpf) || cpf.replace(/\D/g, '') !== '52998224725') {
-          $('flow-error').textContent = 'Use o CPF fictício válido 529.982.247-25. Nenhuma consulta real é feita.';
+        if (!validCpf(cpf)) {
+          $('flow-error').textContent = 'Informe 11 números ou use o formato XXX.XXX.XXX-XX.';
           $('flow-error').hidden = false;
           return;
         }
-        go('IDE-02');
-        return;
-      }
-      if (step.id === 'IDE-02') {
-        if (String(data.get('verification') || '') !== '123456') {
-          go('IDE-04');
-          return;
-        }
-        // Code-only represents a previously identified account; never CPF-only.
+        // Format-only demo gate. No identity lookup or CPF checksum validation.
         authenticatedUntil = Date.now() + 15 * 60 * 1000;
         clearTimeout(sessionTimer);
         sessionTimer = setTimeout(() => {
@@ -315,7 +299,7 @@
   function renderInspector(step, group) {
     $('screen-title').textContent = step.title;
     $('screen-status').innerHTML =
-      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : group.code === 'LEG' ? 'Referência documental' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
+      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
     $('screen-intent').textContent = interpolate(step.intent);
     $('screen-behavior').textContent = interpolate(step.behavior).replace(/\*\*/g, '');
     $('screen-component').textContent = modeLabels[step.mode];
@@ -423,7 +407,7 @@
     }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
-      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
+      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Serviços de Assistência.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
     $('document-dialog').showModal();
   }
   document.addEventListener('click', (event) => {
