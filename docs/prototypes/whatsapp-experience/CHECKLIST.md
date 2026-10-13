@@ -13,3 +13,4 @@
 - [x] Comparativo HTML independente: 45 itens, sete fluxos e links para as 34 telas Figma; filtros, busca, referências e mobile verificados.
 - [x] Lacunas do legado equalizadas no catálogo: resumo do titular, dados de dependentes sem inferência, FAQ, motivo opcional, encerramento de conversa e CPF mascarado; comparativo e atlas atualizados.
 - [x] Descoberta: DES-01 preserva a lista WhatsApp Flow; detalhes em DES-12–14 usam texto conversacional e quick replies dentro dos limites do WhatsApp, com rotas para lista e opções verificadas no navegador.
+- [x] Nomenclatura equalizada: “Serviços de Assistência” identifica somente as telas de gestão; catálogo e HTML standalone mantêm o escopo de serviços aprovado.

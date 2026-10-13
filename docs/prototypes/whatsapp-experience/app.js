@@ -29,7 +29,7 @@
   let galleryVisible = false;
   let light = false;
   let additions = [];
-  let selectedContract = 'Assistência Saúde';
+  let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
   let identityReturn = 'CON-02';
   let authenticatedUntil = 0;
@@ -159,12 +159,12 @@
       .join('');
   }
   function screenBot(step) {
-    if (step.journey === 'SOL' && selectedContract !== 'Assistência Saúde') {
+    if (step.journey === 'SOL' && selectedContract !== 'Serviços de Assistência') {
       if (step.id === 'SOL-02')
         return `Estas são as solicitações do contrato selecionado: ${selectedContract}.`;
     }
     if (step.id === 'DES-08' && selectedPlan === 'Individual')
-      return '**Assistência Saúde Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
+      return '**Serviços de Assistência Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
     return step.bot;
   }
   function renderChat(step) {
@@ -423,7 +423,7 @@
     }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
-      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
+      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Serviços de Assistência.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
     $('document-dialog').showModal();
   }
   document.addEventListener('click', (event) => {

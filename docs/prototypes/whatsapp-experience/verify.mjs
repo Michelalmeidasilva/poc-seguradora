@@ -63,6 +63,7 @@ assert.match(index['DES-13'].bot, /descontos.*redes credenciadas/i);
 assert.match(index['DES-14'].bot, /prestador|disponibilidade/i);
 assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escopo');
 assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
+assert.ok(!/assist[eê]ncia\s+sa[uú]de/i.test(JSON.stringify(groups)), 'não usar o nome fora de escopo no catálogo');
 const benefits = index['UTI-01'].flow.choices.map((item) => item.label);
 assert.deepEqual(Array.from(benefits), ['Telemedicina', 'Assistência Farmácia', 'Assistência Funeral']);
 assert.ok(index['DEP-05'].flow.fields.some((field) => field.name === 'phone'));

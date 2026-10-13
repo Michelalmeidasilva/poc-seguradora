@@ -61,16 +61,16 @@
   ];
   const contracts = [
     {
-      label: 'Assistência Saúde',
+      label: 'Serviços de Assistência',
       detail: 'Familiar · ativa · contrato final 2048',
       target: 'CON-02',
     },
     {
-      label: 'Assistência Saúde',
+      label: 'Serviços de Assistência',
       detail: 'Individual · ativa · contrato final 1092',
       target: 'CON-02',
     },
-    { label: 'Assistência Saúde', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
+    { label: 'Serviços de Assistência', detail: 'Encerrado · contrato final 0871', target: 'CON-06' },
   ];
   const dependentReview = () => [
     { title: 'Pessoa que será incluída', rows: person },
@@ -130,7 +130,7 @@
       screen(
         'ENT-04',
         'Informação sem identificação',
-        'O que é a assistência saúde?',
+        'O que são os serviços de assistência?',
         'É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver opções', 'DES-05'), action('Tirar dúvidas', 'FAQ-01')] },
       ),
@@ -193,13 +193,13 @@
         'Quero tirar uma dúvida.',
         'Sobre qual assunto você quer saber?',
         { ...list('Central de dúvidas', [
-          { label: 'Informações gerais', detail: 'O que é a Assistência Saúde', target: 'FAQ-02' },
+          { label: 'Informações gerais', detail: 'O que são os serviços de assistência', target: 'FAQ-02' },
           { label: 'Como utilizar', detail: 'Telemedicina, funeral e farmácia', target: 'FAQ-03' },
           { label: 'Coberturas', detail: 'O que está incluído e o que não está', target: 'FAQ-04' },
           { label: 'Carências', detail: 'Consultar condições do plano', target: 'FAQ-05' },
         ], 'Ver resposta'), actions: [action('Menu', 'NAV-01')] },
       ),
-      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'A Assistência Saúde reúne exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-03', 'Como utilizar', 'Como uso os serviços?', 'A Telemedicina é acessada no ambiente do prestador; a Assistência Funeral oferece suporte ao titular e dependentes; a Assistência Farmácia dá acesso a descontos em redes credenciadas. Disponibilidade e instruções específicas devem ser consultadas para o seu plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01'), action('Consultar meus benefícios', 'UTI-01')] }),
       screen('FAQ-04', 'Coberturas', 'Quais são as coberturas?', 'Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-05', 'Carências', 'Quais são as carências?', 'A carência aplicável depende do serviço e das condições vigentes do seu plano. Não vou estimar um prazo: consulte seu contrato ou autentique para verificarmos a condição aplicável.', { actions: [action('Ver contrato', 'CON-01'), action('Voltar aos tópicos', 'FAQ-01')] }),
@@ -541,8 +541,8 @@
       screen(
         'DES-03',
         'Apresentação do produto',
-        'Quero conhecer a assistência saúde.',
-        'A Assistência Saúde oferece somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
+        'Quero conhecer os serviços de assistência.',
+        'Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver planos', 'DES-05')] },
       ),
       screen(
@@ -601,7 +601,7 @@
         'DES-08',
         'Oferta consultada',
         'Quero o Familiar.',
-        '**Assistência Saúde Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
+        '**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
         {
           actions: [
             action('Revisar contratação', 'ADE-01'),
@@ -648,7 +648,7 @@
         'ADE-01',
         'Plano escolhido',
         'Quero contratar o Familiar.',
-        'Você escolheu Assistência Saúde Familiar. Vamos conferir os dados e condições antes de confirmar.',
+        'Você escolheu Serviços de Assistência Familiar. Vamos conferir os dados e condições antes de confirmar.',
         { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-05')] },
       ),
       screen(
@@ -709,7 +709,7 @@
             {
               title: 'Produto e participantes',
               rows: [
-                ['Produto', 'Assistência Saúde'],
+                ['Produto', 'Serviços de Assistência'],
                 ['Plano', 'Familiar'],
                 ['Titular', 'Ana Silva'],
                 ['Dependentes agora', 'Nenhum; incluir depois'],
@@ -752,7 +752,7 @@
             {
               title: 'Resumo',
               rows: [
-                ['Produto', 'Assistência Saúde Familiar'],
+                ['Produto', 'Serviços de Assistência Familiar'],
                 ['Valor', 'R$ 39,90/mês'],
                 ['Participantes', 'Somente titular nesta etapa'],
               ],
@@ -784,7 +784,7 @@
         'ADE-09',
         'Contratação concluída',
         'Qual é o resultado?',
-        '**Contratação concluída**\nAssistência Saúde Familiar · ativa.\nVigência: 10/10/2026.\nProtocolo: ADE-2026-2048.\nConsulte as condições de cada benefício antes de utilizar.',
+        '**Contratação concluída**\nServiços de Assistência Familiar · ativa.\nVigência: 10/10/2026.\nProtocolo: ADE-2026-2048.\nConsulte as condições de cada benefício antes de utilizar.',
         {
           actions: [
             action('Ver documentos', 'CON-07'),
@@ -976,8 +976,8 @@
       screen(
         'CON-02',
         'Resumo ativo',
-        'Assistência Saúde',
-        '**Assistência Saúde · Familiar**\nSituação: ativa.\nVigência: desde 10/10/2026.\nMensalidade: R$ 39,90.\nPessoas vinculadas: titular e 1 dependente.\nConsulte carências e limites ao usar cada benefício.',
+        'Serviços de Assistência',
+        '**Serviços de Assistência · Familiar**\nSituação: ativa.\nVigência: desde 10/10/2026.\nMensalidade: R$ 39,90.\nPessoas vinculadas: titular e 1 dependente.\nConsulte carências e limites ao usar cada benefício.',
         {
           actions: [
             action('Usar benefícios', 'UTI-01'),
@@ -1019,7 +1019,7 @@
       screen(
         'CON-06',
         'Contrato encerrado',
-        'Assistência Saúde encerrado',
+        'Serviços de Assistência encerrado',
         'Este contrato foi encerrado em 10/09/2026. Você pode consultar documentos e solicitações ainda disponíveis.',
         {
           ...variant(),
@@ -1105,7 +1105,7 @@
           'Selecionar assistência',
           [
             {
-              label: 'Assistência Saúde Familiar',
+              label: 'Serviços de Assistência Familiar',
               detail: 'Ativa · contrato final 2048',
               target: 'DEP-03',
             },
@@ -1116,7 +1116,7 @@
       screen(
         'DEP-03',
         'Consultar vagas e condições',
-        'Assistência Saúde Familiar',
+        'Serviços de Assistência Familiar',
         'Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
         {
           actions: [
@@ -1209,7 +1209,7 @@
         'DEP-09',
         'Inclusão concluída',
         'Consultar resultado',
-        '**Inclusão concluída**\n{{name}} está vinculada à Assistência Saúde Familiar.\nData efetiva: 10/10/2026.\nProtocolo: DEP-2026-0318.\nA utilização segue as condições de cada benefício.',
+        '**Inclusão concluída**\n{{name}} está vinculada aos Serviços de Assistência Familiar.\nData efetiva: 10/10/2026.\nProtocolo: DEP-2026-0318.\nA utilização segue as condições de cada benefício.',
         {
           actions: [
             action('Ver benefícios', 'UTI-01'),
@@ -1564,7 +1564,7 @@
         'EXC-11',
         'Agendamento desfeito',
         'Consultar resultado',
-        'O agendamento de exclusão foi desfeito. Maria permanece vinculada à Assistência Saúde Familiar.\nProtocolo: EXC-2026-0092.',
+        'O agendamento de exclusão foi desfeito. Maria permanece vinculada aos Serviços de Assistência Familiar.\nProtocolo: EXC-2026-0092.',
         { actions: [action('Ver participantes', 'DEP-10')] },
       ),
       screen(
@@ -2071,7 +2071,7 @@
         'COB-01',
         'Resumo financeiro',
         'Quero ver meus pagamentos.',
-        '**Assistência Saúde Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
+        '**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
         {
           actions: [
             action('Ver pendência', 'COB-02'),
@@ -2271,7 +2271,7 @@
             {
               title: 'Encerramento',
               rows: [
-                ['Contrato', 'Assistência Saúde Familiar'],
+                ['Contrato', 'Serviços de Assistência Familiar'],
                 ['Data efetiva neste cenário', '10/10/2026'],
                 ['Acesso aos benefícios', 'Até a data efetiva consultada'],
                 ['Pessoas afetadas', 'Titular e dependentes'],
@@ -2432,7 +2432,7 @@
             {
               title: 'Nova vigência',
               rows: [
-                ['Produto', 'Assistência Saúde'],
+                ['Produto', 'Serviços de Assistência'],
                 ['Novo valor', 'R$ 42,90/mês'],
                 ['Início', '11/11/2026'],
                 ['Primeira cobrança', 'Data informada pelo sistema'],
@@ -2515,7 +2515,7 @@
       screen(
         'SOL-02',
         'Lista por contrato',
-        'Assistência Saúde Familiar',
+        'Serviços de Assistência Familiar',
         'Estas são as solicitações do contrato selecionado.',
         list(
           'Minhas solicitações',
@@ -2932,7 +2932,7 @@
         'LEG-137',
         '137 · Boas-vindas e CPF',
         'Oi',
-        'Olá, boas-vindas ao WhatsApp de Assistência Saúde Digio 💙\nAqui você pode consultar informações sobre sua assistência e gerenciar dependentes.\nPara começar, qual é o número do seu CPF?',
+        'Olá, boas-vindas ao WhatsApp da Digio Assistências 💙\nAqui você pode consultar informações sobre sua assistência e gerenciar dependentes.\nPara começar, qual é o número do seu CPF?',
       ),
       screen('LEG-138', '138 · Envio do CPF', '000.000.000-00', 'CPF recebido para consulta.'),
       screen(
