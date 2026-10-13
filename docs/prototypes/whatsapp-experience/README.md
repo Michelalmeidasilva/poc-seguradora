@@ -69,4 +69,6 @@ Depois de alterar os arquivos-fonte, rode `node docs/prototypes/whatsapp-experie
 
 `node docs/prototypes/whatsapp-experience/verify.mjs` verifica IDs, destinos, estrutura de componentes, ausência de telas legadas e ausência de autenticação por código. A interface também deve ser inspecionada no navegador para verificar renderização, formulários e responsividade.
 
+`node docs/prototypes/whatsapp-experience/experience-e2e-video.mjs` executa o E2E mobile em viewport de 390 × 844, valida acesso CPF-only, descoberta de serviços, quick reply, todas as 24 jornadas/247 telas e overflow horizontal. Também grava um vídeo WebM com legenda de jornada/ID em cada tela. O arquivo é salvo no diretório temporário do sistema; defina `WHATSAPP_VIDEO_OUTPUT` para escolher outro caminho.
+
 Execute `node docs/prototypes/whatsapp-experience/auth-browser-test.js` para testar no Chromium headless com Playwright instalado em `apps/web`. O script serve o atlas em uma porta local temporária e encerra navegador e servidor ao terminar. O comparativo histórico permanece independente e não é uma jornada navegável do atlas.

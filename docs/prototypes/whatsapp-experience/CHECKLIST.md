@@ -16,3 +16,4 @@
 - [x] Nomenclatura equalizada: “Serviços de Assistência” identifica somente as telas de gestão; catálogo e HTML standalone mantêm o escopo de serviços aprovado.
 
 - [x] Entrada CPF-only aceita qualquer sequência de 11 dígitos ou formato XXX.XXX.XXX-XX; rejeita outros formatos; testes executáveis de navegador e atlas regenerado.
+- [x] E2E mobile percorre 24 jornadas/247 telas em 390 × 844, valida CPF, descoberta, quick reply e overflow, e grava vídeo legendado em WebM.

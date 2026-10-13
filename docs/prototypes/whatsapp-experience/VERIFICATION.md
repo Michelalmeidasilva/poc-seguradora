@@ -1,5 +1,11 @@
 # Verificação do protótipo — 13/10/2026
 
+## E2E mobile e gravação
+
+- `node docs/prototypes/whatsapp-experience/experience-e2e-video.mjs`: passou em Chromium mobile (390 × 844), navegou pelas 24 jornadas e pelos 247 estados usando os controles visíveis da interface, confirmou o título e ausência de overflow horizontal em cada tela, gate CPF, retomada do pedido, descoberta de Assistência Funeral e quick reply para opções.
+- JavaScript errors: nenhum. Vídeo WebM VP9, 390 × 844, 25 fps, duração de 86,20 s e 11.543.444 bytes; salvo em `docs/prototypes/whatsapp-experience/experiencias-mobile.webm`.
+- O vídeo identifica cada tela com posição/247, jornada, ID e título. A enumeração usa os controles de navegação e estados do protótipo para garantir cobertura visual completa; CPF e descoberta de serviços também são submetidos pelos formulários e quick replies visíveis. Isso não afirma que cada alternativa tenha um caminho conversacional natural alcançável.
+
 Esta revisão remove as 34 telas do grupo LEG do atlas e preserva as 24 jornadas / 247 telas novas, incluindo todos os 64 estados marcados como alternativos (entre eles os 54 anteriormente apontados). O comparativo histórico permanece em `comparativo-legado.html`, separado do catálogo navegável.
 
 ## Verificações desta revisão
