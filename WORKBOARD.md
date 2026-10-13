@@ -6,7 +6,7 @@ Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec
 
 | Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
 |---|---|---|---|---|---|---|---|
-| protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Reaberta para Task 1 do plano WhatsApp Assistance Experience; coordenada com proprietário anterior concluído |
+| protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Task 1 concluída: `message.document`, schema estrito e parser sem seq; suíte protocol 92/92. Workstream segue aberto por pendência preexistente do schema completo de Flow JSON no CHECKLIST |
 | resilience | packages/resilience | done | claude | feat/foundation-protocol-resilience | 2026-10-10 | 2026-10-10 | |
 | svc-cotacao | apps/svc-cotacao | not_started | - | - | - | - | Outro agente; contrato em docs/superpowers/specs/2026-10-10-internal-services-contracts.md |
 | svc-apolice | apps/svc-apolice | not_started | - | - | - | - | Outro agente; mesmo contrato |
