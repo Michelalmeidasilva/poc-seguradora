@@ -122,3 +122,25 @@ Os quatro cenários `audio` são `AUD-01` (compreensão completa), `AUD-03` (par
 ### Commit round 3
 
 - `7e94073 fix(web-chat): expire legacy review Flows on restore`
+
+## Fix round 4 — restringir expiração legada aos reviews do catálogo
+
+### Achado e implementação
+
+- Base conferida: `d7f5b39`. O achado da revisão round 3, fornecido no brief do usuário, foi reproduzido: a assinatura estrutural sozinha expirava Flows alheios ao catálogo.
+- `expireDraftFlow` agora exige um dos 15 IDs de review canônicos além da tela única terminal `REVIEW` para snapshots sem `initialData`. O caminho com `initialData` continua expirando independentemente do ID.
+- Allowlist local em produção; somente o teste importa `assistance-catalog.generated.json`. Os 247 estados canônicos são exercitados com a mesma forma legada, exigindo expiração exatamente quando `mode === 'review'`, tanto em load bruto quanto em save/load. Isso verifica os 15 reviews e rejeita os demais IDs do catálogo.
+- Flow externo de mesma estrutura preserva integralmente evento, CTA e ação `complete` após save/load. Estado ativo permanece intacto. Casos com `initialData` cobrem IDs interno e externo; casos de falha de escrita cobrem remoção bem-sucedida e indisponível, sem restaurar estado inseguro.
+
+### TDD e validação
+
+- RED antes da correção: persistência 233 falhas / 32 passes (265 testes). Os 232 estados não-review e o Flow externo eram indevidamente convertidos para texto; os reviews canônicos passavam.
+- GREEN: `pnpm --filter @seguradora/web exec vitest run src/chat/persistence.test.ts src/renderers/registry.test.tsx src/renderers/FlowMessage.test.tsx src/flows/FlowSheet.test.tsx` — 4 arquivos, 298/298 testes.
+- Typecheck inicialmente identificou inferência excessivamente ampla no JSON do teste; projeção explícita de `id`/`mode` corrigiu o problema. Repetição final de persistência: 267/267; `pnpm --filter @seguradora/web typecheck`, ESLint de persistence.ts/persistence.test.ts e `git diff --check` passaram.
+- Pull foi tentado novamente com permissão de escrita: branch sem upstream, portanto nenhum merge/pull ocorreu e a base solicitada foi preservada. `RTK.md` não foi encontrado no worktree nem nos caminhos pessoais consultados.
+
+### Commit e autorrevisão
+
+- `3e57768 fix(web-chat): scope legacy draft expiry to catalog reviews`
+- Checklist atualizado no mesmo commit. Autorrevisão do diff confirmou allowlist exata, nenhuma importação chatbot em produção, saneamento síncrono e tratamento de falha de escrita preservados, sem mutação do Flow em memória.
+- Alterações de código restritas a persistence.ts, persistence.test.ts e CHECKLIST.md; este relatório registra o resultado em commit separado. WORKBOARD intacto; task-1-report.md preexistente preservado e fora do staging. Nenhum arquivo protocol/chatbot/flows alterado.
