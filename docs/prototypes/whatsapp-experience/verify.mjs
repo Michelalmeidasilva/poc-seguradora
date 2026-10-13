@@ -34,6 +34,24 @@ for (const step of Object.values(index)) assert.equal(typeof step.requiresAuth, 
 for (const id of ['DEP-33', 'CON-02', 'PAG-01', 'CAN-01', 'FUN-01', 'UTI-01', 'SOL-01', 'LEG-142'])
   assert.equal(index[id].requiresAuth, true, `${id} must require authentication`);
 assert.equal(index['DES-03'].requiresAuth, false);
+assert.deepEqual(
+  Array.from(index['DES-01'].flow.choices.map((item) => item.label)),
+  ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina'],
+);
+assert.deepEqual(
+  Array.from(index['DES-01'].flow.choices.map((item) => item.target)),
+  ['DES-12', 'DES-13', 'DES-14'],
+);
+for (const id of ['DES-12', 'DES-13', 'DES-14']) {
+  assert.equal(index[id].mode, 'review', `${id} must open a detailed WhatsApp Flow`);
+  assert.equal(index[id].requiresAuth, false, `${id} is informational`);
+  assert.ok(index[id].flow.sections.length >= 2, `${id} needs useful service details`);
+  assert.equal(index[id].flow.target, 'DES-05', `${id} must link to plan options`);
+  assert.equal(index[id].flow.correction, 'DES-01', `${id} must return to service discovery`);
+}
+assert.match(JSON.stringify(index['DES-12'].flow.sections), /titular.*dependentes/i);
+assert.match(JSON.stringify(index['DES-13'].flow.sections), /descontos.*redes credenciadas/i);
+assert.match(JSON.stringify(index['DES-14'].flow.sections), /prestador|disponibilidade/i);
 assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escopo');
 assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
 const benefits = index['UTI-01'].flow.choices.map((item) => item.label);

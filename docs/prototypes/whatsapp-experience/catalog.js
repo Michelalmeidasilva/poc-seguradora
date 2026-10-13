@@ -478,13 +478,83 @@
           'Conhecer produtos',
           [
             {
-              label: 'Assistência Saúde',
-              detail: 'Serviços e benefícios para o dia a dia',
-              target: 'DES-03',
+              label: 'Assistência Funeral',
+              detail: 'Suporte ao titular e aos dependentes, conforme as condições do serviço.',
+              target: 'DES-12',
+            },
+            {
+              label: 'Assistência Farmácia',
+              detail: 'Descontos em redes credenciadas, conforme as condições do serviço.',
+              target: 'DES-13',
+            },
+            {
+              label: 'Telemedicina',
+              detail: 'Atendimento remoto no ambiente do prestador, conforme disponibilidade.',
+              target: 'DES-14',
             },
           ],
-          'Ver produto',
+          'Ver detalhes',
         ),
+      ),
+      screen(
+        'DES-12',
+        'Detalhes · Assistência Funeral',
+        'Quero saber mais sobre a Assistência Funeral.',
+        'A Assistência Funeral oferece suporte ao titular e aos dependentes. A utilização depende das condições, limites e elegibilidade previstos no serviço contratado.',
+        {
+          ...review(
+            'Assistência Funeral',
+            [
+              { title: 'O que é', rows: [['Serviço', 'Suporte de assistência funeral ao titular e aos dependentes.']] },
+              { title: 'Antes de utilizar', rows: [['Condições', 'Consulte as regras, limites e elegibilidade do serviço contratado.']] },
+            ],
+            'Conhecer opções da Assistência Saúde',
+            'DES-05',
+            { correction: 'DES-01', secondaryLabel: 'Voltar aos serviços' },
+          ),
+          actions: [action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não prometer cobertura, valores, carência ou procedimentos sem confirmação das condições vigentes.',
+        },
+      ),
+      screen(
+        'DES-13',
+        'Detalhes · Assistência Farmácia',
+        'Quero saber mais sobre a Assistência Farmácia.',
+        'A Assistência Farmácia oferece descontos em redes credenciadas. As redes participantes e as condições de uso devem ser confirmadas antes da utilização.',
+        {
+          ...review(
+            'Assistência Farmácia',
+            [
+              { title: 'O que é', rows: [['Benefício', 'Descontos em redes credenciadas.']] },
+              { title: 'Antes de utilizar', rows: [['Condições', 'Consulte redes participantes e regras vigentes do serviço contratado.']] },
+            ],
+            'Conhecer opções da Assistência Saúde',
+            'DES-05',
+            { correction: 'DES-01', secondaryLabel: 'Voltar aos serviços' },
+          ),
+          actions: [action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não informar percentual, preço ou rede específica sem confirmação das condições vigentes.',
+        },
+      ),
+      screen(
+        'DES-14',
+        'Detalhes · Telemedicina',
+        'Quero saber mais sobre a Telemedicina.',
+        'A Telemedicina acontece no ambiente do prestador, conforme disponibilidade, limites e condições do serviço contratado.',
+        {
+          ...review(
+            'Telemedicina',
+            [
+              { title: 'O que é', rows: [['Atendimento', 'Atendimento remoto realizado no ambiente do prestador.']] },
+              { title: 'Antes de utilizar', rows: [['Condições', 'Disponibilidade, limites e demais condições dependem do serviço contratado.']] },
+            ],
+            'Conhecer opções da Assistência Saúde',
+            'DES-05',
+            { correction: 'DES-01', secondaryLabel: 'Voltar aos serviços' },
+          ),
+          actions: [action('Voltar aos serviços', 'DES-01')],
+          rule: 'Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador.',
+        },
       ),
       screen(
         'DES-02',
@@ -3145,7 +3215,7 @@
       step.requiresAuth = ![
         'ENT-01', 'ENT-02', 'ENT-03', 'ENT-04', 'ENT-05', 'ENT-09', 'FAQ-01', 'FAQ-02', 'FAQ-03', 'FAQ-04', 'FAQ-05', 'FIM-01', 'FIM-02',
         'NAV-01', 'DES-01', 'DES-02', 'DES-03', 'DES-04', 'DES-05', 'DES-06',
-        'DES-09', 'DES-10', 'DES-11', 'HUM-01', 'HUM-02', 'HUM-03',
+        'DES-09', 'DES-10', 'DES-11', 'DES-12', 'DES-13', 'DES-14', 'HUM-01', 'HUM-02', 'HUM-03',
         'AUD-01', 'AUD-03', 'AUD-04',
       ].includes(step.id) && group.code !== 'IDE';
       step.position = position;
