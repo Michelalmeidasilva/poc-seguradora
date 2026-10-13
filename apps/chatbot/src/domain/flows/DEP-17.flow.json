@@ -14,32 +14,68 @@
             "text": "O resumo abaixo contém os dados atualizados. Sua confirmação valerá para esta revisão."
           },
           {
+            "type": "TextInput",
+            "name": "name",
+            "label": "name",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "birth",
+            "label": "birth",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "maskedDocument",
+            "label": "maskedDocument",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "relationship",
+            "label": "relationship",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "phone",
+            "label": "phone",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "biologicalSex",
+            "label": "biologicalSex",
+            "visible": false
+          },
+          {
             "type": "TextSubheading",
             "text": "Pessoa que será incluída"
           },
           {
             "type": "TextBody",
-            "text": "Nome: ••••"
+            "text": "Nome: ${form.name}"
           },
           {
             "type": "TextBody",
-            "text": "Nascimento: ••••"
+            "text": "Nascimento: ${form.birth}"
           },
           {
             "type": "TextBody",
-            "text": "CPF: ••••"
+            "text": "CPF: ${form.maskedDocument}"
           },
           {
             "type": "TextBody",
-            "text": "Parentesco: ••••"
+            "text": "Parentesco: ${form.relationship}"
           },
           {
             "type": "TextBody",
-            "text": "Celular: ••••"
+            "text": "Celular: ${form.phone}"
           },
           {
             "type": "TextBody",
-            "text": "Sexo biológico: ••••"
+            "text": "Sexo biológico: ${form.biologicalSex}"
           },
           {
             "type": "TextSubheading",

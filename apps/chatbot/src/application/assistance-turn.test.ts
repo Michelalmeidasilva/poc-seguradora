@@ -70,6 +70,62 @@ describe('runAssistanceTurn', () => {
     expect(result.ok && result.value.state.temporaryData).toEqual(earlier);
     expect(assistance.updateAddress).not.toHaveBeenCalled();
   });
+  it('carries a safe draft through review, correction, and one terminal mutation', async () => {
+    const assistance = port();
+    const first = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-02', data: {
+      postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP',
+    } }, { port: assistance, state: { journeyId: 'CAD', screenId: 'CAD-02', gateApproved: true }, sessionId: 'draft', context: ctx });
+    expect(first.ok && first.value.replies[0]).toMatchObject({ type: 'message.flow', payload: {
+      flowId: 'CAD-03', initialData: { intent: 'review', values: { postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP' } },
+    } });
+
+    const correction = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-03', data: { correction: true } }, {
+      port: assistance, state: first.ok ? first.value.state : state, sessionId: 'draft', context: ctx,
+    });
+    expect(correction.ok && correction.value.replies[0]).toMatchObject({ type: 'message.flow', payload: {
+      flowId: 'CAD-02', initialData: { intent: 'correction', values: { postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP' } },
+    } });
+    const corrected = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-02', data: {
+      postal: '01000-000', address: 'Rua B, 2', city: 'São Paulo/SP',
+    } }, { port: assistance, state: correction.ok ? correction.value.state : state, sessionId: 'draft', context: ctx });
+    expect(corrected.ok && corrected.value.replies[0]).toMatchObject({ type: 'message.flow', payload: {
+      flowId: 'CAD-03', initialData: { intent: 'review', values: { postal: '01000-000', address: 'Rua B, 2', city: 'São Paulo/SP' } },
+    } });
+    expect(assistance.updateAddress).not.toHaveBeenCalled();
+    const reviewedState = corrected.ok ? corrected.value.state : state;
+    const confirmed = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-03', data: {} }, {
+      port: assistance, state: reviewedState, sessionId: 'draft', context: ctx,
+    });
+    expect(confirmed.ok).toBe(true);
+    expect(assistance.updateAddress).toHaveBeenCalledTimes(1);
+    const duplicate = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-03', data: {} }, {
+      port: assistance, state: confirmed.ok ? confirmed.value.state : state, sessionId: 'draft', context: ctx,
+    });
+    expect(duplicate.ok).toBe(true);
+    expect(assistance.updateAddress).toHaveBeenCalledTimes(1);
+  });
+  it('masks CPF while showing ordinary values in cross-step review data', async () => {
+    const canary = '98765432109';
+    const result = await runAssistanceTurn({ type: 'flow_submit', flowId: 'DEP-05', data: {
+      name: 'Ana Lima', birth: '2014-03-12', document: canary, relationship: 'Filha', phone: '11999999999', biologicalSex: 'Feminino',
+    } }, {
+      port: port(), state: { journeyId: 'DEP', screenId: 'DEP-05', gateApproved: true },
+      sessionId: 'cpf-mask', context: ctx,
+    });
+    const serialized = JSON.stringify(result.ok ? result.value.replies : result);
+    expect(serialized).not.toContain(canary);
+    expect(serialized).toContain('•••••••••09');
+    expect(serialized).toContain('Ana Lima');
+  });
+  it('does not hydrate a review Flow from a stale draft when it was not reached by form submit', async () => {
+    const result = await runAssistanceTurn({ type: 'open', target: 'DEP-06' }, {
+      port: port(), state: { journeyId: 'CAD', screenId: 'CAD-02', gateApproved: true,
+        temporaryData: { name: 'Old journey', document: '98765432109' } },
+      sessionId: 'stale-draft', context: ctx,
+    });
+    const flow = result.ok ? result.value.replies.find((reply) => reply.type === 'message.flow') : undefined;
+    expect(flow?.type === 'message.flow' && flow.payload.initialData).toBeUndefined();
+  });
   it('returns the domain transition state exactly and never retains the submitted gate CPF', async () => {
     const assistance = port();
     const result = await runAssistanceTurn({ type: 'cpf_submit', cpf: '123.456.789-01' }, {

@@ -44,6 +44,23 @@ describe('Flow JSON copies', () => {
       }
     }
   });
+  it('preserves preference defaults while keeping consent unchecked in both synchronized copies', () => {
+    const canonical = read(fileURLToPath(new URL('PRE-02.flow.json', canonicalDir))) as { screens: Array<{ layout: { children: Array<Record<string, unknown>> } }> };
+    const web = read(fileURLToPath(new URL('PRE-02.flow.json', webDir))) as typeof canonical;
+    const children = canonical.screens[0]!.layout.children;
+    expect(children.find((child) => child.name === 'optionalDocs')?.['init-value']).toBe(true);
+    expect(children.find((child) => child.name === 'optionalBenefits')?.['init-value']).toBe(false);
+    expect(web).toStrictEqual(canonical);
+    const consent = read(fileURLToPath(new URL('ADE-07.flow.json', canonicalDir))) as typeof canonical;
+    expect(consent.screens[0]!.layout.children.find((child) => child.name === 'consent')?.['init-value']).toBe(false);
+  });
+  it('never binds a sensitive CPF field into the local same-Flow review', () => {
+    const flow = read(fileURLToPath(new URL('DEP-05.flow.json', canonicalDir))) as { screens: Array<{ layout: { children: Array<{ type: string; text?: string }> } }> };
+    const reviewText = flow.screens[1]!.layout.children.filter((child) => child.type === 'TextBody').map((child) => child.text);
+    expect(reviewText).toContain('CPF: ••••');
+    expect(reviewText.join('\n')).not.toContain('${form.document}');
+    expect(reviewText.join('\n')).not.toContain('${form.maskedDocument}');
+  });
   it('exposes only the three approved public services in discovery', () => {
     const flow = read(fileURLToPath(new URL('DES-01.flow.json', canonicalDir))) as { screens: Array<{ layout: { children: Array<{ type: string; 'data-source'?: Array<{ title: string }> }> } }> };
     const options = flow.screens[0]?.layout.children.find((child) => child.type === 'RadioButtonsGroup')?.['data-source'];

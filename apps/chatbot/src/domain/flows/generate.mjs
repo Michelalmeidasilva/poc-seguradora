@@ -8,9 +8,12 @@ const root = new URL('./', import.meta.url);
 const web = new URL('../../../../web/src/flows/fixtures/', import.meta.url);
 const steps = catalog.groups.flatMap((group) => group.steps)
   .filter((step) => ['list', 'form', 'review'].includes(step.mode));
+const sensitiveFields = new Set(steps.flatMap((step) => (step.flow?.fields ?? [])
+  .filter((field) => field.sensitive === true).map((field) => field.name)));
 
 const complete = (payload = {}) => ({ name: 'complete', payload });
 const ref = (name) => '${form.' + name + '}';
+const isSensitiveField = (field) => field.sensitive === true || /^(cpf|document)$/i.test(field.name);
 
 function build(step) {
   const source = step.flow ?? {};
@@ -28,11 +31,11 @@ function build(step) {
   } else if (step.mode === 'form') {
     for (const field of source.fields ?? []) {
       const common = { name: field.name, label: field.label, required: field.required === true };
-      if (field.sensitive) common.sensitive = true;
+      if (isSensitiveField(field)) common.sensitive = true;
       if (field.placeholder) common['helper-text'] = field.placeholder;
       if (field.value) common['init-value'] = field.value;
       if (field.type === 'checkbox') {
-        children.push({ type: 'OptIn', ...common, 'init-value': false });
+        children.push({ type: 'OptIn', ...common, 'init-value': field.checked === true });
       } else if (field.type === 'select') {
         children.push({
           type: 'Dropdown', ...common,
@@ -49,14 +52,19 @@ function build(step) {
       payload[field.name] = ref(field.name);
     }
   } else {
+    const reviewRefs = new Set();
     for (const section of source.sections ?? []) {
       children.push({ type: 'TextSubheading', text: section.title });
       for (const [label, value] of section.rows) {
-        // The catalog contains template tokens; do not ship unresolved tokens or personal values
-        // in a Flow JSON message (which the current web chat may persist).
-        children.push({ type: 'TextBody', text: `${label}: ${String(value).replace(/\{\{[^}]+\}\}/g, '••••')}` });
+        const dynamicValue = String(value).replace(/\{\{([A-Za-z_]\w*)\}\}/g, (_, name) => {
+          const field = sensitiveFields.has(name) || /^(cpf|document)$/i.test(name) ? 'maskedDocument' : name;
+          reviewRefs.add(field);
+          return ref(field);
+        });
+        children.push({ type: 'TextBody', text: `${label}: ${dynamicValue}` });
       }
     }
+    children.splice(1, 0, ...[...reviewRefs].map((name) => ({ type: 'TextInput', name, label: name, visible: false })));
     for (const document of source.documents ?? []) children.push({ type: 'TextBody', text: document });
     if (source.note) children.push({ type: 'TextCaption', text: source.note });
     if (source.consent) {
@@ -73,16 +81,16 @@ function build(step) {
       'on-click-action': { name: 'navigate', next: { type: 'screen', name: 'REVIEW' }, payload: {} } });
     const review = [
       { type: 'TextHeading', text: 'Revise os dados' },
-      ...source.fields.map((field) => ({ type: 'TextBody', text: `${field.label}: ${field.sensitive ? '••••' : ref(field.name)}` })),
+      ...source.fields.map((field) => ({ type: 'TextBody', text: `${field.label}: ${isSensitiveField(field) ? '••••' : ref(field.name)}` })),
       { type: 'Footer', label: 'Enviar formulário', 'on-click-action': complete(payload) },
     ];
     return { version: '7.1', routing_model: { FORM: ['REVIEW'], REVIEW: [] }, screens: [
       { id: 'FORM', title, layout: { type: 'SingleColumnLayout', children },
-        ...(source.fields.some((field) => field.sensitive)
-          ? { sensitive: source.fields.filter((field) => field.sensitive).map((field) => field.name) } : {}) },
+        ...(source.fields.some(isSensitiveField)
+          ? { sensitive: source.fields.filter(isSensitiveField).map((field) => field.name) } : {}) },
       { id: 'REVIEW', title: 'Revisar dados', terminal: true, success: true,
-        ...(source.fields.some((field) => field.sensitive)
-          ? { sensitive: source.fields.filter((field) => field.sensitive).map((field) => field.name) } : {}),
+        ...(source.fields.some(isSensitiveField)
+          ? { sensitive: source.fields.filter(isSensitiveField).map((field) => field.name) } : {}),
         layout: { type: 'SingleColumnLayout', children: review } },
     ] };
   }
@@ -90,8 +98,8 @@ function build(step) {
   return {
     version: '7.1',
     screens: [{ id: step.mode.toUpperCase(), title, terminal: true, success: true,
-      ...(step.mode === 'form' && source.fields?.some((field) => field.sensitive)
-        ? { sensitive: source.fields.filter((field) => field.sensitive).map((field) => field.name) } : {}),
+      ...(step.mode === 'form' && source.fields?.some(isSensitiveField)
+        ? { sensitive: source.fields.filter(isSensitiveField).map((field) => field.name) } : {}),
       layout: { type: 'SingleColumnLayout', children } }],
   };
 }

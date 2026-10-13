@@ -89,12 +89,42 @@ function validateFlowData(step: AssistanceStep, input: Record<string, unknown>):
   return z.object({}).strict().safeParse(input).success ? input : undefined;
 }
 
-const textReply = (step: AssistanceStep): ReplyBody[] => {
+const flowInitialData = (
+  step: AssistanceStep,
+  state: AssistanceState | undefined,
+  intent: 'review' | 'correction' | undefined,
+) => {
+  if (!state || !intent || step.journeyId !== state.journeyId || !state.temporaryData) return undefined;
+  const values = Object.fromEntries(Object.entries(state.temporaryData)
+    .filter(([key, value]) => !/^(cpf|document)$/i.test(key) && (typeof value === 'string' || typeof value === 'boolean')));
+  const cpf = state.temporaryData.cpf ?? state.temporaryData.document;
+  if (intent === 'review' && typeof cpf === 'string') {
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length >= 2) values.maskedDocument = `•••••••••${digits.slice(-2)}`;
+  }
+  if (intent === 'correction') {
+    const fields = Array.isArray(recordOf(step.flow)?.fields) ? recordOf(step.flow)!.fields as unknown[] : [];
+    for (const candidate of fields) {
+      const field = recordOf(candidate);
+      if (!field || typeof field.name !== 'string' || (field.sensitive !== true && !/^(cpf|document)$/i.test(field.name))) continue;
+      const value = state.temporaryData[field.name] ?? (/^(cpf|document)$/i.test(field.name) ? cpf : undefined);
+      if (typeof value === 'string') values[field.name] = value;
+    }
+  }
+  return { intent, values };
+};
+
+const textReply = (
+  step: AssistanceStep,
+  state?: AssistanceState,
+  intent?: 'review' | 'correction',
+): ReplyBody[] => {
   const replies: ReplyBody[] = [];
   if (step.mode === 'document') return replies;
   if (step.mode === 'chat' || step.mode === 'audio') {
     replies.push({ type: 'message.text', payload: { text: step.bot } } as ReplyBody);
   } else {
+    const initialData = flowInitialData(step, state, intent);
     replies.push({
       type: 'message.flow',
       payload: {
@@ -102,6 +132,7 @@ const textReply = (step: AssistanceStep): ReplyBody[] => {
         body: step.bot,
         ctaLabel: (recordOf(step.flow)?.submit as string | undefined) ?? 'Continuar',
         flowJson: assistanceFlows[step.id] ?? { title: step.title },
+        ...(initialData ? { initialData } : {}),
       },
     } as ReplyBody);
   }
@@ -393,7 +424,12 @@ export async function runAssistanceTurn(
     if (!docs.ok) return ok(preserveReply(state, failureText[docs.error]));
     replies = [{ type: 'message.document', payload: { documents: docs.value } } as ReplyBody];
   } else {
-    replies = textReply(step);
+    const hydrationIntent = step.mode === 'review' && input.type === 'flow_submit' && currentStep?.mode === 'form'
+      ? 'review'
+      : input.type === 'flow_submit' && currentStep?.mode === 'review' && submitted?.correction === true
+        ? 'correction'
+        : undefined;
+    replies = textReply(step, nextState, hydrationIntent);
   }
   if (step.id === 'DEP-10') {
     const dependents = await port.listDependents(sessionId, context);

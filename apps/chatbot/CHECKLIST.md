@@ -30,8 +30,8 @@
 
 ## Plano WhatsApp Assistance Experience — Task 7
 
-- [x] 46 Flows JSON versionados para todos os estados `list`, `form` e `review`, gerados do catálogo e servidos pelo chatbot; cópias web sincronizadas e validadas pelo schema/runtime
-- [x] Escolha de lista validada por índice e destino canônico; correção de revisão retorna sem mutação e preserva os dados anteriores; placeholder de seleção rejeitado
+- [x] 46 Flows JSON versionados para todos os estados `list`, `form` e `review`, gerados do catálogo e servidos pelo chatbot; cópias web sincronizadas e validadas pelo schema/runtime; revisão/correção mantém valores comuns, mascara CPF e não reutiliza draft em outro fluxo
+- [x] Escolha de lista validada por índice e destino canônico; correção de revisão retorna sem mutação e preserva os dados anteriores; placeholder de seleção rejeitado; mutação terminal é executada uma única vez
 - [x] Quatro IDs de áudio do catálogo continuam sendo os únicos cenários aceitos pelo chatbot
 
 ## Estrutura
