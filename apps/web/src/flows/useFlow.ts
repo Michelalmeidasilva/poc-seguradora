@@ -26,6 +26,7 @@ export function useFlowSheet(
   flowId: string,
   callbacks: FlowSheetCallbacks,
   footerSlot: HTMLElement | null,
+  initialData?: Record<string, unknown>,
 ): FlowSheetSession {
   const latest = useRef(callbacks);
   latest.current = callbacks;
@@ -40,7 +41,7 @@ export function useFlowSheet(
     }),
     [],
   );
-  const { state, dispatch, getState, runAction } = useFlowRuntime(flow, flowId, host);
+  const { state, dispatch, getState, runAction } = useFlowRuntime(flow, flowId, host, initialData);
 
   return {
     context: { flow, state, scope: scopeOf(state), dispatch, runAction, footerSlot },

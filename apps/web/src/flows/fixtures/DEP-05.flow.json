@@ -37,6 +37,7 @@
             "name": "document",
             "label": "CPF",
             "required": true,
+            "sensitive": true,
             "helper-text": "Informe o CPF",
             "input-type": "text"
           },
@@ -105,13 +106,19 @@
             }
           }
         ]
-      }
+      },
+      "sensitive": [
+        "document"
+      ]
     },
     {
       "id": "REVIEW",
       "title": "Revisar dados",
       "terminal": true,
       "success": true,
+      "sensitive": [
+        "document"
+      ],
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
@@ -129,7 +136,7 @@
           },
           {
             "type": "TextBody",
-            "text": "CPF: ${form.document}"
+            "text": "CPF: ••••"
           },
           {
             "type": "TextBody",

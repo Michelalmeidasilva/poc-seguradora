@@ -14,6 +14,18 @@
             "text": "Confira os dados essenciais antes do envio."
           },
           {
+            "type": "TextInput",
+            "name": "funeralCity",
+            "label": "funeralCity",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "funeralState",
+            "label": "funeralState",
+            "visible": false
+          },
+          {
             "type": "TextSubheading",
             "text": "Dados do pedido"
           },
@@ -23,11 +35,11 @@
           },
           {
             "type": "TextBody",
-            "text": "Cidade: ••••"
+            "text": "Cidade: ${form.funeralCity}"
           },
           {
             "type": "TextBody",
-            "text": "Estado: ••••"
+            "text": "Estado: ${form.funeralState}"
           },
           {
             "type": "TextBody",

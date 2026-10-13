@@ -22,7 +22,7 @@
             "name": "optionalDocs",
             "label": "Avisos opcionais sobre documentos",
             "required": false,
-            "init-value": false
+            "init-value": true
           },
           {
             "type": "OptIn",

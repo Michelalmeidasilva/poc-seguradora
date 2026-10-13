@@ -38,6 +38,7 @@
 - [x] E2E de Flows: cotação ponta a ponta, demo percorrido só por teclado (com `data_exchange` e `complete`), Voltar/Fechar com confirmação e retorno do foco
 - [x] Cotação: `cpf` e `nascimento` são `sensitive` na tela `DADOS`; o resumo mostra `••••` e o E2E confere que nem a bolha nem o sessionStorage guardam os valores (só o `user.flow_submit` os leva ao gateway)
 - [x] Fonte única dos Flows: os JSON canônicos ficam em `apps/chatbot/src/domain/flows/`; `src/flows/fixtures/` guarda cópias só para os testes unitários, e `apps/chatbot/src/domain/flows-sync.test.ts` falha se as cópias divergirem
+- [x] Task 7 round 1: revisão com valores seguros, correção pré-preenchida, CPF mascarado e dados iniciais ausentes de saves/loads persistidos
 
 ### Decisões próprias (Plano 5)
 

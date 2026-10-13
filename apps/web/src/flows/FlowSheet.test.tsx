@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import cotacao from './fixtures/cotacao.flow.json';
 import address from './fixtures/CAD-02.flow.json';
+import addressReview from './fixtures/CAD-03.flow.json';
+import dependentForm from './fixtures/DEP-05.flow.json';
 import consentFlow from './fixtures/ADE-07.flow.json';
 import { FlowSheet, type FlowSheetRequest } from './index';
 
@@ -33,6 +35,40 @@ async function toDados(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
+  it('shows safe cross-step review values and prefills correction without losing other fields', async () => {
+    const draft = { postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP' };
+    const { user, submit, rerender } = setup({
+      flowId: 'CAD-03', flowJson: addressReview,
+      initialData: { intent: 'review', values: draft },
+    });
+    expect(screen.getByText('CEP: 01000-000')).toBeInTheDocument();
+    expect(screen.getByText('Endereço: Rua A, 1')).toBeInTheDocument();
+    expect(screen.getByText('Cidade e estado: São Paulo/SP')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    rerender(<FlowSheet request={{ flowId: 'CAD-02', flowJson: address, initialData: { intent: 'correction', values: draft } }} onClose={() => undefined} submit={submit} exchange={vi.fn()} />);
+    expect(screen.getByLabelText('CEP')).toHaveValue('01000-000');
+    expect(screen.getByLabelText('Endereço e número')).toHaveValue('Rua A, 1');
+    expect(screen.getByLabelText('Cidade e estado')).toHaveValue('São Paulo/SP');
+    await user.clear(screen.getByLabelText('Endereço e número'));
+    await user.type(screen.getByLabelText('Endereço e número'), 'Rua B, 2');
+    expect(screen.getByLabelText('CEP')).toHaveValue('01000-000');
+    expect(screen.getByLabelText('Cidade e estado')).toHaveValue('São Paulo/SP');
+  });
+  it('keeps correction CPF only in runtime memory and renders the masked review value', async () => {
+    const rawCpf = '98765432109';
+    expect(JSON.stringify(dependentForm)).not.toContain(rawCpf);
+    const { user } = setup({ flowId: 'DEP-05', flowJson: dependentForm, initialData: { intent: 'correction', values: {
+      name: 'Maria Silva', birth: '2014-03-12', document: rawCpf, relationship: 'Filha', phone: '11999999999', biologicalSex: 'Feminino',
+    } } });
+    expect(screen.getByLabelText('CPF')).toHaveValue(rawCpf);
+    await user.clear(screen.getByLabelText('CPF'));
+    await user.type(screen.getByLabelText('CPF'), '12345678900');
+    await user.click(screen.getByRole('button', { name: 'Revisar inclusão' }));
+    expect(screen.getByText('CPF: ••••')).toBeInTheDocument();
+    expect(screen.queryByText(/CPF: (98765432109|12345678900)/)).toBeNull();
+  });
   it('starts catalog consent unchecked and closing before confirmation does not submit', async () => {
     const { user, submit, exchange } = setup({ flowId: 'ADE-07', flowJson: consentFlow });
     expect(screen.getByRole('checkbox', { name: /Confirmo os dados/ })).not.toBeChecked();
