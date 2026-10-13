@@ -22,6 +22,8 @@ import type {
 export interface MockAssistanceOptions {
   capacity: number;
   ttlMs: number;
+  /** Maximum replay records retained per active session (FIFO). */
+  idempotencyCapacity?: number;
   now?: Clock;
   /** Deterministic adapter failure switch, intended for demo scenarios and tests. */
   unavailable?: readonly AssistanceOperation[];
@@ -141,6 +143,11 @@ export class MockAssistance implements AssistancePort {
       throw new RangeError('capacity must be an integer >= 1');
     if (!Number.isFinite(options.ttlMs) || options.ttlMs < 1)
       throw new RangeError('ttlMs must be positive');
+    if (
+      options.idempotencyCapacity !== undefined &&
+      (!Number.isInteger(options.idempotencyCapacity) || options.idempotencyCapacity < 1)
+    )
+      throw new RangeError('idempotencyCapacity must be an integer >= 1');
     this.now = options.now ?? Date.now;
     this.unavailable = new Set(options.unavailable ?? []);
   }
@@ -172,7 +179,7 @@ export class MockAssistance implements AssistancePort {
     return this.mutate(sessionId, ctx, 'addDependent', (state) => {
       const dependent = { ...parsed.data, id: `DEP-DEMO-${++state.dependentSequence}` };
       state.dependents.push(dependent);
-      return ok(dependent);
+      return ok(structuredClone(dependent));
     });
   }
 
@@ -211,9 +218,9 @@ export class MockAssistance implements AssistancePort {
 
   async renewAssistance(sessionId: string, command: { confirmed: true }, ctx: CallContext) {
     if (!command.confirmed) return fail('invalid');
-    return this.mutate(sessionId, ctx, 'renewAssistance', (state) =>
-      ok(this.addRequest(state, 'renewal', 'Renovação demonstrativa registrada.')),
-    );
+    return this.mutate(sessionId, ctx, 'renewAssistance', (state) => {
+      return ok(structuredClone(this.addRequest(state, 'renewal', 'Renovação demonstrativa registrada.')));
+    });
   }
 
   async cancelAssistance(
@@ -230,7 +237,7 @@ export class MockAssistance implements AssistancePort {
         'Cancelamento demonstrativo confirmado.',
       );
       state.contract.status = 'cancelled';
-      return ok(request);
+      return ok(structuredClone(request));
     });
   }
 
@@ -287,7 +294,7 @@ export class MockAssistance implements AssistancePort {
     ];
     if (!kinds.includes(command.kind)) return fail('invalid');
     return this.mutate(sessionId, ctx, 'createRequest', (state) =>
-      ok(this.addRequest(state, command.kind, command.message)),
+      ok(structuredClone(this.addRequest(state, command.kind, command.message))),
     );
   }
 
@@ -336,6 +343,12 @@ export class MockAssistance implements AssistancePort {
       ? fail('unavailable')
       : apply(entry.state);
     entry.idempotency.set(ctx.idempotencyKey, { operation, result: structuredClone(result) });
+    const maxEntries = this.options.idempotencyCapacity ?? 256;
+    while (entry.idempotency.size > maxEntries) {
+      const oldest = entry.idempotency.keys().next().value as string | undefined;
+      if (oldest === undefined) break;
+      entry.idempotency.delete(oldest);
+    }
     return result;
   }
 

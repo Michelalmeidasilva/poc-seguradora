@@ -15,7 +15,7 @@
 ## Plano WhatsApp Assistance Experience — Task 4
 
 - [x] `AssistancePort` tipado e separado de `ServicesPort`, com leituras e comandos confirmados publicados para consumo da Task 5
-- [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas e retorno `Result` idempotente
+- [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas, `Result` idempotente e cache FIFO limitada a 256 chaves por sessão
 - [x] Composição manual injeta e expõe a porta de assistência; testes de isolamento, expiração, capacidade, idempotência, mutações, falhas e composição
 
 ## Estrutura

@@ -102,6 +102,54 @@ describe('MockAssistance', () => {
     expect(list.ok && list.value).toHaveLength(1);
   });
 
+  it('does not expose mutable references to stored session state', async () => {
+    const mock = new MockAssistance({ capacity: 2, ttlMs: 1000, now: () => 0 });
+    const dependent = await mock.addDependent(
+      's1',
+      {
+        ...confirmed,
+        dependent: {
+          name: 'Joana',
+          cpf: '12345678901',
+          birthDate: '2010-02-03',
+          relationship: 'filha',
+        },
+      },
+      context('add'),
+    );
+    if (dependent.ok) dependent.value.name = 'Alterado pelo consumidor';
+    const request = await mock.createRequest(
+      's1',
+      { ...confirmed, kind: 'human_handoff', message: 'Solicitação demonstrativa.' },
+      context('request'),
+    );
+    if (request.ok) request.value.message = 'Alterado pelo consumidor';
+
+    const snapshot = await mock.getSessionSnapshot('s1', context('snapshot'));
+    expect(snapshot.ok && snapshot.value.dependents[0]?.name).toBe('Joana');
+    expect(snapshot.ok && snapshot.value.requests[0]?.message).toBe('Solicitação demonstrativa.');
+  });
+
+  it('bounds retained idempotency keys per session', async () => {
+    const mock = new MockAssistance({
+      capacity: 2,
+      ttlMs: 1000,
+      idempotencyCapacity: 2,
+      now: () => 0,
+    });
+    const command = {
+      ...confirmed,
+      kind: 'human_handoff' as const,
+      message: 'Solicitação demonstrativa.',
+    };
+    await mock.createRequest('s1', command, context('first'));
+    await mock.createRequest('s1', command, context('second'));
+    await mock.createRequest('s1', command, context('third'));
+    await mock.createRequest('s1', command, context('first'));
+    const requests = await mock.listRequests('s1', context('read'));
+    expect(requests.ok && requests.value).toHaveLength(4);
+  });
+
   it('returns expected failures as Result values without reporting success', async () => {
     const mock = new MockAssistance({
       capacity: 2,
