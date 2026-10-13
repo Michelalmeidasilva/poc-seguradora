@@ -27,12 +27,55 @@ describe('persistence', () => {
     ['CPF 987.654.321-00; confirme.', 'CPF ***.***.***-00; confirme.'],
     ['Sem documento nesta mensagem.', 'Sem documento nesta mensagem.'],
     ['Protocolo 123456789012 não é CPF.', 'Protocolo 123456789012 não é CPF.'],
+    ['Prefixo 198765432100 não é CPF.', 'Prefixo 198765432100 não é CPF.'],
+    ['Prefixo 1987.654.321-00 não é CPF.', 'Prefixo 1987.654.321-00 não é CPF.'],
+    ['Sufixo 987.654.321-001 não é CPF.', 'Sufixo 987.654.321-001 não é CPF.'],
   ])('persists user text with recognized CPF masked: %s', (text, expected) => {
     const live = chatReducer(sample(), { type: 'user_queued', item: userText(text) });
     saveChat(sessionStorage, live);
     expect(live.items.at(-1)).toMatchObject({ content: { text } });
     expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content.text).toBe(expected);
     expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ content: { text: expected } });
+  });
+
+  it.each([
+    ['CPF 98765432100 confirmado', 'CPF *********00 confirmado', '98765432100'],
+    ['CPF 987.654.321-00 confirmado', 'CPF ***.***.***-00 confirmado', '987.654.321-00'],
+  ])('masks quick-reply title on save without changing active text or identifiers: %s', (title, expected, rawCpf) => {
+    const reply: UserItem = {
+      kind: 'user', id: uuid(90), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
+      content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
+    };
+    const live = chatReducer(sample(), { type: 'user_queued', item: reply });
+    saveChat(sessionStorage, live);
+
+    expect(live.items.at(-1)).toMatchObject({ content: { title } });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content).toEqual({
+      type: 'quick_reply', title: expected, optionId: 'menu.confirm', replyToId: uuid(7),
+    });
+    expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
+    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({
+      content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
+    });
+  });
+
+  it.each([
+    ['CPF 98765432100 confirmado', 'CPF *********00 confirmado', '98765432100'],
+    ['CPF 987.654.321-00 confirmado', 'CPF ***.***.***-00 confirmado', '987.654.321-00'],
+  ])('masks a legacy quick-reply title before restoring and rewriting: %s', (title, expected, rawCpf) => {
+    const reply: UserItem = {
+      kind: 'user', id: uuid(91), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
+      content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
+    };
+    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, sessionId: 's9', lastSeq: 0, items: [reply] }));
+
+    expect(loadChat(sessionStorage)?.items[0]).toMatchObject({
+      content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
+    });
+    expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content).toEqual({
+      type: 'quick_reply', title: expected, optionId: 'menu.confirm', replyToId: uuid(7),
+    });
+    expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
   });
 
   it('sanitizes old user text and rewrites storage before returning the restored state', () => {

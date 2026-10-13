@@ -33,10 +33,13 @@ function maskCpf(text: string): string {
   );
 }
 
-/** Mask copied user text, including Flow summaries; leave the active item untouched. */
+/** Mask copied user-visible content; leave the active item and static identifiers untouched. */
 function withoutRawCpf(item: UserItem): UserItem {
   if (item.content?.type === 'text') {
     return { ...item, content: { ...item.content, text: maskCpf(item.content.text) } };
+  }
+  if (item.content?.type === 'quick_reply') {
+    return { ...item, content: { ...item.content, title: maskCpf(item.content.title) } };
   }
   if (item.content?.type === 'flow_submit') {
     return { ...item, content: { ...item.content, summary: maskCpf(item.content.summary) } };
