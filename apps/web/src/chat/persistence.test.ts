@@ -106,6 +106,30 @@ describe('persistence', () => {
     });
   });
 
+  it('does not persist volatile Flow initialData in a server message', () => {
+    const event = {
+      v: 1 as const, id: uuid(4), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z',
+      type: 'message.flow' as const,
+      payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'review' as const, values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' } } },
+    };
+    saveChat(sessionStorage, chatReducer(sample(), { type: 'server_event', event }));
+    expect(sessionStorage.getItem(KEY)).not.toContain('CPF-CANARY-98765432100');
+    expect(sessionStorage.getItem(KEY)).not.toContain('initialData');
+  });
+
+  it('scrubs volatile Flow initialData from legacy persisted messages on load', () => {
+    sessionStorage.setItem(KEY, JSON.stringify({
+      v: 1, sessionId: 's9', lastSeq: 3,
+      items: [{ kind: 'bot', id: uuid(5), ts: '2026-10-10T12:00:00.000Z', event: {
+        v: 1, id: uuid(6), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z', type: 'message.flow',
+        payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } } },
+      } }],
+    }));
+    const serialized = JSON.stringify(loadChat(sessionStorage));
+    expect(serialized).not.toContain('CPF-CANARY-98765432100');
+    expect(serialized).not.toContain('initialData');
+  });
+
   it('does not throw when the storage is full or unavailable', () => {
     const broken = {
       getItem: () => null,
