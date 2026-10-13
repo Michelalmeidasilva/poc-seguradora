@@ -32,24 +32,40 @@ describe('assistance journey catalog', () => {
         expect(actual.journeyId).toBe('IDE');
         expect(actual.bot).not.toMatch(/c[oó]digo|otp|identidade verificada/i);
         expect(actual.destinations).not.toContain('IDE-09');
-        const sourceActions = (original.actions as Array<{ label: string; target: string }>).map((action) => ({
-          ...action,
-          target: action.target === 'IDE-01' || action.target === 'IDE-02' ? 'IDE-08' : action.target,
-        }));
-        expect(actual.actions).toEqual(sourceActions);
+        const sourceActions = (original.actions as Array<{ label: string; target: string }>).map(
+          (action) => ({
+            ...action,
+            target:
+              action.target === 'IDE-01' || action.target === 'IDE-02' ? 'IDE-08' : action.target,
+          }),
+        );
+        // IDE-02 is an automatic receipt/validation state under SPEC 5.5, not a second input.
+        expect(actual.actions).toEqual(original.id === 'IDE-02' ? [] : sourceActions);
         if (original.id === 'IDE-08') {
-          expect((actual.flow as { fields: Array<{ name: string }> }).fields.map((field) => field.name)).toEqual(['cpf']);
+          expect(
+            (actual.flow as { fields: Array<{ name: string }> }).fields.map((field) => field.name),
+          ).toEqual(['cpf']);
         }
       } else {
         expect({
-          id: actual.id, journeyId: actual.journeyId, title: actual.title,
-          user: actual.user, bot: actual.bot, mode: actual.mode,
-          requiresAuth: actual.requiresAuth, actions: actual.actions,
+          id: actual.id,
+          journeyId: actual.journeyId,
+          title: actual.title,
+          user: actual.user,
+          bot: actual.bot,
+          mode: actual.mode,
+          requiresAuth: actual.requiresAuth,
+          actions: actual.actions,
           ...(actual.flow === undefined ? {} : { flow: actual.flow }),
         }).toEqual({
-          id: original.id, journeyId: original.journey, title: original.title,
-          user: original.user, bot: original.bot, mode: original.mode,
-          requiresAuth: original.requiresAuth, actions: original.actions,
+          id: original.id,
+          journeyId: original.journey,
+          title: original.title,
+          user: original.user,
+          bot: original.bot,
+          mode: original.mode,
+          requiresAuth: original.requiresAuth,
+          actions: original.actions,
           ...(original.flow === undefined ? {} : { flow: original.flow }),
         });
       }
@@ -64,6 +80,15 @@ describe('assistance journey catalog', () => {
         expect(assistanceCatalog.byId[target], `${step.id} -> ${target}`).toBeDefined();
       }
     }
+  });
+
+  it('can emit every catalog action within the protocol title limit without dropping or truncating it', () => {
+    const invalid = assistanceCatalog.steps.flatMap((step) =>
+      step.actions
+        .filter((action) => action.label.length > 20)
+        .map((action) => `${step.id}: ${action.label}`),
+    );
+    expect(invalid).toEqual([]);
   });
 
   it('limits public product discovery to telemedicine, funeral, and pharmacy', () => {
@@ -81,9 +106,11 @@ describe('assistance journey catalog', () => {
   it('offers exactly the three approved public products through canonical chooser targets', () => {
     const chooser = assistanceCatalog.byId['DES-01'];
     if (!chooser) throw new Error('canonical public product chooser DES-01 is missing');
-    const choices = (chooser.flow as {
-      choices: Array<{ label: string; detail: string; target: string }>;
-    }).choices;
+    const choices = (
+      chooser.flow as {
+        choices: Array<{ label: string; detail: string; target: string }>;
+      }
+    ).choices;
     const canonicalChooser = canonical.index['DES-01'] as {
       flow: { choices: Array<{ label: string; detail: string; target: string }> };
     };

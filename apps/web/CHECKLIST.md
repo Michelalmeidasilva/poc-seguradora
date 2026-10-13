@@ -91,7 +91,14 @@
 
 - [x] Playwright verifica CPF-canário visível somente no turno ativo, mascarado no `sessionStorage` e restaurado já mascarado
 - [x] Gateway simulado não ecoa mensagens com CPF; E2E confirma que o canário não aparece no histórico persistido nem após recarga
-- [x] Suíte Playwright completa executada com Chromium
+- [ ] Suíte Playwright ampliada: 19/19 passou após diagnóstico de 429/Retry-After e espera inicial de 30 s (sem alterar rate limit); 11/11 percursos live passaram. Última correção contextual PLA/CAN foi validada por HTTP/unidade e integrada em novo rebuild local; aceite completo da Task 9 permanece pendente dos 247 estados.
+- [x] Fixture IDE-08 sincronizada mecanicamente com o backend: único screen FORM terminal e Footer complete. Suíte web 933/933 e typecheck passaram; demais fontes frontend preservadas.
+
+## Plano WhatsApp Assistance Experience — Task 10
+
+- [x] Checkpoint parcial: 938/938 testes web com um worker e limites temporais originais; 19/19 E2E após respeitar Retry-After, 11/11 live e 24/24 grupos representativos. Typecheck/lint/build aprovados. Execução padrão paralela ainda apresentou falha temporal de renderização; isso foi registrado, não eliminado das asserções.
+- [ ] Fidelidade completa ao atlas e acessibilidade de todos os estados ainda pendentes. Capturas representativas dos 24 grupos passaram em localhost:8080 nas larguras 320/390/1440 px (24/24); não equivalem aos 247 estados nem a todas as alternativas.
+- [ ] Consolidar revisão visual: Flow branco, seções de revisão em duas colunas, nascimento DD/MM/AAAA, CPF mascarado, formatação canônica e agrupamento de texto/quick replies no mesmo turno. Captura mobile DEP-06 conferida após percurso real de inclusão; regressões finais em andamento.
 
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 

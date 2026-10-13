@@ -1,15 +1,14 @@
 {
   "version": "7.1",
-  "routing_model": {
-    "FORM": [
-      "REVIEW"
-    ],
-    "REVIEW": []
-  },
   "screens": [
     {
       "id": "FORM",
       "title": "Informar CPF",
+      "terminal": true,
+      "success": true,
+      "sensitive": [
+        "cpf"
+      ],
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
@@ -28,43 +27,6 @@
           {
             "type": "Footer",
             "label": "Validar formato",
-            "on-click-action": {
-              "name": "navigate",
-              "next": {
-                "type": "screen",
-                "name": "REVIEW"
-              },
-              "payload": {}
-            }
-          }
-        ]
-      },
-      "sensitive": [
-        "cpf"
-      ]
-    },
-    {
-      "id": "REVIEW",
-      "title": "Revisar dados",
-      "terminal": true,
-      "success": true,
-      "sensitive": [
-        "cpf"
-      ],
-      "layout": {
-        "type": "SingleColumnLayout",
-        "children": [
-          {
-            "type": "TextHeading",
-            "text": "Revise os dados"
-          },
-          {
-            "type": "TextBody",
-            "text": "CPF: ••••"
-          },
-          {
-            "type": "Footer",
-            "label": "Enviar formulário",
             "on-click-action": {
               "name": "complete",
               "payload": {

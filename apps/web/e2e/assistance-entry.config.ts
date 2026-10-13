@@ -3,7 +3,11 @@ import { defineConfig } from '@playwright/test';
 // Exercises the running Docker stack, without the transport mock used by chat.spec.ts.
 export default defineConfig({
   testDir: '.',
-  testMatch: 'assistance-entry.live.ts',
+  testMatch: [
+    'assistance-entry.live.ts',
+    'assistance-fidelity.live.ts',
+    'assistance-dependent.live.ts',
+  ],
   outputDir: '/tmp/seguradora-assistance-entry-artifacts',
   workers: 1,
   // The real gateway allows five new sessions/minute; recovery may wait for its refill.

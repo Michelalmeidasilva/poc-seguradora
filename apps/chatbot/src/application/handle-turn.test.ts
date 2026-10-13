@@ -83,6 +83,7 @@ const assistancePort = (requests: AssistanceRequest[] = []): AssistancePort => (
   addDependent: async () => err('unavailable' as const),
   updateDependent: async () => err('unavailable' as const),
   removeDependent: async () => err('unavailable' as const),
+  cancelDependentRemoval: async () => err('unavailable' as const),
   changeModality: async () => err('unavailable' as const),
   renewAssistance: async () => err('unavailable' as const),
   updateAddress: async () => err('unavailable' as const),
@@ -765,7 +766,7 @@ describe('HandleTurn', () => {
     expect(assistanceStates.get('s1')?.screenId).not.toBe('DEP-06');
   });
 
-  it('routes a recognized legacy quote request after clearing assistance state', async () => {
+  it('keeps internal legacy behavior when the assistance adapter is not configured', async () => {
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', { journeyId: 'CON', screenId: 'CON-07', gateApproved: true });
     const services = okServices();

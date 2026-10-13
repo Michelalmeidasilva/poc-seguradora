@@ -19,6 +19,8 @@ export interface RenderContext {
   interactive: boolean;
   sendChoice(optionId: string, title: string, replyToId: string): void;
   openFlow: OpenFlow;
+  /** Presentation-only grouping; original events and reply identity remain unchanged. */
+  textOverride?: string | undefined;
 }
 
 function assertNever(event: never): never {
@@ -47,7 +49,10 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
         />,
       );
     case 'message.document':
-      return bubble(<DocumentMessage payload={event.payload} />, 'Documentos enviados pelo assistente');
+      return bubble(
+        <DocumentMessage payload={event.payload} />,
+        'Documentos enviados pelo assistente',
+      );
     case 'message.location':
       return bubble(
         <LocationMessage
@@ -79,7 +84,7 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
     case 'message.quick_replies':
       return bubble(
         <QuickReplies
-          text={event.payload.text}
+          text={ctx.textOverride ?? event.payload.text}
           options={event.payload.options}
           interactive={ctx.interactive}
           onChoice={onChoice}

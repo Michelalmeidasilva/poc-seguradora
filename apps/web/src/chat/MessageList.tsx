@@ -7,7 +7,15 @@ import { TypingIndicator } from '../renderers/TypingIndicator';
 import { VoiceMessage } from '../renderers/VoiceMessage';
 import { Bubble } from '../ui/Bubble';
 import { formatDay, formatTime, sameDay } from '../ui/time';
-import { isInteractive, type ChatState, type UserItem } from './model';
+import { isInteractive, type ChatItem, type ChatState, type UserItem } from './model';
+
+const assistanceOptionsFollow = (text: ChatItem | undefined, options: ChatItem | undefined) =>
+  text?.kind === 'bot' &&
+  text.event.type === 'message.text' &&
+  options?.kind === 'bot' &&
+  options.event.type === 'message.quick_replies' &&
+  options.event.payload.text === 'Escolha uma opção para continuar.' &&
+  text.event.correlationId === options.event.correlationId;
 
 export interface MessageListProps {
   state: ChatState;
@@ -73,6 +81,15 @@ export function MessageList({
             !previous || !sameDay(previous.ts, item.ts, timeZone) ? (
               <DateSeparator label={formatDay(item.ts, today, 'pt-BR', timeZone)} />
             ) : null;
+          if (assistanceOptionsFollow(item, state.items[index + 1])) {
+            return <Fragment key={item.id}>{separator}</Fragment>;
+          }
+          const combinedText =
+            assistanceOptionsFollow(previous, item) &&
+            previous?.kind === 'bot' &&
+            previous.event.type === 'message.text'
+              ? previous.event.payload.text
+              : undefined;
 
           let body: ReactNode;
           if (item.kind === 'bot') {
@@ -80,6 +97,7 @@ export function MessageList({
               interactive: isInteractive(state, item.id),
               sendChoice,
               openFlow,
+              textOverride: combinedText,
             });
           } else if (item.kind === 'notice') {
             body = <Notice tone={item.tone} text={item.text} />;

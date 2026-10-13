@@ -12,7 +12,42 @@
     ...options,
   });
   const variant = (options = {}) => ({ alternative: true, ...options });
-  const action = (label, target) => ({ label, target });
+  // Explicit customer copy, never silent truncation: quick-reply titles are limited to 20.
+  // IDs, intent and destinations are unchanged; the runtime and offline atlas share this source.
+  const actionTitles = {
+    'Continuar atendimento': 'Continuar conversa',
+    'Consultar meus benefícios': 'Meus benefícios',
+    'Abandonar solicitação': 'Abandonar pedido',
+    'Continuar solicitação': 'Continuar pedido',
+    'Solicitar atendimento': 'Pedir atendimento',
+    'Serviços de assistência': 'Ver assistências',
+    'Continuar com autenticação': 'Informar CPF',
+    'Abrir demonstração segura': 'Abrir demonstração',
+    'Informar dados que faltam': 'Completar dados',
+    'Simular dado informado': 'Simular dado',
+    'Simular correção de data': 'Simular nova data',
+    'Substituir pessoa do pedido': 'Trocar pessoa',
+    'Ver revisão atualizada': 'Ver nova revisão',
+    'Simular correção informada': 'Simular correção',
+    'Revisar alteração permitida': 'Revisar alteração',
+    'Corrigir pela conversa': 'Corrigir no chat',
+    'Acompanhar agendamento': 'Ver agendamento',
+    'Consultar solicitação': 'Ver solicitação',
+    'Ver acesso disponível': 'Ver acesso',
+    'Ver caso com carência': 'Caso com carência',
+    'Ver outros benefícios': 'Outros benefícios',
+    'Consultar atualização': 'Ver atualização',
+    'Acompanhar restituição': 'Ver restituição',
+    'Sim, encerrar conversa': 'Sim, encerrar',
+    'Começar nova conversa': 'Nova conversa',
+    'Consultar opção atual': 'Ver opção atual',
+    'Verificação necessária': 'Informar CPF',
+    'Continuar autosserviço': 'Continuar no chat',
+    'Confirmar encerramento do retorno': 'Encerrar retorno',
+    'Recomeçar com contexto': 'Retomar contexto',
+    'Consultar restituição': 'Ver restituição',
+  };
+  const action = (label, target) => ({ label: actionTitles[label] ?? label, target });
   const form = (title, fields, submit, target, extra = {}) => ({
     mode: 'form',
     flow: { title, fields, submit, target, ...extra },

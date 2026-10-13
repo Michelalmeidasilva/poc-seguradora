@@ -23,7 +23,8 @@ export interface FlowSheetRequest {
   flowId: string;
   flowJson: Record<string, unknown>;
   header?: string | undefined;
-  initialData?: { intent: 'review' | 'correction'; values: Record<string, string | boolean> } | undefined;
+  initialData?:
+    { intent: 'review' | 'correction'; values: Record<string, string | boolean> } | undefined;
 }
 
 export interface FlowSheetProps {
@@ -99,7 +100,13 @@ function FlowSession({
 }: FlowSheetProps & { flow: FlowJson }) {
   // Callback ref + state: the portal target exists before Layout (and its Footer) first renders.
   const [footerSlot, setFooterSlot] = useState<HTMLDivElement | null>(null);
-  const session = useFlowSheet(flow, request.flowId, { submit, exchange, onClose }, footerSlot, request.initialData?.values);
+  const session = useFlowSheet(
+    flow,
+    request.flowId,
+    { submit, exchange, onClose },
+    footerSlot,
+    request.initialData?.values,
+  );
   const { screen, context } = session;
   const title =
     (typeof screen.title === 'string' ? interpolate(screen.title, context.scope) : '') ||
@@ -118,7 +125,7 @@ function FlowSession({
     >
       {footerSlot ? (
         <FlowProvider value={context}>
-          <Layout />
+          <Layout review={screen.id === 'REVIEW' && /^[A-Z]{3}-\d{2}$/.test(request.flowId)} />
         </FlowProvider>
       ) : null}
     </SheetFrame>
@@ -269,7 +276,7 @@ function SheetFrame({
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <div className="flow-sheet__panel" inert={confirming}>
+      <div className="flow-sheet__panel" data-screen-key={screenKey} inert={confirming}>
         <header className="flow-sheet__header">
           {onBack ? (
             <button type="button" className="flow-sheet__icon" aria-label="Voltar" onClick={onBack}>
@@ -278,9 +285,18 @@ function SheetFrame({
           ) : (
             <span className="flow-sheet__icon-spacer" />
           )}
-          <h2 id={titleId} ref={headingRef} className="flow-sheet__title" tabIndex={-1}>
-            {title}
-          </h2>
+          <div className="flow-sheet__heading">
+            <h2 id={titleId} ref={headingRef} className="flow-sheet__title" tabIndex={-1}>
+              {title}
+            </h2>
+            {/:LIST$/.test(screenKey) ? (
+              <p>Selecione uma opção para continuar</p>
+            ) : /:REVIEW$/.test(screenKey) ? (
+              <p>Confira as informações antes de confirmar</p>
+            ) : /:FORM$/.test(screenKey) ? (
+              <p>Preencha os dados solicitados</p>
+            ) : null}
+          </div>
           {showClose ? (
             <button
               type="button"
@@ -295,7 +311,12 @@ function SheetFrame({
           )}
         </header>
         <div className="flow-sheet__body">{children}</div>
-        {footerRef ? <div ref={footerRef} className="flow-sheet__footer" /> : null}
+        {footerRef ? (
+          <div className="flow-sheet__footer">
+            <div ref={footerRef} />
+            <p className="flow-sheet__note">Digio · experiência estruturada no WhatsApp</p>
+          </div>
+        ) : null}
       </div>
       {confirming ? (
         <div className="flow-sheet__confirm-backdrop">

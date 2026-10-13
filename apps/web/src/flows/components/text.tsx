@@ -106,10 +106,27 @@ type Weight = 'bold' | 'italic' | 'bold_italic' | 'normal';
 
 export function TextBody({
   c,
+  reviewLine = false,
 }: {
   c: TextComponent & { 'font-weight'?: Weight; strikethrough?: boolean };
+  reviewLine?: boolean;
 }) {
   const text = useText(c);
+  const separator = text.indexOf(': ');
+  if (reviewLine && separator > 0) {
+    const label = text.slice(0, separator);
+    const rawValue = text.slice(separator + 2);
+    const value =
+      label === 'Nascimento' ? rawValue.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1') : rawValue;
+    return (
+      <div className="flow-review-line">
+        <span>{label}</span>
+        <strong>
+          <Inline text={value} />
+        </strong>
+      </div>
+    );
+  }
   const weight = c['font-weight'];
   const classes = ['flow-body'];
   if (weight === 'bold' || weight === 'bold_italic') classes.push('flow-body--bold');

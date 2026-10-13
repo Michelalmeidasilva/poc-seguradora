@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// End-to-end smoke test of the public web URL: web -> gateway -> chatbot -> services.
+// End-to-end smoke of the current assistance experience: web -> gateway -> chatbot -> mock.
 // Usage: node infra/smoke.mjs <base-url>   (or BASE_URL=<base-url> node infra/smoke.mjs)
 // Each step prints `ok <step>`; the first failure prints `FAIL <hop>: <reason>` and exits 1.
 // Hops: web (nginx/static), session (gateway session/cookie/Origin), sse (event stream),
-// chatbot (gateway -> chatbot turn), services (chatbot -> internal services).
+// chatbot (gateway -> chatbot turn), assistance (personal CPF gate and session mock).
 // No dependencies: Node 22 fetch only.
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
@@ -213,18 +213,6 @@ async function request(deadline, hop, url, init = {}) {
   }
 }
 
-/** Valid AUTO quote (same data as apps/chatbot/src/e2e.test.ts). */
-export const AUTO_QUOTE = {
-  produto: 'AUTO',
-  nome: 'Maria Souza',
-  cpf: '123.456.789-01',
-  nascimento: '1990-05-20',
-  marca: 'Fiat',
-  modelo: 'Argo',
-  ano: '2021',
-  cep: '01310-100',
-};
-
 /**
  * Runs the seven steps against `baseUrl`; throws SmokeError on the first failure. Each step has
  * one deadline (`stepTimeoutMs`) shared by its requests and its wait, and the whole run has one
@@ -358,42 +346,101 @@ export async function runSmoke(
       log('ok chatbot');
     });
 
-    // 5. The demo Flow.
+    // 5. Public discovery contains exactly the approved assistance services.
     await step('chatbot', async (deadline) => {
       const from = stream.events.length;
-      await postEvent(deadline, 'user.text', { text: 'demo flow' });
-      await expect(
+      await postEvent(deadline, 'user.text', { text: 'O que vocês oferecem?' });
+      const catalog = await expect(
         deadline,
         stream,
-        (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'demo',
-        'message.flow with flowId "demo"',
+        (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'DES-01',
+        'public assistance catalog DES-01',
         from,
       );
-      log('ok demo-flow');
+      const screens = catalog.data?.payload?.flowJson?.screens;
+      const options = Array.isArray(screens)
+        ? screens
+            .flatMap((screen) => screen.layout?.children ?? [])
+            .filter((component) => component.type === 'RadioButtonsGroup')
+            .flatMap((component) => component['data-source'] ?? [])
+            .map((option) => option.title)
+        : [];
+      if (
+        options.sort().join('|') !==
+        ['Assistência Farmácia', 'Assistência Funeral', 'Telemedicina'].join('|')
+      ) {
+        throw new SmokeError(
+          'chatbot',
+          'catalog must contain exactly the three assistance services',
+        );
+      }
+      log('ok assistance-products');
     });
 
-    // 6. A quote submission goes through the chatbot to the quote service.
-    await step('services', async (deadline) => {
-      const from = stream.events.length;
-      await postEvent(deadline, 'user.flow_submit', { flowId: 'cotacao', data: AUTO_QUOTE });
-      // The chatbot answers either with the quote or, when the service fails, the form again.
-      const answer = await expect(
+    // 6. Personal access requires CPF format, then resumes the requested contract.
+    await step('assistance', async (deadline) => {
+      let from = stream.events.length;
+      await postEvent(deadline, 'user.text', { text: 'Quero ver meu contrato.' });
+      const gate = await expect(
         deadline,
         stream,
         (e) =>
-          (e.event === 'message.template' &&
-            String(e.data?.payload?.header ?? '').startsWith('Cotação')) ||
-          (e.event === 'message.flow' && e.data?.payload?.flowId === 'cotacao'),
-        'quote result (message.template "Cotação ...")',
+          e.event === 'message.quick_replies' &&
+          e.data?.payload?.options?.some((option) => option.id === 'IDE-08'),
+        'CPF gate before contract',
         from,
       );
-      if (answer.event !== 'message.template') {
-        throw new SmokeError(
-          'services',
-          'chatbot answered with the quote form again (service call failed)',
-        );
-      }
-      log('ok quote');
+      from = stream.events.length;
+      await postEvent(deadline, 'user.quick_reply', {
+        optionId: 'IDE-08',
+        replyToId: gate.data.id,
+      });
+      await expect(
+        deadline,
+        stream,
+        (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'IDE-08',
+        'single CPF form',
+        from,
+      );
+      from = stream.events.length;
+      await postEvent(deadline, 'user.flow_submit', {
+        flowId: 'IDE-08',
+        data: { cpf: '11111111111' },
+      });
+      await expect(
+        deadline,
+        stream,
+        (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'CON-01',
+        'contract after CPF format gate',
+        from,
+      );
+      from = stream.events.length;
+      await postEvent(deadline, 'user.flow_submit', { flowId: 'CON-01', data: { choice: '0' } });
+      const contract = await expect(
+        deadline,
+        stream,
+        (e) =>
+          e.event === 'message.quick_replies' &&
+          e.data?.payload?.options?.some((option) => option.id === 'CON-07'),
+        'documents offered by the selected contract',
+        from,
+      );
+      from = stream.events.length;
+      await postEvent(deadline, 'user.quick_reply', {
+        optionId: 'CON-07',
+        replyToId: contract.data.id,
+      });
+      await expect(
+        deadline,
+        stream,
+        (e) =>
+          e.event === 'message.document' &&
+          Array.isArray(e.data?.payload?.documents) &&
+          e.data.payload.documents.length > 0,
+        'mock documents after CPF and contract selection',
+        from,
+      );
+      log('ok cpf-contract');
     });
 
     // 7. Reconnect with Last-Event-ID of the first event: every later event is replayed.

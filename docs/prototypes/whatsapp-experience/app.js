@@ -89,7 +89,7 @@
       id = 'IDE-01';
     }
     if (id === 'IDE-03')
-      index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
+      index['IDE-03'].actions[0] = { label: 'Continuar pedido', target: identityReturn };
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
     if (index[id].seed) Object.assign(memory, index[id].seed);

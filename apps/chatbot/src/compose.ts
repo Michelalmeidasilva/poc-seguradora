@@ -17,6 +17,7 @@ import { GuardedLlmProvider } from './infra/guarded-llm-provider';
 import { InMemoryDialogStore } from './infra/in-memory-dialog-store';
 import { MockLlmProvider } from './infra/mock-llm-provider';
 import { MockAssistance } from './infra/mock-assistance';
+import { canonicalInitialDependents } from './infra/assistance-fixtures';
 import { HttpJsonClient } from './infra/services/http-json';
 import { HttpServices } from './infra/services/http-services';
 import { createServicePolicy } from './infra/services/services-policy';
@@ -37,6 +38,7 @@ export interface ChatbotOverrides {
 export interface Chatbot {
   app: FastifyInstance;
   dialogs: InMemoryDialogStore;
+  assistanceStates: InMemoryAssistanceStateStore;
   /** Typed seam consumed by the assistance-turn use case (Task 5). */
   assistance: AssistancePort;
 }
@@ -63,6 +65,7 @@ export async function createChatbot(
       capacity: config.SESSION_CAPACITY,
       ttlMs: config.SESSION_TTL_SECONDS * 1000,
       now,
+      initialDependents: canonicalInitialDependents,
     });
   const assistanceStates = new InMemoryAssistanceStateStore(
     config.SESSION_CAPACITY,
@@ -113,5 +116,5 @@ export async function createChatbot(
   });
 
   const app = await buildApp({ turns, logger, shutdownGraceMs: config.SHUTDOWN_GRACE_MS });
-  return { app, dialogs, assistance };
+  return { app, dialogs, assistance, assistanceStates };
 }

@@ -85,7 +85,8 @@ export class HandleTurn implements TurnRunner {
         .catch(() => undefined)
         .finally(() => {
           this.running.delete(running);
-          if (this.sessionTails.get(request.sessionId) === running) this.sessionTails.delete(request.sessionId);
+          if (this.sessionTails.get(request.sessionId) === running)
+            this.sessionTails.delete(request.sessionId);
         });
       this.sessionTails.set(request.sessionId, running);
       this.running.add(running);
@@ -129,20 +130,32 @@ export class HandleTurn implements TurnRunner {
       emit({ type: 'status.typing', payload: { state: 'start' } });
       let assistanceState = this.d.assistanceStates?.get(request.sessionId);
       const legacyDialogIsIdle = this.d.dialogs.get(request.sessionId).name === 'idle';
-      if (assistanceState && event.type === 'user.text') {
-        const exactAssistancePhrase = assistanceStepForText(event.payload.text);
-        const dependentFreeText = ['DEP-33', 'DEP-04'].includes(assistanceState.screenId);
-        const gateInput = assistanceState.screenId === 'IDE-08' && /\d/.test(event.payload.text);
-        if (!exactAssistancePhrase && !dependentFreeText && !gateInput) {
-          this.d.assistanceStates?.clear(request.sessionId);
-          assistanceState = undefined;
+      // Older integrations can omit the assistance adapter. Once the new experience
+      // is active, customer text must never escape into legacy insurance screens.
+      if (assistanceState && !this.d.assistance) {
+        this.d.assistanceStates?.clear(request.sessionId);
+        assistanceState = undefined;
+      }
+      if (
+        !assistanceState &&
+        legacyDialogIsIdle &&
+        this.d.assistance &&
+        event.type === 'user.text' &&
+        !assistanceStepForText(event.payload.text) &&
+        !/^demo flow$/i.test(event.payload.text.trim())
+      ) {
+        const intent = await this.d.llm.classify(event.payload.text);
+        if (['unknown', 'greeting', 'help'].includes(intent.name)) {
+          assistanceState = assistanceEntry('ENT-02').state;
         }
       }
       const assistanceInput = assistanceState
         ? this.assistanceInput(request)
         : legacyDialogIsIdle && event.type === 'user.text'
           ? this.assistanceInput(request, assistanceStepForText(event.payload.text))
-          : legacyDialogIsIdle && event.type === 'user.voice' && assistanceStepForAudio(event.payload.mediaId)
+          : legacyDialogIsIdle &&
+              event.type === 'user.voice' &&
+              assistanceStepForAudio(event.payload.mediaId)
             ? this.assistanceInput(request)
             : undefined;
       if (assistanceInput && this.d.assistance && this.d.assistanceStates) {
@@ -163,7 +176,10 @@ export class HandleTurn implements TurnRunner {
             this.d.assistanceStates.set(request.sessionId, result.value.state);
             for (const body of result.value.replies) emit(body);
           } else {
-            emit({ type: 'message.text', payload: { text: 'Esta demonstração está indisponível no momento.' } });
+            emit({
+              type: 'message.text',
+              payload: { text: 'Esta demonstração está indisponível no momento.' },
+            });
           }
           return;
         }
@@ -197,7 +213,10 @@ export class HandleTurn implements TurnRunner {
     }
   }
 
-  private assistanceInput(request: ChatbotRequest, matched?: { id: string }): AssistanceInput | undefined {
+  private assistanceInput(
+    request: ChatbotRequest,
+    matched?: { id: string },
+  ): AssistanceInput | undefined {
     const event = request.event;
     switch (event.type) {
       case 'user.text':
@@ -207,7 +226,11 @@ export class HandleTurn implements TurnRunner {
       case 'user.flow_submit':
         return { type: 'flow_submit', flowId: event.payload.flowId, data: event.payload.data };
       case 'user.voice':
-        return { type: 'voice', mediaId: event.payload.mediaId, durationMs: event.payload.durationMs };
+        return {
+          type: 'voice',
+          mediaId: event.payload.mediaId,
+          durationMs: event.payload.durationMs,
+        };
       default:
         return matched ? { type: 'open', target: matched.id } : undefined;
     }

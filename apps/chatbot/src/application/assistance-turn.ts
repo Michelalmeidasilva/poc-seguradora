@@ -29,10 +29,22 @@ export interface AssistanceTurnDeps {
   context: CallContext;
 }
 
-const preserveReply = (state: AssistanceState, text: string): AssistanceTurnResult => ({
-  state,
-  replies: [{ type: 'message.text', payload: { text } } as ReplyBody],
-});
+const preserveReply = (state: AssistanceState, text: string): AssistanceTurnResult => {
+  const step = assistanceCatalog.byId[state.screenId];
+  return {
+    state,
+    replies: [
+      { type: 'message.text', payload: { text } } as ReplyBody,
+      ...(step
+        ? textReply(
+            step,
+            state,
+            step.mode === 'review' && state.temporaryData ? 'review' : undefined,
+          )
+        : []),
+    ],
+  };
+};
 
 const recordOf = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -141,7 +153,7 @@ const flowInitialData = (
   const cpf = state.temporaryData.cpf ?? state.temporaryData.document;
   if (intent === 'review' && typeof cpf === 'string') {
     const digits = cpf.replace(/\D/g, '');
-    if (digits.length >= 2) values.maskedDocument = `•••••••••${digits.slice(-2)}`;
+    if (digits.length >= 2) values.maskedDocument = `•••.•••.•••-${digits.slice(-2)}`;
   }
   if (intent === 'correction') {
     const fields = Array.isArray(recordOf(step.flow)?.fields)
@@ -174,20 +186,69 @@ const textReply = (
   step: AssistanceStep,
   state?: AssistanceState,
   intent?: 'review' | 'correction',
+  listChoices?: Array<{ id: string; title: string; description: string }>,
 ): ReplyBody[] => {
   const replies: ReplyBody[] = [];
-  if (step.mode === 'document') return replies;
+  let body = step.bot;
+  const draft = state?.temporaryData;
+  if (step.id === 'EXC-01' && !listChoices && draft?.exclusionChoices) {
+    listChoices = JSON.parse(draft.exclusionChoices) as Array<{
+      id: string;
+      title: string;
+      description: string;
+    }>;
+  }
+  const personalize = (text: string) =>
+    step.journeyId === 'EXC' && draft?.dependentName
+      ? text.replace(/Maria Silva|Maria/g, () => draft.dependentName!)
+      : text;
+  body = personalize(body);
+  if (step.id === 'DEP-33' && draft?.name) {
+    const birth = draft.birth?.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
+    const cpf = (draft.cpf ?? draft.document ?? '').replace(/\D/g, '');
+    body = body
+      .replace('dados do João', `dados de ${draft.name}`)
+      .replaceAll('João da Silva', draft.name);
+    if (birth) body = body.replaceAll('12/03/2004', birth);
+    if (cpf.length === 11) body = body.replaceAll('•••.•••.•••-10', `•••.•••.•••-${cpf.slice(-2)}`);
+    if (draft.relationship)
+      body = body.replace('**Parentesco:** filho', `**Parentesco:** ${draft.relationship}`);
+  }
+  if (step.id === 'DEP-34' && draft?.name) {
+    body = body.replace('do João', `de ${draft.name}`).replace('ele informa', 'a pessoa informa');
+  }
   if (step.mode === 'chat' || step.mode === 'audio') {
-    replies.push({ type: 'message.text', payload: { text: step.bot } } as ReplyBody);
-  } else {
+    replies.push({ type: 'message.text', payload: { text: body } } as ReplyBody);
+  } else if (step.mode !== 'document') {
     const initialData = flowInitialData(step, state, intent);
+    const hydrate = (value: unknown): unknown => {
+      if (typeof value === 'string') return personalize(value);
+      if (Array.isArray(value)) return value.map(hydrate);
+      if (!value || typeof value !== 'object') return value;
+      const component = recordOf(value);
+      if (listChoices && component?.type === 'RadioButtonsGroup' && component.name === 'choice')
+        return { ...component, 'data-source': listChoices };
+      return Object.fromEntries(
+        Object.entries(value).map(([key, child]) => [
+          key,
+          key === 'text' && child === step.bot ? body : hydrate(child),
+        ]),
+      );
+    };
+    const flowJson = assistanceFlows[step.id] ?? { title: step.title };
     replies.push({
       type: 'message.flow',
       payload: {
         flowId: step.id,
-        body: step.bot,
-        ctaLabel: (recordOf(step.flow)?.submit as string | undefined) ?? 'Continuar',
-        flowJson: assistanceFlows[step.id] ?? { title: step.title },
+        body,
+        ctaLabel:
+          step.mode === 'list'
+            ? 'Selecionar uma opção'
+            : step.mode === 'review'
+              ? 'Abrir revisão'
+              : 'Abrir formulário',
+        flowJson:
+          body === step.bot && !listChoices && !draft?.dependentName ? flowJson : hydrate(flowJson),
         ...(initialData ? { initialData } : {}),
       },
     } as ReplyBody);
@@ -384,7 +445,7 @@ async function confirmedMutation(
   }
 }
 
-function targetForText(text: string): AssistanceStep | undefined {
+function targetForText(text: string, state?: AssistanceState): AssistanceStep | undefined {
   const normalized = text.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
   const greeting = normalized
     .normalize('NFD')
@@ -393,9 +454,28 @@ function targetForText(text: string): AssistanceStep | undefined {
   if (['oi', 'ola', 'bom dia', 'boa tarde', 'boa noite'].includes(greeting)) {
     return assistanceCatalog.byId['ENT-02'];
   }
-  return assistanceCatalog.steps.find(
+  const statement = parseDependentStatement(text);
+  if (
+    /\b(incluir|adicionar)\b/i.test(text) &&
+    statement.name &&
+    statement.cpf &&
+    statement.birth &&
+    statement.relationship
+  ) {
+    return assistanceCatalog.byId['DEP-33'];
+  }
+  const matches = assistanceCatalog.steps.filter(
     (candidate) =>
       candidate.user.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ') === normalized,
+  );
+  // Conditional outcomes are selected by service data, not by an ambiguous
+  // phrase. Ordinary shared intents stay in the current journey.
+  return (
+    (normalized === 'quero confirmar.'
+      ? matches.find(
+          (candidate) => candidate.journeyId === state?.journeyId && !candidate.alternative,
+        )
+      : undefined) ?? matches[0]
   );
 }
 
@@ -404,6 +484,10 @@ export async function runAssistanceTurn(
   deps: AssistanceTurnDeps,
 ): Promise<Result<AssistanceTurnResult, AssistanceFailure>> {
   const { state, port, sessionId, context } = deps;
+  const statement =
+    input.type === 'text' && targetForText(input.text)?.id === 'DEP-33'
+      ? parseDependentStatement(input.text)
+      : undefined;
   if (input.type === 'flow_data_exchange') return ok({ state, replies: [] });
   const currentStep = assistanceCatalog.byId[state.screenId];
   if (input.type === 'quick_reply' && currentStep) {
@@ -421,7 +505,13 @@ export async function runAssistanceTurn(
   ) {
     const gate = nextAssistanceState(state, { type: 'open', target: state.screenId });
     return ok({
-      state: { ...gate.state, pendingStep: state.screenId },
+      state: {
+        ...gate.state,
+        pendingStep: state.screenId,
+        ...(statement
+          ? { temporaryData: { ...state.temporaryData, ...statement } as Record<string, string> }
+          : {}),
+      },
       replies: textReply(gate.step),
     });
   }
@@ -453,6 +543,17 @@ export async function runAssistanceTurn(
   }
   let transitionInput: Parameters<typeof nextAssistanceState>[1] | undefined;
   let submitted: Record<string, unknown> | undefined;
+  let correctedBirth: string | undefined;
+  if (input.type === 'quick_reply' && state.screenId === 'EXC-09' && input.target === 'EXC-10') {
+    const dependentId = state.temporaryData?.dependentId;
+    if (!dependentId) return ok(preserveReply(state, failureText.invalid));
+    const undone = await port.cancelDependentRemoval(
+      sessionId,
+      { confirmed: true, dependentId },
+      context,
+    );
+    if (!undone.ok) return ok(preserveReply(state, failureText[undone.error]));
+  }
 
   switch (input.type) {
     case 'open':
@@ -470,8 +571,18 @@ export async function runAssistanceTurn(
         transitionInput = { type: 'cpf_submit', cpf };
       } else if (state.screenId === 'DEP-33' || state.screenId === 'DEP-04') {
         transitionInput = { type: 'open', target: state.screenId };
+      } else if (['DEP-14', 'DEP-16'].includes(state.screenId)) {
+        correctedBirth = parseDependentStatement(input.text, {}, 'birth').birth;
+        if (!correctedBirth)
+          return ok(
+            preserveReply(
+              state,
+              'Informe a data de nascimento correta, por exemplo: “A data correta é 20/05/2012”.',
+            ),
+          );
+        transitionInput = { type: 'open', target: 'DEP-16' };
       } else {
-        const step = targetForText(input.text);
+        const step = targetForText(input.text, state);
         if (!step)
           return ok(
             preserveReply(state, 'Não entendi essa opção. Escolha uma das opções disponíveis.'),
@@ -501,7 +612,31 @@ export async function runAssistanceTurn(
       const currentStep = assistanceCatalog.byId[state.screenId];
       if (!currentStep)
         return ok(preserveReply(state, 'Esta etapa demonstrativa não está disponível.'));
-      const validated = validateFlowData(currentStep, submitted);
+      let validated: Record<string, unknown> | undefined;
+      if (currentStep.id === 'EXC-01') {
+        const selection = z
+          .object({ choice: z.string().regex(/^(0|[1-9]\d*)$/) })
+          .strict()
+          .safeParse(submitted);
+        let ids: string[] = [];
+        try {
+          const cached = z
+            .array(z.string())
+            .safeParse(JSON.parse(state.temporaryData?.exclusionCandidates ?? '[]'));
+          if (cached.success) ids = cached.data;
+        } catch {
+          return ok(preserveReply(state, failureText.invalid));
+        }
+        const id = selection.success ? ids[Number(selection.data.choice)] : undefined;
+        if (!id) return ok(preserveReply(state, failureText.invalid));
+        const dependents = await port.listDependents(sessionId, context);
+        if (!dependents.ok) return ok(preserveReply(state, failureText[dependents.error]));
+        const dependent = dependents.value.find((person) => person.id === id);
+        if (!dependent) return ok(preserveReply(state, failureText.not_found));
+        validated = { target: 'EXC-02', dependentId: dependent.id, dependentName: dependent.name };
+      } else {
+        validated = validateFlowData(currentStep, submitted);
+      }
       if (!validated)
         return ok(
           preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'),
@@ -567,6 +702,25 @@ export async function runAssistanceTurn(
   if (!transitionInput) return ok({ state, replies: [] });
   const transition = nextAssistanceState(state, transitionInput);
   let nextState = transition.state;
+  let step = transition.step;
+  const gateReplies: ReplyBody[] = [];
+  if (transitionInput.type === 'cpf_submit' && state.screenId === 'IDE-08') {
+    gateReplies.push({
+      type: 'message.text',
+      payload: { text: assistanceCatalog.byId['IDE-02']!.bot },
+    } as ReplyBody);
+    if (nextState.gateApproved && state.pendingStep) {
+      gateReplies.push({
+        type: 'message.text',
+        payload: { text: assistanceCatalog.byId['IDE-03']!.bot },
+      } as ReplyBody);
+    }
+  }
+  if (statement)
+    nextState = {
+      ...nextState,
+      temporaryData: { ...state.temporaryData, ...statement } as Record<string, string>,
+    };
   const requestedTarget =
     transitionInput.type === 'open' || transitionInput.type === 'quick_reply'
       ? transitionInput.target
@@ -593,8 +747,9 @@ export async function runAssistanceTurn(
   }
   if (transitionInput.type === 'cpf_submit' && nextState.gateApproved && state.pendingStep) {
     const pending = nextAssistanceState(nextState, { type: 'open', target: state.pendingStep });
-    nextState = pending.state;
-    return ok({ state: nextState, replies: textReply(pending.step) });
+    nextState = { ...pending.state };
+    delete nextState.pendingStep;
+    step = pending.step;
   }
 
   if (input.type === 'text' && (state.screenId === 'DEP-33' || state.screenId === 'DEP-04')) {
@@ -605,22 +760,72 @@ export async function runAssistanceTurn(
     nextState = { ...nextState, temporaryData: { ...state.temporaryData, ...data } };
   }
 
-  const step = transition.step;
+  let listChoices: Array<{ id: string; title: string; description: string }> | undefined;
+  if (step.id === 'EXC-01') {
+    const dependents = await port.listDependents(sessionId, context);
+    if (!dependents.ok) return ok(preserveReply(state, failureText[dependents.error]));
+    if (!dependents.value.length) {
+      const empty = nextAssistanceState(nextState, { type: 'open', target: 'IDE-07' });
+      return ok({
+        state: empty.state,
+        replies: [...gateReplies, ...textReply(empty.step, empty.state)],
+      });
+    }
+    listChoices = dependents.value.map((person, index) => ({
+      id: String(index),
+      title: person.name,
+      description: `CPF: •••.•••.•••-${person.cpf.slice(-2)} · ${person.relationship} · vínculo ativo`,
+    }));
+    nextState = {
+      ...nextState,
+      temporaryData: {
+        exclusionCandidates: JSON.stringify(dependents.value.map((person) => person.id)),
+        exclusionChoices: JSON.stringify(listChoices),
+      },
+    };
+  }
+  // The canonical correction CTA simulates precisely the date stated by DEP-16.
+  // Preserve every other draft field and still require the updated review's confirmation.
+  if (correctedBirth) {
+    nextState = { ...nextState, temporaryData: { ...state.temporaryData, birth: correctedBirth } };
+  } else if (
+    input.type === 'quick_reply' &&
+    step.id === 'DEP-16' &&
+    ['DEP-14', 'DEP-16'].includes(state.screenId)
+  ) {
+    const date = step.user.match(/\b\d{2}\/\d{2}\/\d{4}\b/)?.[0];
+    const corrected = parseDependentStatement(
+      `nascimento em ${date ?? ''}`,
+      state.temporaryData ?? {},
+      'birth',
+    );
+    nextState = {
+      ...nextState,
+      temporaryData: { ...state.temporaryData, ...corrected } as Record<string, string>,
+    };
+  }
   let replies: ReplyBody[];
   if (isDocumentScreen(step.id) && step.mode === 'document') {
     const docs = await port.listDocuments(sessionId, step.id, context);
     if (!docs.ok) return ok(preserveReply(state, failureText[docs.error]));
-    replies = [{ type: 'message.document', payload: { documents: docs.value } } as ReplyBody];
+    replies = [
+      { type: 'message.document', payload: { documents: docs.value } } as ReplyBody,
+      ...textReply(step, nextState),
+    ];
   } else {
     const hydrationIntent =
-      step.mode === 'review' && input.type === 'flow_submit' && currentStep?.mode === 'form'
+      step.mode === 'review' &&
+      nextState.temporaryData &&
+      step.journeyId === state.journeyId &&
+      ((input.type === 'flow_submit' && currentStep?.mode === 'form') ||
+        (state.screenId === 'DEP-16' && step.id === 'DEP-17'))
         ? 'review'
         : input.type === 'flow_submit' &&
             currentStep?.mode === 'review' &&
             submitted?.correction === true
           ? 'correction'
           : undefined;
-    replies = textReply(step, nextState, hydrationIntent);
+    replies = textReply(step, nextState, hydrationIntent, listChoices);
   }
   if (step.id === 'DEP-10') {
     const dependents = await port.listDependents(sessionId, context);
@@ -630,7 +835,7 @@ export async function runAssistanceTurn(
       payload: { text: `Dependentes demonstrativos cadastrados: ${dependents.value.length}.` },
     } as ReplyBody);
   }
-  return ok({ state: nextState, replies });
+  return ok({ state: nextState, replies: [...gateReplies, ...replies] });
 }
 
 /** Bounded, expiring state store for assistance journeys; CPF gate input is never stored. */

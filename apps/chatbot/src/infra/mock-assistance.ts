@@ -10,6 +10,7 @@ import type {
   AssistanceDocument,
   AssistanceDocumentScreen,
   AssistanceDependent,
+  AssistanceDependentRemoval,
   AssistancePreferences,
   AssistanceRequest,
   AssistanceRequestKind,
@@ -29,6 +30,8 @@ export interface MockAssistanceOptions {
   /** Maximum replay records retained per active session (FIFO). */
   idempotencyCapacity?: number;
   now?: Clock;
+  /** Optional demonstrative seed; copied and validated once at startup. */
+  readonly initialDependents?: readonly Readonly<AssistanceDependent>[];
   /** Deterministic adapter failure switch, intended for demo scenarios and tests. */
   unavailable?: readonly AssistanceOperation[];
 }
@@ -37,6 +40,7 @@ export type AssistanceOperation =
   | 'addDependent'
   | 'updateDependent'
   | 'removeDependent'
+  | 'cancelDependentRemoval'
   | 'changeModality'
   | 'renewAssistance'
   | 'updateAddress'
@@ -49,6 +53,7 @@ export type AssistanceOperation =
 interface SessionState {
   contract: AssistanceSessionSnapshot['contract'];
   dependents: AssistanceDependent[];
+  dependentRemovals: AssistanceDependentRemoval[];
   benefits: AssistanceBenefit[];
   documents: AssistanceDocument[];
   billing: AssistanceBilling;
@@ -90,24 +95,29 @@ const preferencesSchema = z
   })
   .strict();
 
-const addressCommandSchema = z.object({
-  confirmed: z.literal(true),
-  postal: z.string().regex(/^\d{5}-?\d{3}$/),
-  address: z.string().trim().min(1).max(200),
-  city: z.string().trim().min(1).max(100),
-}).strict();
+const addressCommandSchema = z
+  .object({
+    confirmed: z.literal(true),
+    postal: z.string().regex(/^\d{5}-?\d{3}$/),
+    address: z.string().trim().min(1).max(200),
+    city: z.string().trim().min(1).max(100),
+  })
+  .strict();
 
-const funeralCommandSchema = z.object({
-  confirmed: z.literal(true),
-  city: z.string().trim().min(1).max(100),
-  state: z.string().trim().min(2).max(50),
-}).strict();
+const funeralCommandSchema = z
+  .object({
+    confirmed: z.literal(true),
+    city: z.string().trim().min(1).max(100),
+    state: z.string().trim().min(2).max(50),
+  })
+  .strict();
 
 const fail = (reason: AssistanceFailure) => err<AssistanceFailure>(reason);
 
 const baseFixture = (): SessionState => ({
   contract: { status: 'active', modality: 'familiar', since: '2026-10-10' },
   dependents: [],
+  dependentRemovals: [],
   benefits: [
     {
       id: 'BEN-TELEMEDICINA',
@@ -138,7 +148,13 @@ const baseFixture = (): SessionState => ({
     reference: 'REF-DEMO-001',
     message: 'Informação demonstrativa; nenhuma cobrança foi realizada.',
   },
-  preferences: { contactChannel: 'whatsapp', email: 'cliente@example.test', paperless: true, optionalDocs: true, optionalBenefits: false },
+  preferences: {
+    contactChannel: 'whatsapp',
+    email: 'cliente@example.test',
+    paperless: true,
+    optionalDocs: true,
+    optionalBenefits: false,
+  },
   currentAddress: { postal: '01000-000', address: 'Rua Demonstrativa, 100', city: 'São Paulo/SP' },
   requests: [],
   dependentSequence: 0,
@@ -151,7 +167,9 @@ const documentsByScreen: Record<AssistanceDocumentScreen, AssistanceDocument[]> 
     { id: 'DOC-CONDICOES-DEMO', title: 'Condições do produto', status: 'available' },
     { id: 'DOC-COMPROVANTE-DEMO', title: 'Comprovante de contratação', status: 'generating' },
   ],
-  'UTI-09': [{ id: 'DOC-BENEFICIO-DEMO', title: 'Identificação do benefício', status: 'available' }],
+  'UTI-09': [
+    { id: 'DOC-BENEFICIO-DEMO', title: 'Identificação do benefício', status: 'available' },
+  ],
   'CAN-08': [{ id: 'DOC-CANCELAMENTO-DEMO', title: 'Termo de cancelamento', status: 'available' }],
 };
 
@@ -159,6 +177,7 @@ const sessionSnapshot = (state: SessionState): AssistanceSessionSnapshot => ({
   demonstrative: true,
   contract: state.contract,
   dependents: state.dependents,
+  dependentRemovals: state.dependentRemovals,
   benefits: state.benefits,
   documents: state.documents,
   billing: state.billing,
@@ -173,6 +192,7 @@ export class MockAssistance implements AssistancePort {
   private readonly sessions = new Map<string, SessionEntry>();
   private readonly now: Clock;
   private readonly unavailable: Set<AssistanceOperation>;
+  private readonly initialDependents: AssistanceDependent[];
 
   constructor(private readonly options: MockAssistanceOptions) {
     if (!Number.isInteger(options.capacity) || options.capacity < 1)
@@ -186,6 +206,12 @@ export class MockAssistance implements AssistancePort {
       throw new RangeError('idempotencyCapacity must be an integer >= 1');
     this.now = options.now ?? Date.now;
     this.unavailable = new Set(options.unavailable ?? []);
+    const seed = z
+      .array(dependentInput.extend({ id: z.string().trim().min(1).max(100) }))
+      .safeParse(options.initialDependents === undefined ? [] : options.initialDependents);
+    if (!seed.success || new Set(seed.data.map((person) => person.id)).size !== seed.data.length)
+      throw new Error('invalid initialDependents');
+    this.initialDependents = seed.data;
   }
 
   async getSessionSnapshot(sessionId: string, ctx: CallContext) {
@@ -214,7 +240,11 @@ export class MockAssistance implements AssistancePort {
     const parsed = dependentInput.safeParse(command.dependent);
     if (!command.confirmed || !parsed.success) return fail('invalid');
     return this.mutate(sessionId, ctx, 'addDependent', (state) => {
-      const dependent = { ...parsed.data, id: `DEP-DEMO-${++state.dependentSequence}` };
+      let id: string;
+      do {
+        id = `DEP-DEMO-${++state.dependentSequence}`;
+      } while (this.initialDependents.some((person) => person.id === id));
+      const dependent = { ...parsed.data, id };
       state.dependents.push(dependent);
       return ok(structuredClone(dependent));
     });
@@ -238,7 +268,35 @@ export class MockAssistance implements AssistancePort {
     return this.mutate(sessionId, ctx, 'removeDependent', (state) => {
       const index = state.dependents.findIndex((item) => item.id === command.dependentId);
       if (index < 0) return fail('not_found');
-      state.dependents.splice(index, 1);
+      if (
+        state.dependentRemovals.some(
+          (item) => item.dependentId === command.dependentId && item.status === 'scheduled',
+        )
+      )
+        return fail('conflict');
+      // Fixed, fictitious effective date from EXC-03/EXC-06; never a real contractual rule.
+      state.dependentRemovals.push({
+        dependentId: command.dependentId,
+        effectiveDate: '2026-11-10',
+        status: 'scheduled',
+      });
+      return ok(undefined);
+    });
+  }
+
+  async cancelDependentRemoval(
+    sessionId: string,
+    command: RemoveDependentCommand,
+    ctx: CallContext,
+  ) {
+    if (!command.confirmed || !command.dependentId) return fail('invalid');
+    return this.mutate(sessionId, ctx, 'cancelDependentRemoval', (state) => {
+      const removal = [...state.dependentRemovals]
+        .reverse()
+        .find((item) => item.dependentId === command.dependentId);
+      if (!removal) return fail('not_found');
+      if (removal.status !== 'scheduled') return fail('conflict');
+      removal.status = 'cancelled';
       return ok(undefined);
     });
   }
@@ -256,7 +314,9 @@ export class MockAssistance implements AssistancePort {
   async renewAssistance(sessionId: string, command: { confirmed: true }, ctx: CallContext) {
     if (!command.confirmed) return fail('invalid');
     return this.mutate(sessionId, ctx, 'renewAssistance', (state) => {
-      return ok(structuredClone(this.addRequest(state, 'renewal', 'Renovação demonstrativa registrada.')));
+      return ok(
+        structuredClone(this.addRequest(state, 'renewal', 'Renovação demonstrativa registrada.')),
+      );
     });
   }
 
@@ -266,15 +326,35 @@ export class MockAssistance implements AssistancePort {
     return this.mutate(sessionId, ctx, 'updateAddress', (state) => {
       const { postal, address, city } = parsed.data;
       state.pendingAddressUpdate = { postal, address, city };
-      return ok(structuredClone(this.addRequest(state, 'address_update', 'Solicitação demonstrativa de atualização cadastral recebida para verificação.')));
+      return ok(
+        structuredClone(
+          this.addRequest(
+            state,
+            'address_update',
+            'Solicitação demonstrativa de atualização cadastral recebida para verificação.',
+          ),
+        ),
+      );
     });
   }
 
-  async requestFuneralAssistance(sessionId: string, command: FuneralAssistanceCommand, ctx: CallContext) {
+  async requestFuneralAssistance(
+    sessionId: string,
+    command: FuneralAssistanceCommand,
+    ctx: CallContext,
+  ) {
     const parsed = funeralCommandSchema.safeParse(command);
     if (!parsed.success) return fail('invalid');
     return this.mutate(sessionId, ctx, 'requestFuneralAssistance', (state) =>
-      ok(structuredClone(this.addRequest(state, 'funeral_assistance', 'Solicitação demonstrativa de assistência funeral recebida.'))),
+      ok(
+        structuredClone(
+          this.addRequest(
+            state,
+            'funeral_assistance',
+            'Solicitação demonstrativa de assistência funeral recebida.',
+          ),
+        ),
+      ),
     );
   }
 
@@ -375,11 +455,23 @@ export class MockAssistance implements AssistancePort {
         this.sessions.delete(oldest);
       }
       entry = { state: baseFixture(), updatedAt: now, idempotency: new Map() };
+      entry.state.dependents = structuredClone(this.initialDependents);
     } else {
       this.sessions.delete(sessionId);
       entry.updatedAt = now;
     }
     this.sessions.set(sessionId, entry);
+    for (const removal of entry.state.dependentRemovals) {
+      if (
+        removal.status !== 'scheduled' ||
+        now < Date.parse(`${removal.effectiveDate}T00:00:00-03:00`)
+      )
+        continue;
+      entry.state.dependents = entry.state.dependents.filter(
+        (person) => person.id !== removal.dependentId,
+      );
+      removal.status = 'completed';
+    }
     return entry;
   }
 

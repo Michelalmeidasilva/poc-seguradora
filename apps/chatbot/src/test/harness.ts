@@ -65,10 +65,10 @@ export const flowSubmitReq = (
 
 export const voiceReq = (
   durationMs: number,
-  o: { session?: string; corr?: string; id?: string } = {},
+  o: { session?: string; corr?: string; id?: string; mediaId?: string } = {},
 ) =>
   wrap(
-    { type: 'user.voice', payload: { mediaId: 'm1', durationMs } },
+    { type: 'user.voice', payload: { mediaId: o.mediaId ?? 'm1', durationMs } },
     o.session ?? 's1',
     o.corr ?? 'corr-voice',
     o.id,
@@ -77,6 +77,7 @@ export const voiceReq = (
 export interface RunningChatbot {
   url: string;
   fake: FakeServices;
+  screenId(sessionId: string): string | undefined;
   close(): Promise<void>;
 }
 
@@ -84,7 +85,7 @@ export async function startChatbot(
   o: { env?: Record<string, string>; overrides?: ChatbotOverrides } = {},
 ): Promise<RunningChatbot> {
   const fake = await startFakeServices();
-  const { app } = await createChatbot(testConfig(fake.url, o.env), {
+  const { app, assistanceStates } = await createChatbot(testConfig(fake.url, o.env), {
     logger: pino({ level: 'silent' }),
     ...o.overrides,
   });
@@ -93,6 +94,7 @@ export async function startChatbot(
   return {
     url,
     fake,
+    screenId: (sessionId) => assistanceStates.get(sessionId)?.screenId,
     close: async () => {
       await app.close();
       await fake.close();

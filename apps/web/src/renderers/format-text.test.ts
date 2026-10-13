@@ -7,6 +7,12 @@ describe('parseFormatting', () => {
   it('returns plain text unchanged', () => {
     expect(parseFormatting('Olá, tudo bem?')).toEqual([t('Olá, tudo bem?')]);
   });
+  it('renders the atlas double-star labels as bold while preserving surrounding content', () => {
+    expect(parseFormatting('**Nome:** Ana Lima')).toEqual([
+      { type: 'bold', children: [t('Nome:')] },
+      t(' Ana Lima'),
+    ]);
+  });
 
   it('returns nothing for an empty string', () => {
     expect(parseFormatting('')).toEqual([]);
