@@ -197,6 +197,17 @@ describe('message.document contract', () => {
       ).ok,
     ).toBe(false);
   });
+
+  it('rejects unknown fields at the payload root', () => {
+    expect(
+      parseServerEvent(
+        event('message.document', {
+          documents: [{ id: 'doc', title: 'Documento', status: 'available' }],
+          file: 'demo',
+        }),
+      ).ok,
+    ).toBe(false);
+  });
 });
 
 describe('protocol hardening (server events)', () => {
