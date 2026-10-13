@@ -21,7 +21,19 @@ function withoutFlowData(item: UserItem): UserItem {
 
 /** A draft may live in the current tab's reducer state, never in replayable storage/history. */
 function expireDraftFlow(item: BotItem): BotItem {
-  if (item.event.type !== 'message.flow' || !item.event.payload.initialData) return item;
+  if (item.event.type !== 'message.flow') return item;
+  const { initialData, flowJson } = item.event.payload;
+  const screens = (flowJson as { screens?: unknown[] } | undefined)?.screens;
+  const legacyTerminalReview =
+    Array.isArray(screens) &&
+    screens.length === 1 &&
+    typeof screens[0] === 'object' &&
+    screens[0] !== null &&
+    'id' in screens[0] &&
+    screens[0].id === 'REVIEW' &&
+    'terminal' in screens[0] &&
+    screens[0].terminal === true;
+  if (!initialData && !legacyTerminalReview) return item;
   return {
     ...item,
     event: {

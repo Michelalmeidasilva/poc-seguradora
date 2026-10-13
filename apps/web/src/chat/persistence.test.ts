@@ -150,6 +150,32 @@ describe('persistence', () => {
     expect(storedImmediatelyAfterLoad).not.toContain('message.flow');
   });
 
+  it('expires legacy terminal REVIEW Flows even when initialData was already stripped', () => {
+    sessionStorage.setItem(KEY, JSON.stringify({
+      v: 1, sessionId: 's9', lastSeq: 3,
+      items: [{ kind: 'bot', id: uuid(7), ts: '2026-10-10T12:00:00.000Z', event: {
+        v: 1, id: uuid(8), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z', type: 'message.flow',
+        payload: {
+          flowId: 'DEP-06', body: 'Revise seus dados', ctaLabel: 'Confirmar solicitação',
+          flowJson: { version: '7.1', screens: [{ id: 'REVIEW', terminal: true, layout: { type: 'SingleColumnLayout', children: [{ type: 'TextBody', text: 'CPF: ••00 — Rua Canary' }, { type: 'Footer', label: 'Confirmar' }] } }] },
+        },
+      } }],
+    }));
+
+    const loaded = loadChat(sessionStorage);
+    const serialized = JSON.stringify(loaded);
+    const storedImmediatelyAfterLoad = sessionStorage.getItem(KEY) ?? '';
+    expect(serialized).not.toContain('Rua Canary');
+    expect(serialized).not.toContain('message.flow');
+    expect(serialized).not.toContain('Confirmar solicitação');
+    expect(serialized).toContain('message.text');
+    expect(storedImmediatelyAfterLoad).not.toContain('Rua Canary');
+    expect(storedImmediatelyAfterLoad).not.toContain('message.flow');
+    expect(storedImmediatelyAfterLoad).not.toContain('Confirmar solicitação');
+    expect(storedImmediatelyAfterLoad).toContain('message.text');
+    expect(loaded?.items[0]).toMatchObject({ kind: 'bot', event: { type: 'message.text' } });
+  });
+
   it('does not throw when the storage is full or unavailable', () => {
     const broken = {
       getItem: () => null,
