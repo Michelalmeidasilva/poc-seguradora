@@ -1,0 +1,81 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Simular assistência",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Vamos coletar somente os dados necessários para consultar uma opção disponível."
+          },
+          {
+            "type": "Dropdown",
+            "name": "composition",
+            "label": "Quem você deseja atender?",
+            "required": true,
+            "data-source": [
+              {
+                "id": "Somente eu",
+                "title": "Somente eu"
+              },
+              {
+                "id": "Eu e outras pessoas",
+                "title": "Eu e outras pessoas"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Consultar opções",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Quem você deseja atender?: ${form.composition}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "composition": "${form.composition}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

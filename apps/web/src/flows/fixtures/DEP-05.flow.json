@@ -1,0 +1,165 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Incluir dependente",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Preencha os dados da pessoa que será incluída. Você poderá revisar tudo antes de confirmar."
+          },
+          {
+            "type": "TextInput",
+            "name": "name",
+            "label": "Nome completo",
+            "required": true,
+            "init-value": "Maria Silva",
+            "input-type": "text"
+          },
+          {
+            "type": "DatePicker",
+            "name": "birth",
+            "label": "Data de nascimento",
+            "required": true,
+            "init-value": "2014-03-12"
+          },
+          {
+            "type": "TextInput",
+            "name": "document",
+            "label": "CPF",
+            "required": true,
+            "helper-text": "Informe o CPF",
+            "input-type": "text"
+          },
+          {
+            "type": "Dropdown",
+            "name": "relationship",
+            "label": "Parentesco",
+            "required": true,
+            "data-source": [
+              {
+                "id": "Filha",
+                "title": "Filha"
+              },
+              {
+                "id": "Filho",
+                "title": "Filho"
+              },
+              {
+                "id": "Cônjuge",
+                "title": "Cônjuge"
+              },
+              {
+                "id": "Outro",
+                "title": "Outro"
+              }
+            ]
+          },
+          {
+            "type": "TextInput",
+            "name": "phone",
+            "label": "Celular do dependente",
+            "required": true,
+            "helper-text": "(00) 00000-0000",
+            "input-type": "phone"
+          },
+          {
+            "type": "Dropdown",
+            "name": "biologicalSex",
+            "label": "Sexo biológico (informado pela pessoa)",
+            "required": true,
+            "data-source": [
+              {
+                "id": "Feminino",
+                "title": "Feminino"
+              },
+              {
+                "id": "Masculino",
+                "title": "Masculino"
+              },
+              {
+                "id": "Prefiro não informar",
+                "title": "Prefiro não informar"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Revisar inclusão",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Nome completo: ${form.name}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Data de nascimento: ${form.birth}"
+          },
+          {
+            "type": "TextBody",
+            "text": "CPF: ${form.document}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Parentesco: ${form.relationship}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Celular do dependente: ${form.phone}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Sexo biológico (informado pela pessoa): ${form.biologicalSex}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "name": "${form.name}",
+                "birth": "${form.birth}",
+                "document": "${form.document}",
+                "relationship": "${form.relationship}",
+                "phone": "${form.phone}",
+                "biologicalSex": "${form.biologicalSex}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

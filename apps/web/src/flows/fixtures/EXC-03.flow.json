@@ -1,0 +1,62 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Excluir dependente",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira os efeitos antes de excluir."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Pessoa e efeitos"
+          },
+          {
+            "type": "TextBody",
+            "text": "Pessoa: Maria Silva"
+          },
+          {
+            "type": "TextBody",
+            "text": "Exclusão efetiva: 10/11/2026 neste exemplo"
+          },
+          {
+            "type": "TextBody",
+            "text": "Acesso aos benefícios: Até a data efetiva, conforme regras"
+          },
+          {
+            "type": "TextBody",
+            "text": "Mensalidade: Sem redução neste exemplo"
+          },
+          {
+            "type": "TextBody",
+            "text": "Nova inclusão: Conforme restrições do produto"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar exclusão",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

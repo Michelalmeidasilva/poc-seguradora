@@ -1,0 +1,58 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Solicitar assistência",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira os dados essenciais antes do envio."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Dados do pedido"
+          },
+          {
+            "type": "TextBody",
+            "text": "Pessoa: Pessoa selecionada"
+          },
+          {
+            "type": "TextBody",
+            "text": "Cidade: ••••"
+          },
+          {
+            "type": "TextBody",
+            "text": "Estado: ••••"
+          },
+          {
+            "type": "TextBody",
+            "text": "Benefício: Assistência funeral"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar solicitação",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -54,6 +54,34 @@ test('renders template, code, location and voice messages', async ({ page }) => 
   await expect(page.getByRole('button', { name: 'Reproduzir áudio' })).toBeVisible();
 });
 
+test('offers four local demo audio outcomes without microphone or media requests', async ({ page }) => {
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+      getUserMedia: () => { throw new Error('microphone requested'); },
+    } });
+    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: class {
+      constructor() { throw new Error('recording attempted'); }
+    } });
+  });
+  const mediaRequests: string[] = [];
+  page.on('request', (request) => {
+    if (/\/v1\/media|\.(?:wav|ogg|webm)(?:\?|$)/.test(request.url())) mediaRequests.push(request.url());
+  });
+  for (const [id, response] of [
+    ['AUD-01', 'Recebi seu áudio'],
+    ['AUD-03', 'Entendi o pedido de inclusão'],
+    ['AUD-04', 'Não consegui compreender'],
+    ['AUD-05', 'Estes são os dados que compreendi'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Áudio demonstrativo' }).click();
+    await page.getByRole('button', { name: new RegExp(id) }).click();
+    await expect(page.getByText(response, { exact: false })).toBeVisible();
+  }
+  const voices = (await posted(page)).filter((event) => event.type === 'user.voice');
+  expect(voices.map((event) => event.payload.mediaId)).toEqual(['AUD-01', 'AUD-03', 'AUD-04', 'AUD-05']);
+  expect(mediaRequests).toEqual([]);
+});
+
 test('renders a horizontally scrollable carousel operable by the buttons', async ({ page }) => {
   await say(page, 'carrossel');
   const region = page.getByRole('region', { name: /carrossel/i });

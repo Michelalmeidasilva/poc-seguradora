@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatClientOptions, Draft } from '../transport/chat-client';
 import { botText, delivered, errorEvent, uuid } from '../test/fixtures';
 import { useChat } from './useChat';
+import { demoAudio } from './demo-audio';
 
 const originalCreateObjectURL = URL.createObjectURL;
 beforeEach(() => sessionStorage.clear());
@@ -60,6 +61,24 @@ const activeGuard = () => ({
 });
 
 describe('useChat', () => {
+  it.each([
+    ['AUD-01', 'complete'], ['AUD-03', 'partial'], ['AUD-04', 'failure'], ['AUD-05', 'complete'],
+  ] as const)('sends local fixture %s with predictable %s outcome and no media or network API', async (id, outcome) => {
+    const f = fakeClient();
+    const create = vi.fn(() => `blob:http://localhost/${id}`);
+    URL.createObjectURL = create;
+    const media = vi.fn();
+    vi.stubGlobal('MediaRecorder', media);
+    vi.stubGlobal('fetch', vi.fn());
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+    await act(async () => {});
+    act(() => result.current.sendDemoVoice(id));
+    expect(f.sent).toEqual([{ type: 'user.voice', payload: { mediaId: id, durationMs: 1800 } }]);
+    expect(demoAudio.find((scenario) => scenario.id === id)?.outcome).toBe(outcome);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'audio/wav' }));
+    expect(media).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('starts a fresh client and shows the messages that arrive', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));

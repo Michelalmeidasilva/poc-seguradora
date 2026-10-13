@@ -1,0 +1,52 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Condições de continuidade",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Vamos comparar preço, benefícios, participantes, carências e vigência."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Atual e próximo período"
+          },
+          {
+            "type": "TextBody",
+            "text": "Valor atual: R$ 39,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Novo valor neste exemplo: R$ 42,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Participantes: Mantidos, sujeitos à validação"
+          },
+          {
+            "type": "TextBody",
+            "text": "Benefícios: Conforme documento atualizado"
+          },
+          {
+            "type": "TextBody",
+            "text": "Novo início: 11/11/2026"
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar revisão",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

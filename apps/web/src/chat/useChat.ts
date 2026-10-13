@@ -6,6 +6,7 @@ import { loadChat, saveChat } from './persistence';
 import { chatReducer } from './reducer';
 import type { TabGuard, TabStatus } from './tab-lock';
 import { useTabGuard } from './useTabGuard';
+import { DEMO_AUDIO_DURATION_MS, demoAudio, demoAudioBlob, type DemoAudioId } from './demo-audio';
 
 export interface ChatClientLike {
   start(initial?: { sessionId: string; lastSeq: number }): Promise<void>;
@@ -27,6 +28,7 @@ export interface ChatApi {
   sendText(text: string): void;
   sendChoice(optionId: string, title: string, replyToId: string): void;
   sendVoice(blob: Blob, durationMs: number): void;
+  sendDemoVoice(id: DemoAudioId): void;
   sendFlowSubmit(flowId: string, data: Record<string, unknown>, summary: string): void;
   /** Sent through the outbox with no list item (nothing shown, nothing persisted). */
   sendFlowDataExchange(
@@ -164,6 +166,14 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       queue(
         { type: 'user.voice', payload: { mediaId: `local-${randomId()}`, durationMs } },
         { type: 'voice', durationMs, objectUrl },
+      );
+    },
+    sendDemoVoice: (id) => {
+      if (!demoAudio.some((scenario) => scenario.id === id)) return;
+      const objectUrl = URL.createObjectURL(demoAudioBlob(id));
+      queue(
+        { type: 'user.voice', payload: { mediaId: id, durationMs: DEMO_AUDIO_DURATION_MS } },
+        { type: 'voice', durationMs: DEMO_AUDIO_DURATION_MS, objectUrl },
       );
     },
     sendFlowSubmit: (flowId, data, summary) =>

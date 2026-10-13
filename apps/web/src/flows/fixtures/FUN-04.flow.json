@@ -1,0 +1,84 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Local do atendimento",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Precisamos da cidade e do estado para verificar o encaminhamento."
+          },
+          {
+            "type": "TextInput",
+            "name": "funeralCity",
+            "label": "Cidade",
+            "required": true,
+            "input-type": "text"
+          },
+          {
+            "type": "TextInput",
+            "name": "funeralState",
+            "label": "Estado",
+            "required": true,
+            "input-type": "text"
+          },
+          {
+            "type": "Footer",
+            "label": "Verificar disponibilidade",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Cidade: ${form.funeralCity}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Estado: ${form.funeralState}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "funeralCity": "${form.funeralCity}",
+                "funeralState": "${form.funeralState}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

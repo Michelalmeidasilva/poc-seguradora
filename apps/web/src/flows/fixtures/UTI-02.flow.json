@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Pessoa atendida",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Para qual pessoa deseja acessar a telemedicina?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Pessoa atendida",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Ana Silva",
+                "description": "Titular"
+              },
+              {
+                "id": "1",
+                "title": "Maria Silva",
+                "description": "Dependente"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Verificar disponibilidade",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -14,6 +14,9 @@ const fixture = (name) => {
 };
 const COTACAO_FLOW = fixture('cotacao.flow.json');
 const DEMO_FLOW = fixture('demo-componentes.flow.json');
+const catalog = JSON.parse(readFileSync(new URL('../../chatbot/src/domain/assistance-catalog.generated.json', import.meta.url)));
+const audioReplies = new Map(catalog.groups.flatMap((group) => group.steps)
+  .filter((step) => step.mode === 'audio').map((step) => [step.id, step.bot]));
 const FLOW_EVENTS = new Set(['user.flow_submit', 'user.flow_data_exchange']);
 
 const uuid = () => crypto.randomUUID();
@@ -74,6 +77,10 @@ function reply(session, event) {
     publish(session, { type: 'status.typing', payload: { state: 'stop' } });
     if (event.type === 'user.flow_submit') {
       publish(session, text('Recebemos o seu formulário.'));
+      return;
+    }
+    if (event.type === 'user.voice') {
+      publish(session, text(audioReplies.get(event.payload.mediaId) ?? 'Use um áudio demonstrativo disponível.'));
       return;
     }
     if (event.type === 'user.quick_reply') {

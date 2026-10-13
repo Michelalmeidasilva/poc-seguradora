@@ -2,6 +2,8 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import cotacao from './fixtures/cotacao.flow.json';
+import address from './fixtures/CAD-02.flow.json';
+import consentFlow from './fixtures/ADE-07.flow.json';
 import { FlowSheet, type FlowSheetRequest } from './index';
 
 const request: FlowSheetRequest = { flowId: 'cotacao', flowJson: cotacao, header: 'Cotação' };
@@ -31,6 +33,33 @@ async function toDados(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
+  it('starts catalog consent unchecked and closing before confirmation does not submit', async () => {
+    const { user, submit, exchange } = setup({ flowId: 'ADE-07', flowJson: consentFlow });
+    expect(screen.getByRole('checkbox', { name: /Confirmo os dados/ })).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Confirmar contratação' }));
+    expect(submit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    expect(submit).not.toHaveBeenCalled();
+    expect(exchange).not.toHaveBeenCalled();
+  });
+  it('reviews a catalog form, preserves other values on correction, and submits once', async () => {
+    const { user, submit, exchange } = setup({ flowId: 'CAD-02', flowJson: address });
+    await user.type(screen.getByLabelText('CEP'), '01000-000');
+    await user.type(screen.getByLabelText('Endereço e número'), 'Rua A, 1');
+    await user.type(screen.getByLabelText('Cidade e estado'), 'São Paulo/SP');
+    await user.click(screen.getByRole('button', { name: 'Revisar pedido' }));
+    expect(screen.getByText(/Rua A, 1/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Voltar' }));
+    await user.clear(screen.getByLabelText('Endereço e número'));
+    await user.type(screen.getByLabelText('Endereço e número'), 'Rua B, 2');
+    expect(screen.getByLabelText('CEP')).toHaveValue('01000-000');
+    expect(screen.getByLabelText('Cidade e estado')).toHaveValue('São Paulo/SP');
+    await user.click(screen.getByRole('button', { name: 'Revisar pedido' }));
+    await user.click(screen.getByRole('button', { name: 'Enviar formulário' }));
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith('CAD-02', { postal: '01000-000', address: 'Rua B, 2', city: 'São Paulo/SP' }, expect.any(String));
+    expect(exchange).not.toHaveBeenCalled();
+  });
   it('is a modal dialog labelled by the current screen title, focused on its heading', () => {
     setup();
     const d = dialog();

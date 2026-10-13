@@ -69,6 +69,12 @@
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
 
+## Plano WhatsApp Assistance Experience — Task 7
+
+- [x] 46 fixtures Flow sincronizadas com os JSONs canônicos; formulários navegam para revisão local com volta que preserva valores e submit único
+- [x] Composer demonstrativo oferece somente quatro cenários de áudio locais; nenhum caminho de gravação, microfone, upload ou requisição de mídia na tela do chat
+- [x] E2E cobre os quatro IDs e respostas determinísticas, sem chamada a API de mídia
+
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 
 O que existe (verificado localmente, nada aplicado no GCP):
