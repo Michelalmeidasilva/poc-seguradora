@@ -1,4 +1,5 @@
 import { assistanceCatalog, type AssistanceStep } from './assistance-catalog';
+import { parseAssistanceCpf } from './assistance-cpf';
 
 export interface AssistanceState {
   journeyId: string;
@@ -17,15 +18,16 @@ export type AssistanceInput =
 
 const personalGate = assistanceCatalog.byId['IDE-01']!;
 
-const acceptedCpfFormat = (raw: string): boolean => {
-  const digits = raw.replace(/\D/g, '');
-  return digits.length === 11 && (/^\d{11}$/.test(raw) || /^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(raw));
-};
-
 export function nextAssistanceState(state: AssistanceState, input: AssistanceInput): AssistanceStep {
   if (input.type === 'cpf_submit') {
     if (state.screenId !== 'IDE-08') return assistanceCatalog.byId[state.screenId] ?? personalGate;
-    return assistanceCatalog.byId[acceptedCpfFormat(input.cpf) ? 'IDE-03' : 'IDE-04']!;
+    const parsed = parseAssistanceCpf(input.cpf);
+    const step = assistanceCatalog.byId[parsed.ok ? 'IDE-03' : 'IDE-04']!;
+    if (!parsed.ok) return step;
+    return {
+      ...step,
+      behavior: 'Apenas o formato do CPF foi aceito; nenhuma verificação de identidade foi realizada.',
+    };
   }
 
   const target = assistanceCatalog.byId[input.target];

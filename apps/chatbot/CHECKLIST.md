@@ -8,6 +8,10 @@
 - [x] Transições puras das jornadas com gate CPF, descoberta pública, quick replies válidos/obsoletos, destinos inválidos e sem guardar CPF inicial
 - [x] Parser de dependente limitado a nome, CPF, nascimento e parentesco explicitamente informados (inclui “meu filho João … CPF dele é … ele nasceu …”); correção preserva os outros campos e não infere sexo/gênero
 
+## Plano WhatsApp Assistance Experience — Task 3
+
+- [x] Gate demonstrativo aceita somente 11 dígitos ASCII ou CPF com pontuação canônica, normaliza para 11 dígitos sem checksum/lookup e descarta a entrada bruta ao selecionar o passo IDE de formato aceito ou inválido
+
 ## Estrutura
 
 - [x] Pastas hexagonais criadas (domain / application / infra / main.ts)

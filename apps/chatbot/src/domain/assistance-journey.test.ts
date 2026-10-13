@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseAssistanceCpf } from './assistance-cpf';
 import { nextAssistanceState } from './assistance-journey';
 
 describe('assistance journey transitions', () => {
@@ -34,8 +35,12 @@ describe('assistance journey transitions', () => {
     expect(nextAssistanceState(state, { type: 'open', target: 'LEG-001' }).id).toBe('ENT-02');
   });
 
-  it('routes valid CPF format to the CPF-only accepted screen and malformed input to correction', () => {
+  it('routes only a successful shared CPF parse to the CPF-only accepted screen', () => {
     const state = { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false };
+    const accepted = parseAssistanceCpf('123.456.789-00');
+    const rejected = parseAssistanceCpf('1234');
+    expect(accepted.ok).toBe(true);
+    expect(rejected.ok).toBe(false);
     expect(nextAssistanceState(state, { type: 'cpf_submit', cpf: '123.456.789-00' }).id).toBe('IDE-03');
     expect(nextAssistanceState(state, { type: 'cpf_submit', cpf: '1234' }).id).toBe('IDE-04');
   });
@@ -47,5 +52,7 @@ describe('assistance journey transitions', () => {
     );
     expect(JSON.stringify(next)).not.toContain('12345678900');
     expect(next.id).toBe('IDE-03');
+    expect(next.behavior).toBe('Apenas o formato do CPF foi aceito; nenhuma verificação de identidade foi realizada.');
+    expect(next.bot).toContain('O formato do CPF foi aceito');
   });
 });
