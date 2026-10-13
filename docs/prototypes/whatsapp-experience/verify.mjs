@@ -43,15 +43,24 @@ assert.deepEqual(
   ['DES-12', 'DES-13', 'DES-14'],
 );
 for (const id of ['DES-12', 'DES-13', 'DES-14']) {
-  assert.equal(index[id].mode, 'review', `${id} must open a detailed WhatsApp Flow`);
+  assert.equal(index[id].mode, 'chat', `${id} must present service details in the conversation`);
   assert.equal(index[id].requiresAuth, false, `${id} is informational`);
-  assert.ok(index[id].flow.sections.length >= 2, `${id} needs useful service details`);
-  assert.equal(index[id].flow.target, 'DES-05', `${id} must link to plan options`);
-  assert.equal(index[id].flow.correction, 'DES-01', `${id} must return to service discovery`);
+  assert.equal(index[id].flow, undefined, `${id} should not open a native Flow`);
+  assert.deepEqual(
+    Array.from(index[id].actions.map((item) => item.label)),
+    ['Ver opções', 'Voltar aos serviços'],
+    `${id} must show conversational quick replies`,
+  );
+  assert.deepEqual(
+    Array.from(index[id].actions.map((item) => item.target)),
+    ['DES-05', 'DES-01'],
+    `${id} quick replies must reach options and service discovery`,
+  );
+  assert.ok(index[id].actions.every((item) => item.label.length <= 20), `${id} quick replies exceed Meta button limit`);
 }
-assert.match(JSON.stringify(index['DES-12'].flow.sections), /titular.*dependentes/i);
-assert.match(JSON.stringify(index['DES-13'].flow.sections), /descontos.*redes credenciadas/i);
-assert.match(JSON.stringify(index['DES-14'].flow.sections), /prestador|disponibilidade/i);
+assert.match(index['DES-12'].bot, /titular.*dependentes/i);
+assert.match(index['DES-13'].bot, /descontos.*redes credenciadas/i);
+assert.match(index['DES-14'].bot, /prestador|disponibilidade/i);
 assert.ok(!groups.some((group) => group.code === 'SIN'), 'sinistro fora do escopo');
 assert.ok(!/Seguro Celular|proteger um bem/i.test(JSON.stringify(groups)), 'somente assistências');
 const benefits = index['UTI-01'].flow.choices.map((item) => item.label);

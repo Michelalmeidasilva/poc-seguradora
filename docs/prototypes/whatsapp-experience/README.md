@@ -20,7 +20,7 @@ As assistências fornecidas são exclusivamente:
 
 Seguro Celular, proteção de bens e jornadas de sinistro não fazem parte deste escopo. Contratação, dependentes, pagamentos, documentos e atendimento são jornadas de gestão das assistências, não serviços adicionais. Esta definição substitui as hipóteses anteriores de catálogo; documentos técnicos compartilhados e fontes históricas externas não foram alterados nesta revisão.
 
-Em `DES-01`, “Conhecer produtos disponíveis” apresenta Assistência Funeral, Assistência Farmácia e Telemedicina com resumos. Cada item abre um Flow de detalhes (`DES-12` a `DES-14`), com condições de uso e retorno à lista ou às opções da Assistência Saúde. Os textos não presumem coberturas, valores, carências, redes específicas ou disponibilidade não confirmadas.
+Em `DES-01`, “Conhecer produtos disponíveis” apresenta Assistência Funeral, Assistência Farmácia e Telemedicina com resumos. Cada item abre uma mensagem conversacional de detalhes (`DES-12` a `DES-14`) com quick replies “Ver opções” e “Voltar aos serviços”. O WhatsApp permite até três botões de resposta rápida por mensagem; os rótulos usados respeitam o limite de 20 caracteres. Os textos não presumem coberturas, valores, carências, redes específicas ou disponibilidade não confirmadas.
 
 A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. `DEP-34` pergunta explicitamente celular e sexo biológico, campos encontrados no legado; nunca infere sexo/gênero. A obrigatoriedade e as opções desses campos precisam de validação do produto. `DEP-06` reúne os dados para revisão.
 
