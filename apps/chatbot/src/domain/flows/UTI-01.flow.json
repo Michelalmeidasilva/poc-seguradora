@@ -1,0 +1,53 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Usar benefícios",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Qual benefício você precisa acessar?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Usar benefícios",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Telemedicina",
+                "description": "Consultar disponibilidade e acessar o prestador"
+              },
+              {
+                "id": "1",
+                "title": "Assistência Farmácia",
+                "description": "Descontos em redes credenciadas"
+              },
+              {
+                "id": "2",
+                "title": "Assistência Funeral",
+                "description": "Suporte ao titular e aos dependentes"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Renovar contrato",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira as condições completas. Sua escolha precisa ser explícita."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Nova vigência"
+          },
+          {
+            "type": "TextBody",
+            "text": "Produto: Serviços de Assistência"
+          },
+          {
+            "type": "TextBody",
+            "text": "Novo valor: R$ 42,90/mês"
+          },
+          {
+            "type": "TextBody",
+            "text": "Início: 11/11/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Primeira cobrança: Data informada pelo sistema"
+          },
+          {
+            "type": "TextBody",
+            "text": "Condições de continuidade"
+          },
+          {
+            "type": "OptIn",
+            "name": "consent",
+            "label": "Aceito as condições apresentadas para o novo período.",
+            "required": true,
+            "init-value": false
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar continuidade",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "consent": "${form.consent}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

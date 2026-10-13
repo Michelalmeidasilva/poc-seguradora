@@ -1,0 +1,86 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Dados do titular",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira os dados do titular necessários à contratação."
+          },
+          {
+            "type": "TextInput",
+            "name": "holder",
+            "label": "Nome completo",
+            "required": true,
+            "init-value": "Ana Silva",
+            "input-type": "text"
+          },
+          {
+            "type": "TextInput",
+            "name": "email",
+            "label": "E-mail para documentos",
+            "required": true,
+            "init-value": "ana@example.com",
+            "input-type": "email"
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Nome completo: ${form.holder}"
+          },
+          {
+            "type": "TextBody",
+            "text": "E-mail para documentos: ${form.email}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "holder": "${form.holder}",
+                "email": "${form.email}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

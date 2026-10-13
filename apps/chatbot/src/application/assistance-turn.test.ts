@@ -43,6 +43,33 @@ const port = (): AssistancePort => ({
 });
 
 describe('runAssistanceTurn', () => {
+  it('serves the versioned catalog Flow and resolves a list choice to its catalog destination', async () => {
+    const assistance = port();
+    const opened = await runAssistanceTurn({ type: 'open', target: 'DES-01' }, {
+      port: assistance, state: { journeyId: 'ENT', screenId: 'ENT-02', gateApproved: false }, sessionId: 'list', context: ctx,
+    });
+    expect(opened.ok && opened.value.replies[0]).toMatchObject({ type: 'message.flow', payload: { flowId: 'DES-01', flowJson: { version: '7.1', screens: expect.any(Array) } } });
+    const chosen = await runAssistanceTurn({ type: 'flow_submit', flowId: 'DES-01', data: { choice: '2' } }, {
+      port: assistance, state: { journeyId: 'DES', screenId: 'DES-01', gateApproved: false }, sessionId: 'list', context: ctx,
+    });
+    expect(chosen.ok && chosen.value.state.screenId).toBe('DES-14');
+  });
+  it('rejects an unselected catalog form option at the chatbot boundary', async () => {
+    const result = await runAssistanceTurn({ type: 'flow_submit', flowId: 'DES-07', data: { composition: 'Selecione' } }, {
+      port: port(), state: { journeyId: 'DES', screenId: 'DES-07', gateApproved: true }, sessionId: 'unselected', context: ctx,
+    });
+    expect(result.ok && result.value.state.screenId).toBe('DES-07');
+  });
+  it('routes a review correction without mutation and retains earlier form values', async () => {
+    const assistance = port();
+    const earlier = { postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP' };
+    const result = await runAssistanceTurn({ type: 'flow_submit', flowId: 'CAD-03', data: { correction: true } }, {
+      port: assistance, state: { journeyId: 'CAD', screenId: 'CAD-03', gateApproved: true, temporaryData: earlier }, sessionId: 'correction', context: ctx,
+    });
+    expect(result.ok && result.value.state.screenId).toBe('CAD-02');
+    expect(result.ok && result.value.state.temporaryData).toEqual(earlier);
+    expect(assistance.updateAddress).not.toHaveBeenCalled();
+  });
   it('returns the domain transition state exactly and never retains the submitted gate CPF', async () => {
     const assistance = port();
     const result = await runAssistanceTurn({ type: 'cpf_submit', cpf: '123.456.789-01' }, {

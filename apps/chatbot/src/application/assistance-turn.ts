@@ -2,6 +2,7 @@ import { err, ok, type Result } from '@seguradora/protocol';
 import { z } from 'zod';
 import { assistanceCatalog, type AssistanceStep } from '../domain/assistance-catalog';
 import { nextAssistanceState, type AssistanceState } from '../domain/assistance-journey';
+import { assistanceFlows } from '../domain/flows';
 import { parseDependentStatement } from '../domain/dependent-statement';
 import type { AssistanceDocumentScreen } from './assistance-service';
 import type { ReplyBody } from '../domain/reply';
@@ -60,7 +61,9 @@ function validateFlowData(step: AssistanceStep, input: Record<string, unknown>):
         ? z.preprocess((value) => value === 'true' ? true : value === 'false' ? false : value, z.boolean())
         : z.string().max(500);
       if (Array.isArray(options) && options.length > 0 && options.every((option) => typeof option === 'string')) {
-        schema = z.enum(options as [string, ...string[]]);
+        const allowed = options.filter((option) => option !== 'Selecione') as string[];
+        if (allowed.length === 0) return undefined;
+        schema = z.enum(allowed as [string, ...string[]]);
       }
       if (field!.required === true && field!.type !== 'checkbox' && !Array.isArray(options)) schema = z.string().min(1).max(500);
       shape[name] = field!.required === true ? schema : schema.optional();
@@ -71,8 +74,13 @@ function validateFlowData(step: AssistanceStep, input: Record<string, unknown>):
   if (choices.length) {
     const targets = choices.map((choice) => choice!.target);
     if (!targets.length || targets.some((target) => typeof target !== 'string')) return undefined;
-    const parsed = z.object({ target: z.enum(targets as [string, ...string[]]) }).strict().safeParse(input);
-    return parsed.success ? parsed.data : undefined;
+    const index = z.object({ choice: z.enum(choices.map((_, i) => String(i)) as [string, ...string[]]) }).strict().safeParse(input);
+    if (index.success) return { target: targets[Number(index.data.choice)] };
+    const legacy = z.object({ target: z.enum(targets as [string, ...string[]]) }).strict().safeParse(input);
+    return legacy.success ? legacy.data : undefined;
+  }
+  if (typeof flow?.correction === 'string' && input.correction === true && Object.keys(input).length === 1) {
+    return { correction: true };
   }
   if (flow?.consent !== undefined) {
     const parsed = z.object({ consent: z.literal(true) }).strict().safeParse(input);
@@ -93,7 +101,7 @@ const textReply = (step: AssistanceStep): ReplyBody[] => {
         flowId: step.id,
         body: step.bot,
         ctaLabel: (recordOf(step.flow)?.submit as string | undefined) ?? 'Continuar',
-        flowJson: recordOf(step.flow) ?? { title: step.title },
+        flowJson: assistanceFlows[step.id] ?? { title: step.title },
       },
     } as ReplyBody);
   }
@@ -321,13 +329,16 @@ export async function runAssistanceTurn(
       const validated = validateFlowData(currentStep, submitted);
       if (!validated) return ok(preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'));
       submitted = validated;
-      const target = typeof submitted.target === 'string' ? submitted.target : requestTarget(currentStep);
-      if (!target || !currentStep.destinations.includes(target) || !assistanceCatalog.byId[target]) {
+      const correction = submitted.correction === true && recordOf(currentStep.flow)?.correction;
+      const target = typeof correction === 'string' ? correction : typeof submitted.target === 'string' ? submitted.target : requestTarget(currentStep);
+      if (!target || !(currentStep.destinations.includes(target) || target === correction) || !assistanceCatalog.byId[target]) {
         return ok(preserveReply(state, 'O destino deste formulário não corresponde à etapa atual.'));
       }
       if (state.screenId === 'IDE-08') {
         const cpf = submitted.authCpf ?? submitted.cpf;
         transitionInput = { type: 'cpf_submit', cpf: typeof cpf === 'string' ? cpf : '' };
+      } else if (typeof correction === 'string') {
+        transitionInput = { type: 'open', target: correction };
       } else if (assistanceCatalog.byId[state.screenId]?.mode === 'review' || state.screenId === 'PRE-02') {
         const mutationData = state.screenId === 'PRE-02' ? submitted : state.temporaryData ?? {};
         const mutation = await confirmedMutation(assistanceCatalog.byId[state.screenId]!, mutationData, deps);

@@ -1,0 +1,48 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Histórico",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Selecione um pedido anterior deste contrato."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Histórico",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Contratação",
+                "description": "Concluída · 10/10/2026"
+              },
+              {
+                "id": "1",
+                "title": "Correção de dependente",
+                "description": "Concluída · 10/10/2026"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Ver resultado",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

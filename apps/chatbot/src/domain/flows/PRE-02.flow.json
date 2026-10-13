@@ -1,0 +1,84 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Preferências de avisos",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Selecione os avisos opcionais que deseja receber neste exemplo."
+          },
+          {
+            "type": "OptIn",
+            "name": "optionalDocs",
+            "label": "Avisos opcionais sobre documentos",
+            "required": false,
+            "init-value": false
+          },
+          {
+            "type": "OptIn",
+            "name": "optionalBenefits",
+            "label": "Avisos opcionais de benefícios disponíveis",
+            "required": false,
+            "init-value": false
+          },
+          {
+            "type": "Footer",
+            "label": "Salvar preferências",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Avisos opcionais sobre documentos: ${form.optionalDocs}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Avisos opcionais de benefícios disponíveis: ${form.optionalBenefits}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "optionalDocs": "${form.optionalDocs}",
+                "optionalBenefits": "${form.optionalBenefits}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

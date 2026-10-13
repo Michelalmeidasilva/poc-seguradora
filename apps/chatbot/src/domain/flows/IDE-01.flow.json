@@ -1,0 +1,28 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Informe o CPF",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Para abrir esta demonstração, informe um CPF com 11 dígitos. Este formato não confirma identidade."
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
