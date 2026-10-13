@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { assistanceCatalog, type AssistanceStep } from '../domain/assistance-catalog';
 import { nextAssistanceState, type AssistanceState } from '../domain/assistance-journey';
 import { parseDependentStatement } from '../domain/dependent-statement';
+import type { AssistanceDocumentScreen } from './assistance-service';
 import type { ReplyBody } from '../domain/reply';
 import type { AssistancePort, CallContext, AssistanceFailure } from './ports';
 
@@ -115,7 +116,11 @@ const failureText: Record<AssistanceFailure, string> = {
   unavailable: 'Esta demonstração está indisponível no momento. Tente novamente mais tarde.',
 };
 
-const documentIds = new Set(['CON-07', 'UTI-09', 'CAN-08']);
+const documentIds = new Set<AssistanceDocumentScreen>(['CON-07', 'UTI-09', 'CAN-08']);
+const isDocumentScreen = (screenId: string): screenId is AssistanceDocumentScreen => {
+  for (const documentId of documentIds) if (documentId === screenId) return true;
+  return false;
+};
 const audioStepsById: ReadonlyMap<string, AssistanceStep> = new Map(
   assistanceCatalog.steps.filter((step) => step.mode === 'audio').map((step) => [step.id, step]),
 );
@@ -291,6 +296,8 @@ export async function runAssistanceTurn(
       if (state.screenId === 'IDE-08') {
         const cpf = input.text.match(/\b(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})\b/)?.[0] ?? '';
         transitionInput = { type: 'cpf_submit', cpf };
+      } else if (state.screenId === 'DEP-33' || state.screenId === 'DEP-04') {
+        transitionInput = { type: 'open', target: state.screenId };
       } else {
         const step = targetForText(input.text);
         if (!step) return ok(preserveReply(state, 'Não entendi essa opção. Escolha uma das opções disponíveis.'));
@@ -370,8 +377,8 @@ export async function runAssistanceTurn(
 
   const step = transition.step;
   let replies: ReplyBody[];
-  if (documentIds.has(step.id) && step.mode === 'document') {
-    const docs = await port.listDocuments(sessionId, context);
+  if (isDocumentScreen(step.id) && step.mode === 'document') {
+    const docs = await port.listDocuments(sessionId, step.id, context);
     if (!docs.ok) return ok(preserveReply(state, failureText[docs.error]));
     replies = [{ type: 'message.document', payload: { documents: docs.value } } as ReplyBody];
   } else {
@@ -402,6 +409,9 @@ export class InMemoryAssistanceStateStore {
     this.entries.delete(sessionId);
     this.entries.set(sessionId, { state, updatedAt: this.now() });
     while (this.entries.size > this.capacity) this.entries.delete(this.entries.keys().next().value!);
+  }
+  clear(sessionId: string): void {
+    this.entries.delete(sessionId);
   }
 }
 

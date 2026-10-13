@@ -1,6 +1,7 @@
 import { UnsequencedServerEventSchema, ok } from '@seguradora/protocol';
 import { describe, expect, it, vi } from 'vitest';
 import { assistanceCatalog } from '../domain/assistance-catalog';
+import type { AssistanceDocumentScreen } from './assistance-service';
 import type { AssistancePort } from './ports';
 import { runAssistanceTurn } from './assistance-turn';
 
@@ -19,7 +20,15 @@ const snapshot = {
 };
 const port = (): AssistancePort => ({
   getSessionSnapshot: vi.fn(async () => ok(snapshot)), listBenefits: vi.fn(async () => ok([])),
-  listDocuments: vi.fn(async () => ok(snapshot.documents)), listDependents: vi.fn(async () => ok([])),
+  listDocuments: vi.fn(async (_sessionId: string, screenId: AssistanceDocumentScreen) => ok(({
+    'CON-07': [
+      { id: 'doc-adhesion', title: 'Termo de adesão', status: 'available' as const },
+      { id: 'doc-conditions', title: 'Condições do produto', status: 'available' as const },
+      { id: 'doc-proof', title: 'Comprovante de contratação', status: 'available' as const },
+    ],
+    'UTI-09': [{ id: 'doc-benefit', title: 'Identificação do benefício', status: 'available' as const }],
+    'CAN-08': [{ id: 'doc-cancellation', title: 'Termo de cancelamento', status: 'available' as const }],
+  })[screenId])), listDependents: vi.fn(async () => ok([])),
   addDependent: vi.fn(async () => ok({ id: 'd1', name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' as const })),
   updateDependent: vi.fn(async () => ok({ id: 'd1', name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' as const })),
   removeDependent: vi.fn(async () => ok(undefined)), changeModality: vi.fn(async () => ok(undefined)),
@@ -148,15 +157,37 @@ describe('runAssistanceTurn', () => {
     expect(assistance.createRequest).not.toHaveBeenCalled();
   });
 
-  it('emits strict document events only for catalog document screens', async () => {
+  it('projects the catalog document list for each supported document screen', async () => {
     const assistance = port();
-    const result = await runAssistanceTurn({ type: 'open', target: 'DOC-01' }, {
-      port: assistance, state: { journeyId: 'DOC', screenId: 'DOC-01', gateApproved: true }, sessionId: 's1', context: ctx,
-    });
-    expect(result.ok).toBe(true);
-    if (result.ok) for (const reply of result.value.replies) {
-      expect(UnsequencedServerEventSchema.safeParse({ v: 1, id: '00000000-0000-4000-8000-000000000001', sessionId: 's1', correlationId: 'corr-demo', ts: '2026-10-12T00:00:00.000Z', ...reply }).success).toBe(true);
+    const expected: Record<string, string[]> = {
+      'CON-07': ['Termo de adesão', 'Condições do produto', 'Comprovante de contratação'],
+      'UTI-09': ['Identificação do benefício'],
+      'CAN-08': ['Termo de cancelamento'],
+    };
+    for (const [screenId, titles] of Object.entries(expected)) {
+      const result = await runAssistanceTurn({ type: 'open', target: screenId }, {
+        port: assistance, state: { journeyId: 'DOC', screenId: 'DOC-01', gateApproved: true }, sessionId: `s-${screenId}`, context: ctx,
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const documentEvent = result.value.replies.find((reply) => reply.type === 'message.document');
+        expect(documentEvent).toMatchObject({ type: 'message.document', payload: { documents: titles.map((title) => expect.objectContaining({ title })) } });
+        expect(documentEvent?.type === 'message.document' ? documentEvent.payload.documents.map((doc) => doc.title) : []).toEqual(titles);
+        expect(UnsequencedServerEventSchema.safeParse({ v: 1, id: '00000000-0000-4000-8000-000000000001', sessionId: `s-${screenId}`, correlationId: 'corr-demo', ts: '2026-10-12T00:00:00.000Z', ...documentEvent }).success).toBe(true);
+      }
     }
+  });
+
+  it('parses a natural dependent statement while assistance state is active', async () => {
+    const assistance = port();
+    const result = await runAssistanceTurn({ type: 'text', text: 'Quero incluir João, CPF 123.456.789-01, nascido em 03/02/2010, meu filho.' }, {
+      port: assistance,
+      state: { journeyId: 'DEP', screenId: 'DEP-33', gateApproved: true },
+      sessionId: 's1', context: ctx,
+    });
+    expect(result.ok && result.value.state.temporaryData).toMatchObject({
+      name: 'João', cpf: '12345678901', birth: '2010-02-03', relationship: 'filho',
+    });
   });
 
   it('reads current dependents when entering the catalog dependents screen', async () => {

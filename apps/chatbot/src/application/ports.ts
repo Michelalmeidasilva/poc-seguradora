@@ -17,6 +17,7 @@ import type {
   AssistanceBilling,
   AssistanceAddressCommand,
   AssistanceDocument,
+  AssistanceDocumentScreen,
   AssistanceDependent,
   AssistancePreferences,
   AssistanceRequest,
@@ -66,7 +67,7 @@ export interface AssistancePort {
     ctx: CallContext,
   ): AssistanceOutcome<AssistanceSessionSnapshot>;
   listBenefits(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceBenefit[]>;
-  listDocuments(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceDocument[]>;
+  listDocuments(sessionId: string, screenId: AssistanceDocumentScreen, ctx: CallContext): AssistanceOutcome<AssistanceDocument[]>;
   listDependents(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceDependent[]>;
   addDependent(
     sessionId: string,

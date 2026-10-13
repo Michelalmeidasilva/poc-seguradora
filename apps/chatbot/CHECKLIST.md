@@ -26,7 +26,7 @@
 - [x] Operações tipadas dedicadas para endereço (estado atual + solicitação pendente de verificação), assistência funeral e preferências opcionais; telefone e sexo biológico obrigatórios no dependente
 - [x] Documentos limitados a `CON-07`, `UTI-09` e `CAN-08`; áudio restrito a IDs determinísticos do catálogo, sem transcrição ou upload
 - [x] Regressões de sessão, idempotência, leitura após escrita, falha sem transição de sucesso, validação, autorização e compatibilidade com o legado
-- [x] Verificação final: 575 testes do chatbot, typecheck, build, dependency-cruiser, ESLint dos arquivos alterados e `git diff --check`
+- [x] Verificação final: 578 testes do chatbot, typecheck, build, dependency-cruiser, ESLint dos arquivos alterados e `git diff --check`
 
 ## Estrutura
 

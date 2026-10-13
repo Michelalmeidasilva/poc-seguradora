@@ -31,6 +31,8 @@ export interface AssistanceDocument {
   status: 'available' | 'generating';
 }
 
+export type AssistanceDocumentScreen = 'CON-07' | 'UTI-09' | 'CAN-08';
+
 export interface AssistanceAddress {
   postal: string;
   address: string;

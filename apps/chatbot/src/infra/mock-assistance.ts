@@ -8,6 +8,7 @@ import type {
   AssistanceBenefit,
   AssistanceBilling,
   AssistanceDocument,
+  AssistanceDocumentScreen,
   AssistanceDependent,
   AssistancePreferences,
   AssistanceRequest,
@@ -144,6 +145,16 @@ const baseFixture = (): SessionState => ({
   requestSequence: 0,
 });
 
+const documentsByScreen: Record<AssistanceDocumentScreen, AssistanceDocument[]> = {
+  'CON-07': [
+    { id: 'DOC-ADESAO-DEMO', title: 'Termo de adesão', status: 'available' },
+    { id: 'DOC-CONDICOES-DEMO', title: 'Condições do produto', status: 'available' },
+    { id: 'DOC-COMPROVANTE-DEMO', title: 'Comprovante de contratação', status: 'generating' },
+  ],
+  'UTI-09': [{ id: 'DOC-BENEFICIO-DEMO', title: 'Identificação do benefício', status: 'available' }],
+  'CAN-08': [{ id: 'DOC-CANCELAMENTO-DEMO', title: 'Termo de cancelamento', status: 'available' }],
+};
+
 const sessionSnapshot = (state: SessionState): AssistanceSessionSnapshot => ({
   demonstrative: true,
   contract: state.contract,
@@ -188,9 +199,10 @@ export class MockAssistance implements AssistancePort {
     return ok(structuredClone(this.session(sessionId).state.benefits));
   }
 
-  async listDocuments(sessionId: string, ctx: CallContext) {
+  async listDocuments(sessionId: string, screenId: AssistanceDocumentScreen, ctx: CallContext) {
     if (!sessionId.trim() || !this.validContext(ctx)) return fail('invalid');
-    return ok(structuredClone(this.session(sessionId).state.documents));
+    this.session(sessionId);
+    return ok(structuredClone(documentsByScreen[screenId]));
   }
 
   async listDependents(sessionId: string, ctx: CallContext) {

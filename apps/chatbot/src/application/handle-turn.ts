@@ -69,6 +69,8 @@ const describeError = (error: unknown): { name: string; paths?: string[] } => {
 export class HandleTurn implements TurnRunner {
   /** Turns executing right now (they keep running even when their client is gone). */
   private readonly running = new Set<Promise<void>>();
+  /** A session's stateful turns run in arrival order; unrelated sessions remain concurrent. */
+  private readonly sessionTails = new Map<string, Promise<void>>();
 
   constructor(private readonly d: HandleTurnDeps) {}
 
@@ -76,9 +78,16 @@ export class HandleTurn implements TurnRunner {
     // Event ids come from the client: scope them by session so sessions never share a turn.
     const { record, created } = this.d.turns.begin(`${request.sessionId}\n${request.event.id}`);
     if (created) {
-      const running: Promise<void> = this.execute(request, record)
+      const previous = this.sessionTails.get(request.sessionId) ?? Promise.resolve();
+      const running: Promise<void> = previous
         .catch(() => undefined)
-        .finally(() => this.running.delete(running));
+        .then(() => this.execute(request, record))
+        .catch(() => undefined)
+        .finally(() => {
+          this.running.delete(running);
+          if (this.sessionTails.get(request.sessionId) === running) this.sessionTails.delete(request.sessionId);
+        });
+      this.sessionTails.set(request.sessionId, running);
       this.running.add(running);
     }
     return record.stream();
@@ -118,8 +127,17 @@ export class HandleTurn implements TurnRunner {
         return;
       }
       emit({ type: 'status.typing', payload: { state: 'start' } });
-      const assistanceState = this.d.assistanceStates?.get(request.sessionId);
+      let assistanceState = this.d.assistanceStates?.get(request.sessionId);
       const legacyDialogIsIdle = this.d.dialogs.get(request.sessionId).name === 'idle';
+      if (assistanceState && event.type === 'user.text') {
+        const exactAssistancePhrase = assistanceStepForText(event.payload.text);
+        const dependentFreeText = ['DEP-33', 'DEP-04'].includes(assistanceState.screenId);
+        const gateInput = assistanceState.screenId === 'IDE-08' && /\d/.test(event.payload.text);
+        if (!exactAssistancePhrase && !dependentFreeText && !gateInput) {
+          this.d.assistanceStates?.clear(request.sessionId);
+          assistanceState = undefined;
+        }
+      }
       const assistanceInput = assistanceState
         ? this.assistanceInput(request)
         : legacyDialogIsIdle && event.type === 'user.text'

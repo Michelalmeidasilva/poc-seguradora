@@ -646,4 +646,46 @@ describe('HandleTurn', () => {
     const requests = await assistance.listRequests('s1', { correlationId: 'corr-45', idempotencyKey: idempotencyKeyFor('s1', uuid(45)) });
     expect(requests.ok && requests.value).toHaveLength(1);
   });
+
+  it('serializes distinct confirmed submissions in one session against the latest review state', async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+    const assistance = assistancePort();
+    assistance.addDependent = vi.fn(async () => {
+      calls++;
+      if (calls === 1) await gate;
+      return ok({ id: 'd1', name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' as const });
+    });
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', {
+      journeyId: 'DEP', screenId: 'DEP-06', gateApproved: true,
+      temporaryData: { name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' },
+    });
+    const { handler } = make({ assistance, assistanceStates });
+    const submission = (id: number) => request({ type: 'user.flow_submit', payload: { flowId: 'DEP-06', data: {} } }, id);
+    const first = collect(handler.run(submission(46)));
+    const second = collect(handler.run(submission(47)));
+    await Promise.resolve();
+    release?.();
+    await Promise.all([first, second]);
+    expect(assistance.addDependent).toHaveBeenCalledTimes(1);
+    expect(assistanceStates.get('s1')?.screenId).not.toBe('DEP-06');
+  });
+
+  it('routes a recognized legacy quote request after clearing assistance state', async () => {
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', { journeyId: 'CON', screenId: 'CON-07', gateApproved: true });
+    const services = okServices();
+    const { handler, dialogs } = make({
+      llm: { classify: async () => intent('quote') },
+      services,
+      assistanceStates,
+    });
+    const events = await collect(handler.run(text('quero fazer uma cotação', 48)));
+    expect(types(events)).toContain('message.flow');
+    expect(dialogs.get('s1')).toEqual({ name: 'quote.awaiting_flow' });
+    expect(assistanceStates.get('s1')).toBeUndefined();
+    expect(services.createQuote).not.toHaveBeenCalled();
+  });
 });
