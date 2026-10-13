@@ -78,6 +78,26 @@ describe('assistance journey catalog', () => {
     expect(publicText).not.toMatch(/seguro auto|seguro residencial|seguro de vida/);
   });
 
+  it('offers exactly the three approved public products through canonical chooser targets', () => {
+    const chooser = assistanceCatalog.byId['DES-01'];
+    if (!chooser) throw new Error('canonical public product chooser DES-01 is missing');
+    const choices = (chooser.flow as {
+      choices: Array<{ label: string; detail: string; target: string }>;
+    }).choices;
+    const canonicalChooser = canonical.index['DES-01'] as {
+      flow: { choices: Array<{ label: string; detail: string; target: string }> };
+    };
+
+    expect(chooser.requiresAuth).toBe(false);
+    expect(choices.map(({ label }) => label).sort()).toEqual([
+      'Assistência Farmácia',
+      'Assistência Funeral',
+      'Telemedicina',
+    ]);
+    expect(choices).toEqual(canonicalChooser.flow.choices);
+    expect(choices.every(({ target }) => assistanceCatalog.byId[target] !== undefined)).toBe(true);
+  });
+
   it('keeps the canonical source stable and executable without importing browser globals in domain code', () => {
     expect(Object.keys(canonical.index)).toHaveLength(281);
   });
