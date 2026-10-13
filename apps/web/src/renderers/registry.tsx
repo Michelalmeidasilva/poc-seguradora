@@ -21,6 +21,10 @@ export interface RenderContext {
   openFlow: OpenFlow;
 }
 
+function assertNever(event: never): never {
+  throw new Error(`Unhandled bot message event: ${JSON.stringify(event)}`);
+}
+
 /** Maps one server message event to its component (exhaustive over `message.*`). */
 export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
   const event = item.event;
@@ -97,4 +101,6 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
         'Formulário do assistente',
       );
   }
+
+  return assertNever(event);
 }

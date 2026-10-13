@@ -18,7 +18,7 @@
 - [x] Estado do chat (reducer)
 - [x] Persistência do chat em sessionStorage e aba única (Web Locks)
 - [x] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
-- [x] Renderer de documentos demonstrativos com diálogo local acessível
+- [x] Renderer de documentos demonstrativos com descrição do diálogo anunciada a leitores de tela e registry exaustivo para novos eventos `message.*`
 - [x] Tela de chat, composer e gravação de voz
 - [x] Tema claro e escuro, acessibilidade
 - [x] E2E (Playwright) com gateway simulado

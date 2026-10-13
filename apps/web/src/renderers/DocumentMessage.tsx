@@ -77,6 +77,7 @@ export function DocumentMessage({ payload }: { payload: DocumentPayload }) {
         <div className="document-dialog__backdrop">
           <section
             aria-labelledby="document-dialog-title"
+            aria-describedby="document-dialog-description"
             aria-modal="true"
             className="document-dialog"
             onKeyDown={keepFocusInDialog}
@@ -94,7 +95,7 @@ export function DocumentMessage({ payload }: { payload: DocumentPayload }) {
                 Fechar
               </button>
             </header>
-            <p className="document-dialog__notice">
+            <p className="document-dialog__notice" id="document-dialog-description">
               Este é um conteúdo demonstrativo. Nenhum documento real está disponível.
             </p>
           </section>
