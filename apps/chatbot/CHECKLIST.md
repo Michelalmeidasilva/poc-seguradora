@@ -36,9 +36,9 @@
 
 ## Plano WhatsApp Assistance Experience — Task 9
 
-- [x] E2E de runtime percorre 24 grupos e 247 IDs únicos; valida destino runtime, modalidade/conteúdo servido e ações sem imprimir dados do usuário
-- [x] E2E HTTP em `/v1/chat/events` cobre os três produtos públicos, bloqueio de CPF malformado, retry e CPF aceito somente por formato; respostas não incluem o CPF e não chamam rotas fake de cotação/apólice/sinistro
-- [x] Smoke Compose da pilha web → gateway → chatbot → fake-services: 7/7 passos, incluindo replay
+- [ ] E2E valida IDs/modos/conteúdo/ações; ainda não comprova alcance total: a travessia a partir dos 24 `group.steps[0]` registra 54 telas sem caminho. Três nós também têm `action.target` duplicado (`IDE-01`, `IDE-03`, `DEP-11`); o teste detecta essas duplicidades e protege o baseline até a correção do catálogo. Revisão Task 9 não concluída.
+- [ ] Evidência HTTP existente cobre produtos públicos e gate CPF; ainda faltam as jornadas integradas de dependente frase→revisão→correção→confirmação, isolamento/mutação por sessão, cancelamento/solicitação, áudio/documento, indisponibilidade/idempotência/expiração/retry e canary em logger + prova via `ServicesPort`
+- [x] Smoke Compose 7/7 da pilha web → gateway → chatbot → fake-services é evidência da pilha geral; não percorre jornadas de assistência e não conta como aceite Task 9
 
 ## Estrutura
 
