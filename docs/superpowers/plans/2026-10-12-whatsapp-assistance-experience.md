@@ -251,6 +251,27 @@
 - [ ] **Step 5: Revisar `git diff --check`, checklists e WORKBOARD**; marcar `[x]` somente com código/testes/commits concluídos e encerrar cada linha somente após suas verificações.
 - [ ] **Step 6: Atualizar checklist final e commitar** como `test(web): verify assistance experience fidelity`.
 
+### Task 11: Publicar na GCP e produzir o vídeo executivo de todas as jornadas
+
+**Status:** em fila, solicitado em 2026-10-13. Executar somente após concluir o desenvolvimento, as Tasks 9 e 10 e todas as verificações finais. A gravação anterior do protótipo HTML não satisfaz esta entrega.
+
+**Objetivo:** apresentar em um único vídeo a aplicação implementada e publicada na GCP, simulando a experiência de um usuário em modo mobile, com tempo natural de leitura, raciocínio, digitação e confirmação. O vídeo terá capítulos internos por jornada para uso em apresentação executiva e narração feminina em português brasileiro, conforme a preferência já registrada.
+
+**Dependências:** aceite de fidelidade ao atlas; cobertura integrada de todas as jornadas e variantes; testes, typecheck, lint, build e smoke aprovados; código integrado à `develop`; configuração e infraestrutura GCP existentes verificadas pelo runbook `docs/deploy.md`.
+
+**Entregáveis:** um vídeo final MP4 com áudio e divisões internas por jornada; roteiro/narração; índice de capítulos com timecodes; matriz de cobertura associando cada jornada e estado do catálogo aos trechos gravados; evidências do deploy e dos testes na URL publicada.
+
+- [ ] **Step 1: Fechar o aceite das Tasks 9 e 10.** Resolver jornadas inacessíveis, CTAs inválidos, diferenças visuais e falhas de testes antes da publicação. Nenhum teste isolado de catálogo ou navegação direta pelo atlas conta como experiência integrada de usuário.
+- [ ] **Step 2: Preparar a matriz e o roteiro executivo.** Mapear os 24 grupos funcionais e seus 247 estados, respeitando a exceção CPF-only. Cada jornada terá um capítulo, com os caminhos principais e as alternativas relevantes como subcapítulos: correção, desistência, erro, indisponibilidade, expiração, retomada e confirmação. Registrar o caminho por ações reais de usuário e seus IDs; manter pendente qualquer trecho que ainda não possa ser executado pela interface.
+- [ ] **Step 3: Fazer deploy na GCP pelo fluxo existente.** Executar as pré-condições da CLI e o runbook; publicar o código aceito de `develop`, identificando commit, tag e revisão dos serviços. Verificar web, gateway, chatbot e mocks necessários na infraestrutura existente. Não considerar concluído se a URL pública ainda servir a interface anterior. Não registrar segredos ou arquivos de configuração privados nas evidências.
+- [ ] **Step 4: Validar a aplicação publicada.** Executar smoke e E2E contra a URL GCP, incluindo o catálogo dos três serviços, acesso pessoal via CPF, alteração confirmada de dados, documentos, retomada e isolamento de sessão. Usar somente dados fictícios e serviços demonstrativos, sem operações comerciais reais.
+- [ ] **Step 5: Gravar as jornadas como usuário mobile.** Capturar a aplicação publicada em viewport 390×844, operando mensagens, quick replies, formulários, revisões e documentos pelas interfaces visíveis. Usar cenas/sessões demonstrativas coerentes para caminhos alternativos. Não apresentar o explorador do atlas, o inspector, o console, a navegação de testes por ID ou uma simulação HTML independente como se fossem a aplicação publicada.
+- [ ] **Step 6: Dar ritmo humano à interação.** Esperar o estado real da interface e, além disso, aplicar pausas de leitura proporcionais ao conteúdo (referência inicial: 2–6 s), decisão antes de escolhas (1–3 s), revisão antes de ações importantes (3–8 s) e digitação natural. Esses tempos são editáveis no roteiro; não simular latência do backend nem produzir esperas artificiais no produto. Mostrar correções e confirmações com tempo suficiente para o executivo compreender o efeito da ação.
+- [ ] **Step 7: Produzir a narração feminina e os capítulos.** Narração pt-BR sincronizada com as ações, explicando a necessidade do cliente, a decisão e o resultado de cada jornada. Inserir abertura, título/transição de capítulo e identificação de variantes dentro do mesmo vídeo. Dar contexto de demonstração com dados fictícios na abertura. Manter a interface mobile legível em um master adequado à projeção em apresentação executiva; incluir legendas e timecodes.
+- [ ] **Step 8: Revisar e entregar o vídeo único.** Conferir texto, legibilidade, áudio, sincronização, cortes, capítulos e ausência de trechos em branco. Comparar a matriz de cobertura com o material final e identificar explicitamente qualquer lacuna, sem afirmar cobertura total se houver estados ou caminhos não gravados. Entregar o MP4 final, o índice de capítulos, o roteiro e as evidências de versão/deploy/testes.
+
+**Critérios de aceite desta tarefa:** código correto e validado na URL GCP; jornadas gravadas pela aplicação integrada; matriz completa e rastreável; um vídeo principal com capítulos internos e ritmo humano; voz feminina pt-BR; interface mobile legível para apresentação; revisão audiovisual concluída. A tarefa permanece em fila até que suas dependências estejam concluídas.
+
 ## Critérios de aceite da implementação
 
 - Os 24 grupos/247 IDs previstos são alcançáveis, têm textos/ações rastreáveis ao catálogo e não expõem `LEG-*` em runtime.
