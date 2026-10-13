@@ -210,6 +210,19 @@ describe('message.document contract', () => {
   });
 });
 
+describe('message.flow initialData contract', () => {
+  it('accepts explicit review/correction data and rejects malformed payloads', () => {
+    const valid = {
+      flowId: 'CAD-03', body: 'Revise', ctaLabel: 'Abrir', flowJson: { version: '7.1' },
+      initialData: { intent: 'review', values: { name: 'Ana Lima', consent: false } },
+    };
+    expect(parseServerEvent(event('message.flow', valid)).ok).toBe(true);
+    expect(parseServerEvent(event('message.flow', { ...valid, initialData: { intent: 'other', values: {} } })).ok).toBe(false);
+    expect(parseServerEvent(event('message.flow', { ...valid, initialData: { intent: 'review', values: { field: 'x'.repeat(501) } } })).ok).toBe(false);
+    expect(parseServerEvent(event('message.flow', { ...valid, initialData: { intent: 'review', values: Object.fromEntries(Array.from({ length: 21 }, (_, index) => [`f${index}`, 'x'])) } })).ok).toBe(false);
+  });
+});
+
 describe('protocol hardening (server events)', () => {
   const badUrls = ['javascript:alert(1)', 'data:text/html;base64,AAAA', 'vbscript:x'];
   const card = (mediaUrl: string) => ({ mediaUrl, mediaType: 'image', title: 'T', buttons: [] });
