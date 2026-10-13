@@ -15,6 +15,7 @@
 - [x] Schema servidor→cliente: message.template
 - [x] Schema servidor→cliente: message.carousel
 - [x] Schema servidor→cliente: message.quick_replies
+- [ ] Schema servidor→cliente: message.document (Task 1; contrato e schema adicionados, aguardando suíte completa compatível)
 - [x] Schema servidor→cliente: message.flow
 - [x] Schema servidor→cliente: status.typing
 - [x] Schema servidor→cliente: status.delivered

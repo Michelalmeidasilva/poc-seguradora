@@ -31,6 +31,12 @@ const fixtures: Record<string, unknown> = {
     ctaLabel: 'Abrir',
     flowJson: { version: '7.1', screens: [] },
   },
+  'message.document': {
+    documents: [
+      { id: 'policy-summary', title: 'Resumo da apólice', status: 'available' },
+      { id: 'proof-of-insurance', title: 'Comprovante', status: 'generating' },
+    ],
+  },
   'status.typing': { state: 'start' },
   'status.delivered': { messageId: 'm1' },
   'status.read': { messageId: 'm1' },
@@ -112,6 +118,84 @@ describe('parseServerEvent', () => {
   it('returns a ZodError on failure', () => {
     const r = parseServerEvent({});
     expect(!r.ok && r.error.issues.length > 0).toBe(true);
+  });
+});
+
+describe('message.document contract', () => {
+  const payload = (documents: unknown) => ({ documents });
+
+  it('accepts both available and generating document items', () => {
+    const result = parseServerEvent(
+      event('message.document', payload([
+        { id: 'summary', title: 'Resumo', status: 'available' },
+        { id: 'certificate', title: 'Certificado', status: 'generating' },
+      ])),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects an empty documents list', () => {
+    expect(parseServerEvent(event('message.document', payload([]))).ok).toBe(false);
+  });
+
+  it('rejects more than ten documents', () => {
+    const documents = Array.from({ length: 11 }, (_, index) => ({
+      id: `doc-${index}`,
+      title: `Documento ${index}`,
+      status: 'available',
+    }));
+    expect(parseServerEvent(event('message.document', payload(documents))).ok).toBe(false);
+  });
+
+  it('rejects an unsupported document status', () => {
+    expect(
+      parseServerEvent(
+        event('message.document', payload([{ id: 'doc', title: 'Documento', status: 'ready' }])),
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('rejects an empty item id or title', () => {
+    expect(
+      parseServerEvent(
+        event('message.document', payload([{ id: '', title: 'Documento', status: 'available' }])),
+      ).ok,
+    ).toBe(false);
+    expect(
+      parseServerEvent(
+        event('message.document', payload([{ id: 'doc', title: '', status: 'available' }])),
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('rejects a title longer than 120 characters', () => {
+    expect(
+      parseServerEvent(
+        event(
+          'message.document',
+          payload([{ id: 'doc', title: 'x'.repeat(121), status: 'available' }]),
+        ),
+      ).ok,
+    ).toBe(false);
+  });
+
+  it('rejects unknown item fields including URL and file data', () => {
+    expect(
+      parseServerEvent(
+        event(
+          'message.document',
+          payload([{ id: 'doc', title: 'Documento', status: 'available', url: 'https://example.invalid' }]),
+        ),
+      ).ok,
+    ).toBe(false);
+    expect(
+      parseServerEvent(
+        event(
+          'message.document',
+          payload([{ id: 'doc', title: 'Documento', status: 'available', file: 'demo' }]),
+        ),
+      ).ok,
+    ).toBe(false);
   });
 });
 

@@ -66,6 +66,19 @@ export const QuickRepliesPayload = z.object({
     .max(LIMITS.maxQuickReplyOptions),
 });
 
+export const DocumentItemSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().min(1).max(120),
+    status: z.enum(['available', 'generating']),
+  })
+  .strict();
+
+export const DocumentPayloadSchema = z
+  .object({ documents: z.array(DocumentItemSchema).min(1).max(10) })
+  .strict();
+export type DocumentPayload = z.infer<typeof DocumentPayloadSchema>;
+
 // flowJson is a generic record until Plan 5 refines it with the Flow JSON schema.
 export const FlowPayload = z.object({
   flowId: z.string().min(1),
