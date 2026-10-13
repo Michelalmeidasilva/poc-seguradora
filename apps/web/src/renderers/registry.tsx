@@ -4,6 +4,7 @@ import { Bubble } from '../ui/Bubble';
 import { formatTime } from '../ui/time';
 import { CarouselMessage } from './CarouselMessage';
 import { CodeMessage } from './CodeMessage';
+import { DocumentMessage } from './DocumentMessage';
 import type { OpenFlow } from './flow-host';
 import { FlowMessage } from './FlowMessage';
 import { LocationMessage } from './LocationMessage';
@@ -41,6 +42,8 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
           {...(event.payload.language ? { language: event.payload.language } : {})}
         />,
       );
+    case 'message.document':
+      return bubble(<DocumentMessage payload={event.payload} />, 'Documentos enviados pelo assistente');
     case 'message.location':
       return bubble(
         <LocationMessage
