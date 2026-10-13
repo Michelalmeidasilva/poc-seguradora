@@ -16,6 +16,7 @@ vi.mock('./useVoiceRecorder', async (importOriginal) => {
 const api = (over: Partial<ChatApi> = {}): ChatApi => ({
   state: initialState(),
   tab: 'active',
+  hasPendingSend: false,
   sendText: vi.fn(),
   sendChoice: vi.fn(),
   sendVoice: vi.fn(),
@@ -31,7 +32,7 @@ const api = (over: Partial<ChatApi> = {}): ChatApi => ({
 describe('ChatScreen', () => {
   it('shows the header with the assistant name and the connection state', () => {
     render(<ChatScreen chat={api({ state: { ...initialState(), connection: 'online' } })} />);
-    expect(screen.getByRole('heading', { name: /assistente seguradora/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
     expect(screen.getByText(/online/i)).toBeInTheDocument();
   });
 

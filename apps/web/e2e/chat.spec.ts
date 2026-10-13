@@ -21,10 +21,10 @@ async function say(page: Page, text: string) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('online')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
 });
 
 test('greets and shows the quick replies; tapping one opens the flow message', async ({ page }) => {
-  await say(page, 'oi');
   await expect(page.getByText('Eu sou o', { exact: false })).toBeVisible();
   await expect(page.locator('strong', { hasText: 'assistente' })).toBeVisible();
   await page.getByRole('button', { name: 'Fazer cotação' }).click();
@@ -35,7 +35,7 @@ test('greets and shows the quick replies; tapping one opens the flow message', a
 
 test('shows ticks moving from sending to delivered', async ({ page }) => {
   await say(page, 'qualquer coisa');
-  await expect(page.getByRole('img', { name: 'Entregue' })).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Entregue' }).last()).toBeVisible();
   await expect(page.getByText('Você disse: qualquer coisa')).toBeVisible();
 });
 
@@ -54,18 +54,31 @@ test('renders template, code, location and voice messages', async ({ page }) => 
   await expect(page.getByRole('button', { name: 'Reproduzir áudio' })).toBeVisible();
 });
 
-test('offers four local demo audio outcomes without microphone or media requests', async ({ page }) => {
+test('offers four local demo audio outcomes without microphone or media requests', async ({
+  page,
+}) => {
   await page.evaluate(() => {
-    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
-      getUserMedia: () => { throw new Error('microphone requested'); },
-    } });
-    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: class {
-      constructor() { throw new Error('recording attempted'); }
-    } });
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: () => {
+          throw new Error('microphone requested');
+        },
+      },
+    });
+    Object.defineProperty(window, 'MediaRecorder', {
+      configurable: true,
+      value: class {
+        constructor() {
+          throw new Error('recording attempted');
+        }
+      },
+    });
   });
   const mediaRequests: string[] = [];
   page.on('request', (request) => {
-    if (/\/v1\/media|\.(?:wav|ogg|webm)(?:\?|$)/.test(request.url())) mediaRequests.push(request.url());
+    if (/\/v1\/media|\.(?:wav|ogg|webm)(?:\?|$)/.test(request.url()))
+      mediaRequests.push(request.url());
   });
   for (const [id, response] of [
     ['AUD-01', 'Recebi seu áudio'],
@@ -78,7 +91,12 @@ test('offers four local demo audio outcomes without microphone or media requests
     await expect(page.getByText(response, { exact: false })).toBeVisible();
   }
   const voices = (await posted(page)).filter((event) => event.type === 'user.voice');
-  expect(voices.map((event) => event.payload.mediaId)).toEqual(['AUD-01', 'AUD-03', 'AUD-04', 'AUD-05']);
+  expect(voices.map((event) => event.payload.mediaId)).toEqual([
+    'AUD-01',
+    'AUD-03',
+    'AUD-04',
+    'AUD-05',
+  ]);
   expect(mediaRequests).toEqual([]);
 });
 
@@ -91,7 +109,6 @@ test('renders a horizontally scrollable carousel operable by the buttons', async
 });
 
 test('reload restores the history without duplicating messages', async ({ page }) => {
-  await say(page, 'oi');
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
   // wait for the debounced persistence deterministically
   await expect
@@ -100,27 +117,39 @@ test('reload restores the history without duplicating messages', async ({ page }
   await page.reload();
   await expect(page.getByText('online')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toHaveCount(1);
-  await expect(page.getByText('oi', { exact: true })).toHaveCount(1);
+  await expect(page.getByText('Oi', { exact: true })).toHaveCount(1);
 });
 
-test('keeps a CPF canary visible only in the active turn, not persisted chat history', async ({ page }) => {
+test('keeps a CPF canary visible only in the active turn, not persisted chat history', async ({
+  page,
+}) => {
   const canary = '987.654.321-00';
   await say(page, `Meu CPF é ${canary}`);
-  await expect(page.getByRole('group', { name: 'Sua mensagem' }).getByText(`Meu CPF é ${canary}`)).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Sua mensagem' }).getByText(`Meu CPF é ${canary}`),
+  ).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => Object.keys(sessionStorage)
-      .map((key) => sessionStorage.getItem(key) ?? '')
-      .join('\n')))
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(sessionStorage)
+          .map((key) => sessionStorage.getItem(key) ?? '')
+          .join('\n'),
+      ),
+    )
     .toContain('***.***.***-00');
 
-  const persisted = await page.evaluate(() => Object.keys(sessionStorage)
-    .map((key) => sessionStorage.getItem(key) ?? '')
-    .join('\n'));
+  const persisted = await page.evaluate(() =>
+    Object.keys(sessionStorage)
+      .map((key) => sessionStorage.getItem(key) ?? '')
+      .join('\n'),
+  );
   expect(persisted).not.toContain(canary);
   expect(persisted).not.toContain('98765432100');
 
   await page.reload();
-  await expect(page.getByRole('group', { name: 'Sua mensagem' }).getByText('Meu CPF é ***.***.***-00')).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Sua mensagem' }).getByText('Meu CPF é ***.***.***-00'),
+  ).toBeVisible();
   await expect(page.getByText(canary, { exact: false })).toHaveCount(0);
 });
 
@@ -144,9 +173,15 @@ test('a failed message shows a retry button and the resend reuses the same id', 
   await expect(page.getByRole('img', { name: 'Falha no envio' })).toBeVisible();
   await page.getByRole('button', { name: 'Tentar de novo' }).click();
   await expect
-    .poll(async () => (await posted(page)).filter((e) => e.type === 'user.text').length)
+    .poll(
+      async () =>
+        (await posted(page)).filter((e) => e.type === 'user.text' && e.payload.text === 'erro')
+          .length,
+    )
     .toBe(2);
-  const ids = (await posted(page)).filter((e) => e.type === 'user.text').map((e) => e.id);
+  const ids = (await posted(page))
+    .filter((e) => e.type === 'user.text' && e.payload.text === 'erro')
+    .map((e) => e.id);
   expect(ids).toHaveLength(2);
   expect(ids[0]).toBe(ids[1]);
   // one single user bubble for the message
@@ -181,8 +216,7 @@ test('starts a new conversation when the session is invalidated', async ({ page 
     .toContain('Sessão invalidada.');
   await page.reload();
   await expect(page.getByText(/nova conversa/i)).toBeVisible();
-  await say(page, 'oi');
-  await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fazer cotação' }).last()).toBeVisible();
 });
 
 test('applies the dark theme from the query string', async ({ page }) => {

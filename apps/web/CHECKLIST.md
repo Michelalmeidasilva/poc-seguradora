@@ -73,6 +73,14 @@
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
 
+## Correção da entrada da experiência — 2026-10-13
+
+- [x] Cabeçalho Digio Assistências, identidade visual e tema escuro inicial; boas-vindas uma vez por sessão, preservando conversas restauradas
+- [x] Retomada após reset de sessão e migração do menu anterior; envios ativos pertencem ao cliente atual, sem confundir histórico com reenvio ou duplicar a saudação
+- [x] Suite web 933/933, testes focados de startup/transporte, typecheck e lint; regressão Playwright 16/16
+- [x] E2E Chromium mobile 390×844 na stack real `localhost:8080`: 8/8 para os três produtos, CPF, reset, histórico `sent`, recuperação 401 e retry restaurado; vídeos de evidência em `/tmp/seguradora-assistance-entry-artifacts`
+- [ ] Fidelidade visual e cobertura de todas as jornadas do atlas: continua nas Tasks 9 e 10; estes oito cenários não representam aceite das 247 telas
+
 ## Plano WhatsApp Assistance Experience — Task 7
 
 - [x] 46 fixtures Flow sincronizadas com os JSONs canônicos; formulários navegam para revisão local com volta que preserva valores e submit único

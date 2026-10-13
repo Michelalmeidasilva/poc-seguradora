@@ -25,6 +25,8 @@ export interface UseChatOptions {
 export interface ChatApi {
   state: ChatState;
   tab: TabStatus;
+  /** User messages currently queued by this client, excluding restored history. */
+  hasPendingSend: boolean;
   sendText(text: string): void;
   sendChoice(optionId: string, title: string, replyToId: string): void;
   sendVoice(blob: Blob, durationMs: number): void;
@@ -83,17 +85,26 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
   // Drafts of messages sent in this page lifetime; survives client re-creation (e.g. a tab
   // demotion and takeover) and covers what draftFor() cannot rebuild (voice).
   const draftsRef = useRef(new Map<string, Draft>());
+  const activeSendsRef = useRef(new Set<string>());
   const stateRef = useRef(state);
   stateRef.current = state;
 
   // (Re)start the client while this tab owns the chat.
   useEffect(() => {
     if (guard.status !== 'active') return;
+    const activeSends = activeSendsRef.current;
     const create = options.createClient ?? ((o: ChatClientOptions) => new ChatClient(o));
     const client = create({
-      onServerEvent: (event) => dispatch({ type: 'server_event', event }),
+      onServerEvent: (event) => {
+        if (event.type === 'status.delivered') activeSends.delete(event.payload.messageId);
+        dispatch({ type: 'server_event', event });
+      },
       onConnection: (connection) => dispatch({ type: 'connection', connection }),
-      onOutgoing: (id, status) => dispatch({ type: 'user_status', id, status }),
+      onOutgoing: (id, status) => {
+        if (status === 'sending') activeSends.add(id);
+        if (status === 'failed') activeSends.delete(id);
+        dispatch({ type: 'user_status', id, status });
+      },
       onSession: (sessionId) => dispatch({ type: 'session', sessionId }),
       onSessionReset: () => dispatch({ type: 'session_reset', ts: new Date(now()).toISOString() }),
     });
@@ -113,6 +124,7 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     return () => {
       cancelled = true;
       if (started) client.stop();
+      activeSends.clear();
       clientRef.current = undefined;
     };
     // The client is created once per ownership change; options are read at that moment.
@@ -131,6 +143,7 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       const client = clientRef.current;
       if (!client) return;
       const id = client.send(draft);
+      activeSendsRef.current.add(id);
       draftsRef.current.set(id, draft);
       if (draftsRef.current.size > DRAFT_MEMORY_LIMIT) {
         const oldest = draftsRef.current.keys().next().value;
@@ -151,6 +164,12 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
   return {
     state,
     tab: guard.status,
+    hasPendingSend: state.items.some(
+      (item) =>
+        item.kind === 'user' &&
+        activeSendsRef.current.has(item.id) &&
+        (item.status === 'sending' || item.status === 'sent'),
+    ),
     sendText: (text) => {
       const trimmed = text.trim();
       if (!trimmed) return;
@@ -192,7 +211,11 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       const item = stateRef.current.items.find((i) => i.kind === 'user' && i.id === id);
       const draft =
         draftsRef.current.get(id) ?? (item?.kind === 'user' ? draftFor(item.content) : undefined);
-      clientRef.current?.resend(id, draft);
+      if (draft) draftsRef.current.set(id, draft);
+      const client = clientRef.current;
+      if (!client) return;
+      activeSendsRef.current.add(id);
+      if (client.resend(id, draft) === false) activeSendsRef.current.delete(id);
     },
     canResend: (id) => {
       if (draftsRef.current.has(id)) return true;

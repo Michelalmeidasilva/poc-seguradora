@@ -14,7 +14,14 @@ import type { AssistanceRequest } from './assistance-service';
 import { HandleTurn } from './handle-turn';
 import { InMemoryAssistanceStateStore } from './assistance-turn';
 import { idempotencyKeyFor } from './idempotency';
-import type { AssistancePort, CallContext, DialogStore, LlmProvider, Logger, ServicesPort } from './ports';
+import type {
+  AssistancePort,
+  CallContext,
+  DialogStore,
+  LlmProvider,
+  Logger,
+  ServicesPort,
+} from './ports';
 
 const silent: Logger = {
   debug: () => undefined,
@@ -624,14 +631,76 @@ describe('HandleTurn', () => {
     });
   });
 
+  it.each(['oi', 'Olá!', 'bom dia'])(
+    'opens the assistance welcome and product catalog from %s',
+    async (greeting) => {
+      const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+      const { handler } = make({ assistance: assistancePort(), assistanceStates });
+      const welcome = await collect(handler.run(text(greeting, 401)));
+      const options = welcome.find((event) => event.type === 'message.quick_replies');
+      expect(
+        options?.type === 'message.quick_replies' &&
+          options.payload.options.map((option) => option.title),
+      ).toEqual(['Conhecer produtos', 'Meu contrato', 'Falar com uma pessoa']);
+      const products = await collect(handler.run(quickReply('DES-01', 402)));
+      expect(products).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'message.flow',
+            payload: expect.objectContaining({ flowId: 'DES-01' }),
+          }),
+        ]),
+      );
+      expect(assistanceStates.get('s1')?.gateApproved).toBe(false);
+    },
+  );
+
+  it('keeps the CPF gate on a personal request entered from the assistance welcome', async () => {
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    const { handler } = make({ assistance: assistancePort(), assistanceStates });
+    await collect(handler.run(text('oi', 403)));
+    await collect(handler.run(quickReply('IDE-01', 404)));
+    expect(assistanceStates.get('s1')).toMatchObject({ screenId: 'IDE-01', gateApproved: false });
+    const cpf = await collect(handler.run(quickReply('IDE-08', 405)));
+    expect(cpf).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'message.flow',
+          payload: expect.objectContaining({ flowId: 'IDE-08' }),
+        }),
+      ]),
+    );
+  });
+
   it('routes valid assistance CPF submit, persists the exact domain state, and discards CPF', async () => {
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false });
     const { handler, dialogs } = make({ assistance: assistancePort(), assistanceStates });
     await collect(handler.run(text('12345678901', 44)));
-    expect(assistanceStates.get('s1')).toEqual({ journeyId: 'IDE', screenId: 'IDE-03', gateApproved: true });
+    expect(assistanceStates.get('s1')).toEqual({
+      journeyId: 'IDE',
+      screenId: 'IDE-03',
+      gateApproved: true,
+    });
     expect(JSON.stringify(assistanceStates.get('s1'))).not.toContain('12345678901');
     expect(dialogs.get('s1')).toEqual(IDLE);
+  });
+
+  it('emits valid, distinct CPF-success buttons and routes the contract alternative', async () => {
+    const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
+    assistanceStates.set('s1', { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false });
+    const { handler } = make({ assistance: assistancePort(), assistanceStates });
+    const success = await collect(handler.run(text('00000000000', 406)));
+    expect(success.some((event) => event.type === 'error')).toBe(false);
+    const options = success.find((event) => event.type === 'message.quick_replies');
+    expect(
+      options?.type === 'message.quick_replies' &&
+        options.payload.options.map((option) => option.title),
+    ).toEqual(['Continuar pedido', 'Ver contrato']);
+    if (options?.type !== 'message.quick_replies') throw new Error('missing CPF-success choices');
+    expect(new Set(options.payload.options.map((option) => option.id)).size).toBe(2);
+    await collect(handler.run(quickReply(options.payload.options[1]!.id, 407)));
+    expect(assistanceStates.get('s1')?.screenId).toBe('CON-02');
   });
 
   it('replays a confirmed assistance operation without creating a second request', async () => {
@@ -643,27 +712,50 @@ describe('HandleTurn', () => {
     const first = await collect(handler.run(req));
     const replay = await collect(handler.run(req));
     expect(replay).toEqual(first);
-    const requests = await assistance.listRequests('s1', { correlationId: 'corr-45', idempotencyKey: idempotencyKeyFor('s1', uuid(45)) });
+    const requests = await assistance.listRequests('s1', {
+      correlationId: 'corr-45',
+      idempotencyKey: idempotencyKeyFor('s1', uuid(45)),
+    });
     expect(requests.ok && requests.value).toHaveLength(1);
   });
 
   it('serializes distinct confirmed submissions in one session against the latest review state', async () => {
     let release: (() => void) | undefined;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     let calls = 0;
     const assistance = assistancePort();
     assistance.addDependent = vi.fn(async () => {
       calls++;
       if (calls === 1) await gate;
-      return ok({ id: 'd1', name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' as const });
+      return ok({
+        id: 'd1',
+        name: 'João',
+        cpf: '12345678901',
+        birthDate: '2010-01-01',
+        relationship: 'filho',
+        phone: '11999999999',
+        biologicalSex: 'male' as const,
+      });
     });
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', {
-      journeyId: 'DEP', screenId: 'DEP-06', gateApproved: true,
-      temporaryData: { name: 'João', cpf: '12345678901', birthDate: '2010-01-01', relationship: 'filho', phone: '11999999999', biologicalSex: 'male' },
+      journeyId: 'DEP',
+      screenId: 'DEP-06',
+      gateApproved: true,
+      temporaryData: {
+        name: 'João',
+        cpf: '12345678901',
+        birthDate: '2010-01-01',
+        relationship: 'filho',
+        phone: '11999999999',
+        biologicalSex: 'male',
+      },
     });
     const { handler } = make({ assistance, assistanceStates });
-    const submission = (id: number) => request({ type: 'user.flow_submit', payload: { flowId: 'DEP-06', data: {} } }, id);
+    const submission = (id: number) =>
+      request({ type: 'user.flow_submit', payload: { flowId: 'DEP-06', data: {} } }, id);
     const first = collect(handler.run(submission(46)));
     const second = collect(handler.run(submission(47)));
     await Promise.resolve();

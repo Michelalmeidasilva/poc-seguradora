@@ -36,36 +36,59 @@ const preserveReply = (state: AssistanceState, text: string): AssistanceTurnResu
 
 const recordOf = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : undefined;
 
 const stringFields = (value: unknown): Record<string, string> | undefined => {
   const record = recordOf(value);
   if (!record || Object.keys(record).length > 20) return undefined;
   const pairs = Object.entries(record);
-  if (pairs.some(([, item]) => (typeof item !== 'string' && typeof item !== 'boolean') || (typeof item === 'string' && item.length > 500))) return undefined;
+  if (
+    pairs.some(
+      ([, item]) =>
+        (typeof item !== 'string' && typeof item !== 'boolean') ||
+        (typeof item === 'string' && item.length > 500),
+    )
+  )
+    return undefined;
   return Object.fromEntries(pairs.map(([key, item]) => [key, String(item)]));
 };
 
-function validateFlowData(step: AssistanceStep, input: Record<string, unknown>): Record<string, unknown> | undefined {
+function validateFlowData(
+  step: AssistanceStep,
+  input: Record<string, unknown>,
+): Record<string, unknown> | undefined {
   const flow = recordOf(step.flow);
-  const fields = Array.isArray(flow?.fields) ? flow.fields.map(recordOf).filter((item) => item !== undefined) : [];
-  const choices = Array.isArray(flow?.choices) ? flow.choices.map(recordOf).filter((item) => item !== undefined) : [];
+  const fields = Array.isArray(flow?.fields)
+    ? flow.fields.map(recordOf).filter((item) => item !== undefined)
+    : [];
+  const choices = Array.isArray(flow?.choices)
+    ? flow.choices.map(recordOf).filter((item) => item !== undefined)
+    : [];
   if (fields.length) {
     const shape: Record<string, z.ZodTypeAny> = {};
     for (const field of fields) {
       if (typeof field!.name !== 'string') return undefined;
       const name = field!.name;
       const options = field!.choices;
-      let schema: z.ZodTypeAny = field!.type === 'checkbox'
-        ? z.preprocess((value) => value === 'true' ? true : value === 'false' ? false : value, z.boolean())
-        : z.string().max(500);
-      if (Array.isArray(options) && options.length > 0 && options.every((option) => typeof option === 'string')) {
+      let schema: z.ZodTypeAny =
+        field!.type === 'checkbox'
+          ? z.preprocess(
+              (value) => (value === 'true' ? true : value === 'false' ? false : value),
+              z.boolean(),
+            )
+          : z.string().max(500);
+      if (
+        Array.isArray(options) &&
+        options.length > 0 &&
+        options.every((option) => typeof option === 'string')
+      ) {
         const allowed = options.filter((option) => option !== 'Selecione') as string[];
         if (allowed.length === 0) return undefined;
         schema = z.enum(allowed as [string, ...string[]]);
       }
-      if (field!.required === true && field!.type !== 'checkbox' && !Array.isArray(options)) schema = z.string().min(1).max(500);
+      if (field!.required === true && field!.type !== 'checkbox' && !Array.isArray(options))
+        schema = z.string().min(1).max(500);
       shape[name] = field!.required === true ? schema : schema.optional();
     }
     const parsed = z.object(shape).strict().safeParse(input);
@@ -74,16 +97,29 @@ function validateFlowData(step: AssistanceStep, input: Record<string, unknown>):
   if (choices.length) {
     const targets = choices.map((choice) => choice!.target);
     if (!targets.length || targets.some((target) => typeof target !== 'string')) return undefined;
-    const index = z.object({ choice: z.enum(choices.map((_, i) => String(i)) as [string, ...string[]]) }).strict().safeParse(input);
+    const index = z
+      .object({ choice: z.enum(choices.map((_, i) => String(i)) as [string, ...string[]]) })
+      .strict()
+      .safeParse(input);
     if (index.success) return { target: targets[Number(index.data.choice)] };
-    const legacy = z.object({ target: z.enum(targets as [string, ...string[]]) }).strict().safeParse(input);
+    const legacy = z
+      .object({ target: z.enum(targets as [string, ...string[]]) })
+      .strict()
+      .safeParse(input);
     return legacy.success ? legacy.data : undefined;
   }
-  if (typeof flow?.correction === 'string' && input.correction === true && Object.keys(input).length === 1) {
+  if (
+    typeof flow?.correction === 'string' &&
+    input.correction === true &&
+    Object.keys(input).length === 1
+  ) {
     return { correction: true };
   }
   if (flow?.consent !== undefined) {
-    const parsed = z.object({ consent: z.literal(true) }).strict().safeParse(input);
+    const parsed = z
+      .object({ consent: z.literal(true) })
+      .strict()
+      .safeParse(input);
     return parsed.success ? parsed.data : undefined;
   }
   return z.object({}).strict().safeParse(input).success ? input : undefined;
@@ -94,24 +130,44 @@ const flowInitialData = (
   state: AssistanceState | undefined,
   intent: 'review' | 'correction' | undefined,
 ) => {
-  if (!state || !intent || step.journeyId !== state.journeyId || !state.temporaryData) return undefined;
-  const values = Object.fromEntries(Object.entries(state.temporaryData)
-    .filter(([key, value]) => !/^(cpf|document)$/i.test(key) && (typeof value === 'string' || typeof value === 'boolean')));
+  if (!state || !intent || step.journeyId !== state.journeyId || !state.temporaryData)
+    return undefined;
+  const values = Object.fromEntries(
+    Object.entries(state.temporaryData).filter(
+      ([key, value]) =>
+        !/^(cpf|document)$/i.test(key) && (typeof value === 'string' || typeof value === 'boolean'),
+    ),
+  );
   const cpf = state.temporaryData.cpf ?? state.temporaryData.document;
   if (intent === 'review' && typeof cpf === 'string') {
     const digits = cpf.replace(/\D/g, '');
     if (digits.length >= 2) values.maskedDocument = `•••••••••${digits.slice(-2)}`;
   }
   if (intent === 'correction') {
-    const fields = Array.isArray(recordOf(step.flow)?.fields) ? recordOf(step.flow)!.fields as unknown[] : [];
+    const fields = Array.isArray(recordOf(step.flow)?.fields)
+      ? (recordOf(step.flow)!.fields as unknown[])
+      : [];
     for (const candidate of fields) {
       const field = recordOf(candidate);
-      if (!field || typeof field.name !== 'string' || (field.sensitive !== true && !/^(cpf|document)$/i.test(field.name))) continue;
-      const value = state.temporaryData[field.name] ?? (/^(cpf|document)$/i.test(field.name) ? cpf : undefined);
+      if (
+        !field ||
+        typeof field.name !== 'string' ||
+        (field.sensitive !== true && !/^(cpf|document)$/i.test(field.name))
+      )
+        continue;
+      const value =
+        state.temporaryData[field.name] ?? (/^(cpf|document)$/i.test(field.name) ? cpf : undefined);
       if (typeof value === 'string') values[field.name] = value;
     }
   }
   return { intent, values };
+};
+
+const quickOptionId = (step: AssistanceStep, index: number): string => {
+  const target = step.actions[index]!.target;
+  return step.actions.slice(0, index).some((action) => action.target === target)
+    ? `${step.id}:${index}`
+    : target;
 };
 
 const textReply = (
@@ -141,7 +197,10 @@ const textReply = (
       type: 'message.quick_replies',
       payload: {
         text: 'Escolha uma opção para continuar.',
-        options: step.actions.map(({ label, target }) => ({ id: target, title: label })),
+        options: step.actions.map(({ label }, index) => ({
+          id: quickOptionId(step, index),
+          title: label,
+        })),
       },
     } as ReplyBody);
   }
@@ -150,7 +209,8 @@ const textReply = (
 
 const failureText: Record<AssistanceFailure, string> = {
   not_found: 'Não encontrei esse dado demonstrativo. Confira a opção e tente novamente.',
-  conflict: 'Não foi possível concluir esta etapa demonstrativa. Confira os dados e tente novamente.',
+  conflict:
+    'Não foi possível concluir esta etapa demonstrativa. Confira os dados e tente novamente.',
   invalid: 'Não consegui validar os dados enviados. Confira o formulário e tente novamente.',
   unavailable: 'Esta demonstração está indisponível no momento. Tente novamente mais tarde.',
 };
@@ -190,37 +250,66 @@ async function confirmedMutation(
       const birthDate = field('birthDate', 'birth', 'nascimento');
       const relationship = field('relationship', 'parentesco');
       const phone = field('phone', 'celular');
-      if (!/^\d{11}$/.test(cpf) || !name || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !relationship || !phone) return err('invalid');
+      if (
+        !/^\d{11}$/.test(cpf) ||
+        !name ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
+        !relationship ||
+        !phone
+      )
+        return err('invalid');
       const rawSex = field('biologicalSex');
-      const biologicalSex = rawSex === 'female' || rawSex === 'Feminino'
-        ? 'female'
-        : rawSex === 'male' || rawSex === 'Masculino'
-          ? 'male'
-          : rawSex === 'not_informed' || rawSex === 'Prefiro não informar'
-            ? 'not_informed' : undefined;
+      const biologicalSex =
+        rawSex === 'female' || rawSex === 'Feminino'
+          ? 'female'
+          : rawSex === 'male' || rawSex === 'Masculino'
+            ? 'male'
+            : rawSex === 'not_informed' || rawSex === 'Prefiro não informar'
+              ? 'not_informed'
+              : undefined;
       if (!biologicalSex) return err('invalid');
-      const result = await port.addDependent(sessionId, {
-        confirmed: true,
-        dependent: {
-          name, cpf,
-          birthDate,
-          relationship,
-          phone,
-          biologicalSex,
+      const result = await port.addDependent(
+        sessionId,
+        {
+          confirmed: true,
+          dependent: {
+            name,
+            cpf,
+            birthDate,
+            relationship,
+            phone,
+            biologicalSex,
+          },
         },
-      }, context);
+        context,
+      );
       return result.ok ? ok(undefined) : result;
     }
     case 'DEP-21': {
       const id = field('dependentId');
       if (!id) return err('invalid');
-      const changes = recordOf(data.changes) ?? Object.fromEntries(
-        ['name', 'cpf', 'birthDate', 'birth', 'document', 'relationship', 'phone', 'biologicalSex']
-          .filter((key) => typeof data[key] === 'string')
-          .map((key) => [key, data[key]]),
-      );
+      const changes =
+        recordOf(data.changes) ??
+        Object.fromEntries(
+          [
+            'name',
+            'cpf',
+            'birthDate',
+            'birth',
+            'document',
+            'relationship',
+            'phone',
+            'biologicalSex',
+          ]
+            .filter((key) => typeof data[key] === 'string')
+            .map((key) => [key, data[key]]),
+        );
       if (!changes) return err('invalid');
-      const result = await port.updateDependent(sessionId, { confirmed: true, dependentId: id, changes }, context);
+      const result = await port.updateDependent(
+        sessionId,
+        { confirmed: true, dependentId: id, changes },
+        context,
+      );
       return result.ok ? ok(undefined) : result;
     }
     case 'EXC-03': {
@@ -234,7 +323,11 @@ async function confirmedMutation(
       return port.changeModality(sessionId, { confirmed: true, modality }, context);
     }
     case 'CAN-05': {
-      const result = await port.cancelAssistance(sessionId, { confirmed: true, reason: field('reason', 'motivo') || 'solicitado' }, context);
+      const result = await port.cancelAssistance(
+        sessionId,
+        { confirmed: true, reason: field('reason', 'motivo') || 'solicitado' },
+        context,
+      );
       return result.ok ? ok(undefined) : result;
     }
     case 'REN-03': {
@@ -243,7 +336,11 @@ async function confirmedMutation(
     }
     case 'COB-05': {
       const reference = field('reference') || 'REF-DEMO-001';
-      const result = await port.regularizeBilling(sessionId, { confirmed: true, reference }, context);
+      const result = await port.regularizeBilling(
+        sessionId,
+        { confirmed: true, reference },
+        context,
+      );
       return result.ok ? ok(undefined) : result;
     }
     case 'CAD-03': {
@@ -251,26 +348,35 @@ async function confirmedMutation(
       const address = field('address');
       const city = field('city');
       if (!postal || !address || !city) return err('invalid');
-      return port.updateAddress(sessionId, { confirmed: true, postal, address, city }, context).then((result) =>
-        result.ok ? ok(undefined) : result,
-      );
+      return port
+        .updateAddress(sessionId, { confirmed: true, postal, address, city }, context)
+        .then((result) => (result.ok ? ok(undefined) : result));
     }
     case 'FUN-06': {
       const city = field('funeralCity');
       const state = field('funeralState');
       if (!city || !state) return err('invalid');
-      return port.requestFuneralAssistance(sessionId, { confirmed: true, city, state }, context).then((result) =>
-        result.ok ? ok(undefined) : result,
-      );
+      return port
+        .requestFuneralAssistance(sessionId, { confirmed: true, city, state }, context)
+        .then((result) => (result.ok ? ok(undefined) : result));
     }
     case 'PRE-02': {
-      if (typeof data.optionalDocs !== 'boolean' || typeof data.optionalBenefits !== 'boolean') return err('invalid');
+      if (typeof data.optionalDocs !== 'boolean' || typeof data.optionalBenefits !== 'boolean')
+        return err('invalid');
       const current = await port.getPreferences(sessionId, context);
       if (!current.ok) return current;
-      const updated = await port.updatePreferences(sessionId, {
-        confirmed: true,
-        preferences: { ...current.value, optionalDocs: data.optionalDocs, optionalBenefits: data.optionalBenefits },
-      }, context);
+      const updated = await port.updatePreferences(
+        sessionId,
+        {
+          confirmed: true,
+          preferences: {
+            ...current.value,
+            optionalDocs: data.optionalDocs,
+            optionalBenefits: data.optionalBenefits,
+          },
+        },
+        context,
+      );
       return updated.ok ? ok(undefined) : updated;
     }
     default:
@@ -280,11 +386,17 @@ async function confirmedMutation(
 
 function targetForText(text: string): AssistanceStep | undefined {
   const normalized = text.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
-  const step = assistanceCatalog.steps.find((candidate) =>
-    candidate.user.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ') === normalized,
+  const greeting = normalized
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[!.?]+$/g, '');
+  if (['oi', 'ola', 'bom dia', 'boa tarde', 'boa noite'].includes(greeting)) {
+    return assistanceCatalog.byId['ENT-02'];
+  }
+  return assistanceCatalog.steps.find(
+    (candidate) =>
+      candidate.user.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ') === normalized,
   );
-  // The bare greeting belongs to the legacy intent router; it must not start a second menu.
-  return step?.id === 'ENT-02' ? undefined : step;
 }
 
 export async function runAssistanceTurn(
@@ -294,6 +406,13 @@ export async function runAssistanceTurn(
   const { state, port, sessionId, context } = deps;
   if (input.type === 'flow_data_exchange') return ok({ state, replies: [] });
   const currentStep = assistanceCatalog.byId[state.screenId];
+  if (input.type === 'quick_reply' && currentStep) {
+    const optionId = input.target;
+    const index = currentStep.actions.findIndex(
+      (_, index) => quickOptionId(currentStep, index) === optionId,
+    );
+    if (index >= 0) input = { ...input, target: currentStep.actions[index]!.target };
+  }
   if (
     input.type !== 'cpf_submit' &&
     state.journeyId !== 'IDE' &&
@@ -306,16 +425,30 @@ export async function runAssistanceTurn(
       replies: textReply(gate.step),
     });
   }
-  if (input.type === 'quick_reply' && ['HUM-05', 'HUM-06'].includes(state.screenId) && input.target === 'HUM-08') {
+  if (
+    input.type === 'quick_reply' &&
+    ['HUM-05', 'HUM-06'].includes(state.screenId) &&
+    input.target === 'HUM-08'
+  ) {
     const screen = assistanceCatalog.byId[state.screenId]!;
-    if (!screen.actions.some((action) => action.target === input.target && /solicitar retorno|registrar retorno/i.test(action.label))) {
+    if (
+      !screen.actions.some(
+        (action) =>
+          action.target === input.target &&
+          /solicitar retorno|registrar retorno/i.test(action.label),
+      )
+    ) {
       return ok(preserveReply(state, 'Esta opção não corresponde à etapa atual.'));
     }
-    const created = await port.createRequest(sessionId, {
-      confirmed: true,
-      kind: 'human_handoff',
-      message: 'Pedido demonstrativo de retorno solicitado pela pessoa',
-    }, context);
+    const created = await port.createRequest(
+      sessionId,
+      {
+        confirmed: true,
+        kind: 'human_handoff',
+        message: 'Pedido demonstrativo de retorno solicitado pela pessoa',
+      },
+      context,
+    );
     if (!created.ok) return ok(preserveReply(state, failureText[created.error]));
   }
   let transitionInput: Parameters<typeof nextAssistanceState>[1] | undefined;
@@ -339,7 +472,10 @@ export async function runAssistanceTurn(
         transitionInput = { type: 'open', target: state.screenId };
       } else {
         const step = targetForText(input.text);
-        if (!step) return ok(preserveReply(state, 'Não entendi essa opção. Escolha uma das opções disponíveis.'));
+        if (!step)
+          return ok(
+            preserveReply(state, 'Não entendi essa opção. Escolha uma das opções disponíveis.'),
+          );
         transitionInput = { type: 'open', target: step.id };
       }
       break;
@@ -347,41 +483,76 @@ export async function runAssistanceTurn(
     case 'voice':
       {
         const fixture = audioStepsById.get(input.mediaId);
-        if (!fixture) return ok(preserveReply(state, 'Use uma das mídias de áudio demonstrativas disponíveis.'));
+        if (!fixture)
+          return ok(
+            preserveReply(state, 'Use uma das mídias de áudio demonstrativas disponíveis.'),
+          );
         transitionInput = { type: 'open', target: fixture.id };
       }
       break;
     case 'flow_submit': {
-      if (input.flowId !== state.screenId) return ok(preserveReply(state, 'Este formulário não corresponde à etapa atual.'));
+      if (input.flowId !== state.screenId)
+        return ok(preserveReply(state, 'Este formulário não corresponde à etapa atual.'));
       submitted = recordOf(input.data);
-      if (!submitted) return ok(preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'));
+      if (!submitted)
+        return ok(
+          preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'),
+        );
       const currentStep = assistanceCatalog.byId[state.screenId];
-      if (!currentStep) return ok(preserveReply(state, 'Esta etapa demonstrativa não está disponível.'));
+      if (!currentStep)
+        return ok(preserveReply(state, 'Esta etapa demonstrativa não está disponível.'));
       const validated = validateFlowData(currentStep, submitted);
-      if (!validated) return ok(preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'));
+      if (!validated)
+        return ok(
+          preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'),
+        );
       submitted = validated;
       const correction = submitted.correction === true && recordOf(currentStep.flow)?.correction;
-      const target = typeof correction === 'string' ? correction : typeof submitted.target === 'string' ? submitted.target : requestTarget(currentStep);
-      if (!target || !(currentStep.destinations.includes(target) || target === correction) || !assistanceCatalog.byId[target]) {
-        return ok(preserveReply(state, 'O destino deste formulário não corresponde à etapa atual.'));
+      const target =
+        typeof correction === 'string'
+          ? correction
+          : typeof submitted.target === 'string'
+            ? submitted.target
+            : requestTarget(currentStep);
+      if (
+        !target ||
+        !(currentStep.destinations.includes(target) || target === correction) ||
+        !assistanceCatalog.byId[target]
+      ) {
+        return ok(
+          preserveReply(state, 'O destino deste formulário não corresponde à etapa atual.'),
+        );
       }
       if (state.screenId === 'IDE-08') {
         const cpf = submitted.authCpf ?? submitted.cpf;
         transitionInput = { type: 'cpf_submit', cpf: typeof cpf === 'string' ? cpf : '' };
       } else if (typeof correction === 'string') {
         transitionInput = { type: 'open', target: correction };
-      } else if (assistanceCatalog.byId[state.screenId]?.mode === 'review' || state.screenId === 'PRE-02') {
-        const mutationData = state.screenId === 'PRE-02' ? submitted : state.temporaryData ?? {};
-        const mutation = await confirmedMutation(assistanceCatalog.byId[state.screenId]!, mutationData, deps);
+      } else if (
+        assistanceCatalog.byId[state.screenId]?.mode === 'review' ||
+        state.screenId === 'PRE-02'
+      ) {
+        const mutationData = state.screenId === 'PRE-02' ? submitted : (state.temporaryData ?? {});
+        const mutation = await confirmedMutation(
+          assistanceCatalog.byId[state.screenId]!,
+          mutationData,
+          deps,
+        );
         if (!mutation.ok) return ok(preserveReply(state, failureText[mutation.error]));
         const target = requestTarget(assistanceCatalog.byId[state.screenId]!);
         if (!target) return ok(preserveReply(state, 'A demonstração foi concluída.'));
         transitionInput = { type: 'open', target };
       } else {
         const fields = stringFields(submitted);
-        if (!fields) return ok(preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'));
-        const allowedTarget = typeof submitted.target === 'string' && assistanceCatalog.byId[state.screenId]!.destinations.includes(submitted.target)
-          ? submitted.target : requestTarget(assistanceCatalog.byId[state.screenId]!);
+        if (!fields)
+          return ok(
+            preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'),
+          );
+        const allowedTarget =
+          typeof submitted.target === 'string' &&
+          assistanceCatalog.byId[state.screenId]!.destinations.includes(submitted.target)
+            ? submitted.target
+            : requestTarget(assistanceCatalog.byId[state.screenId]!);
         transitionInput = allowedTarget
           ? { type: 'open', target: allowedTarget }
           : { type: 'open', target: state.screenId };
@@ -396,14 +567,29 @@ export async function runAssistanceTurn(
   if (!transitionInput) return ok({ state, replies: [] });
   const transition = nextAssistanceState(state, transitionInput);
   let nextState = transition.state;
-  const requestedTarget = transitionInput.type === 'open' || transitionInput.type === 'quick_reply'
-    ? transitionInput.target
-    : input.type === 'text' ? targetForText(input.text)?.id : undefined;
-  if (requestedTarget && assistanceCatalog.byId[requestedTarget]?.requiresAuth && !state.gateApproved && assistanceCatalog.byId[requestedTarget]!.journeyId !== 'IDE') {
+  const requestedTarget =
+    transitionInput.type === 'open' || transitionInput.type === 'quick_reply'
+      ? transitionInput.target
+      : input.type === 'text'
+        ? targetForText(input.text)?.id
+        : undefined;
+  if (
+    requestedTarget &&
+    assistanceCatalog.byId[requestedTarget]?.requiresAuth &&
+    !state.gateApproved &&
+    assistanceCatalog.byId[requestedTarget]!.journeyId !== 'IDE'
+  ) {
     nextState = { ...nextState, pendingStep: requestedTarget };
   }
-  if (submitted && state.screenId !== 'IDE-08' && assistanceCatalog.byId[state.screenId]?.mode !== 'review') {
-    nextState = { ...nextState, temporaryData: { ...state.temporaryData, ...stringFields(submitted) } };
+  if (
+    submitted &&
+    state.screenId !== 'IDE-08' &&
+    assistanceCatalog.byId[state.screenId]?.mode !== 'review'
+  ) {
+    nextState = {
+      ...nextState,
+      temporaryData: { ...state.temporaryData, ...stringFields(submitted) },
+    };
   }
   if (transitionInput.type === 'cpf_submit' && nextState.gateApproved && state.pendingStep) {
     const pending = nextAssistanceState(nextState, { type: 'open', target: state.pendingStep });
@@ -413,7 +599,9 @@ export async function runAssistanceTurn(
 
   if (input.type === 'text' && (state.screenId === 'DEP-33' || state.screenId === 'DEP-04')) {
     const parsed = parseDependentStatement(input.text, state.temporaryData ?? {});
-    const data = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, value ?? '']));
+    const data = Object.fromEntries(
+      Object.entries(parsed).map(([key, value]) => [key, value ?? '']),
+    );
     nextState = { ...nextState, temporaryData: { ...state.temporaryData, ...data } };
   }
 
@@ -424,11 +612,14 @@ export async function runAssistanceTurn(
     if (!docs.ok) return ok(preserveReply(state, failureText[docs.error]));
     replies = [{ type: 'message.document', payload: { documents: docs.value } } as ReplyBody];
   } else {
-    const hydrationIntent = step.mode === 'review' && input.type === 'flow_submit' && currentStep?.mode === 'form'
-      ? 'review'
-      : input.type === 'flow_submit' && currentStep?.mode === 'review' && submitted?.correction === true
-        ? 'correction'
-        : undefined;
+    const hydrationIntent =
+      step.mode === 'review' && input.type === 'flow_submit' && currentStep?.mode === 'form'
+        ? 'review'
+        : input.type === 'flow_submit' &&
+            currentStep?.mode === 'review' &&
+            submitted?.correction === true
+          ? 'correction'
+          : undefined;
     replies = textReply(step, nextState, hydrationIntent);
   }
   if (step.id === 'DEP-10') {
@@ -445,29 +636,39 @@ export async function runAssistanceTurn(
 /** Bounded, expiring state store for assistance journeys; CPF gate input is never stored. */
 export class InMemoryAssistanceStateStore {
   private readonly entries = new Map<string, { state: AssistanceState; updatedAt: number }>();
-  constructor(private readonly capacity: number, private readonly ttlMs: number, private readonly now: () => number = Date.now) {}
+  constructor(
+    private readonly capacity: number,
+    private readonly ttlMs: number,
+    private readonly now: () => number = Date.now,
+  ) {}
   get(sessionId: string): AssistanceState | undefined {
     const entry = this.entries.get(sessionId);
     if (!entry) return undefined;
-    if (this.now() - entry.updatedAt > this.ttlMs) { this.entries.delete(sessionId); return undefined; }
+    if (this.now() - entry.updatedAt > this.ttlMs) {
+      this.entries.delete(sessionId);
+      return undefined;
+    }
     return entry.state;
   }
   set(sessionId: string, state: AssistanceState): void {
     this.entries.delete(sessionId);
     this.entries.set(sessionId, { state, updatedAt: this.now() });
-    while (this.entries.size > this.capacity) this.entries.delete(this.entries.keys().next().value!);
+    while (this.entries.size > this.capacity)
+      this.entries.delete(this.entries.keys().next().value!);
   }
   clear(sessionId: string): void {
     this.entries.delete(sessionId);
   }
 }
 
-/** Resolve only exact catalog utterances, leaving legacy intent handling untouched. */
+/** Common greetings open the assistance welcome; other utterances use the catalog. */
 export const assistanceStepForText = targetForText;
 export const assistanceStepForAudio = (mediaId: string): AssistanceStep | undefined => {
   const step = assistanceCatalog.byId[mediaId];
   return step?.mode === 'audio' ? step : undefined;
 };
-export const assistanceEntry = (target: string) => nextAssistanceState(
-  { journeyId: '', screenId: '', gateApproved: false }, { type: 'open', target },
-);
+export const assistanceEntry = (target: string) =>
+  nextAssistanceState(
+    { journeyId: '', screenId: '', gateApproved: false },
+    { type: 'open', target },
+  );

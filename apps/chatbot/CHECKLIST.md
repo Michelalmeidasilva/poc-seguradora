@@ -2,6 +2,13 @@
 
 Última atualização: 2026-10-13
 
+## Correção da entrada da experiência — 2026-10-13
+
+- [x] Saudações comuns abrem `ENT-02` e o catálogo dos três serviços; acesso pessoal pelo menu exige CPF antes de continuar
+- [x] Sucesso do CPF em `IDE-03` usa “Continuar pedido”, dentro do limite de 20 caracteres; preserva os dois destinos/ações com IDs de botão distintos e resolução pela tela atual
+- [x] Regressões de saudação, catálogo, gate e resposta válida após CPF; suíte chatbot 597/597 e typecheck aprovados
+- [ ] Aceite completo dos 247 estados e fidelidade do atlas: continua nas Tasks 9 e 10
+
 ## Plano WhatsApp Assistance Experience — Task 2
 
 - [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE`, artefato JSON sincronizado e teste de deriva por execução do IIFE canônico

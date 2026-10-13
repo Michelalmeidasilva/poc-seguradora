@@ -28,29 +28,41 @@ function customerFacingStep(step: AssistanceStep): AssistanceStep {
 
   const actions = step.actions.map((action) => ({
     ...action,
-    label: action.label === 'Já tenho código'
-      ? 'Continuar'
-      : action.label === 'Confirmar identidade'
-        ? 'Confirmar ação'
-        : action.label,
+    label:
+      action.label === 'Já tenho código'
+        ? 'Continuar'
+        : action.label === 'Confirmar identidade'
+          ? 'Confirmar ação'
+          : action.label === 'Continuar solicitação'
+            ? 'Continuar pedido'
+            : action.label,
   }));
-  const flow = step.flow && typeof step.flow === 'object'
-    ? {
-        ...(step.flow as Record<string, unknown>),
-        ...(step.id === 'IDE-02' ? {
-          title: 'Validar formato do CPF',
-          note: 'Somente o formato do CPF é verificado nesta demonstração.',
-        } : {}),
-        ...(step.id === 'IDE-08' ? {
-          title: 'Informar CPF',
-          submit: 'Validar formato',
-        } : {}),
-      }
-    : step.flow;
+  const flow =
+    step.flow && typeof step.flow === 'object'
+      ? {
+          ...(step.flow as Record<string, unknown>),
+          ...(step.id === 'IDE-02'
+            ? {
+                title: 'Validar formato do CPF',
+                note: 'Somente o formato do CPF é verificado nesta demonstração.',
+              }
+            : {}),
+          ...(step.id === 'IDE-08'
+            ? {
+                title: 'Informar CPF',
+                submit: 'Validar formato',
+              }
+            : {}),
+        }
+      : step.flow;
   return { ...step, actions, flow, behavior: step.bot };
 }
 
-function transition(state: AssistanceState, step: AssistanceStep, gateApproved = state.gateApproved): AssistanceTransition {
+function transition(
+  state: AssistanceState,
+  step: AssistanceStep,
+  gateApproved = state.gateApproved,
+): AssistanceTransition {
   return {
     step: customerFacingStep(step),
     state: { ...state, journeyId: step.journeyId, screenId: step.id, gateApproved },
@@ -58,10 +70,17 @@ function transition(state: AssistanceState, step: AssistanceStep, gateApproved =
 }
 
 function preserve(state: AssistanceState): AssistanceTransition {
-  return transition(state, assistanceCatalog.byId[state.screenId] ?? personalGate, state.gateApproved);
+  return transition(
+    state,
+    assistanceCatalog.byId[state.screenId] ?? personalGate,
+    state.gateApproved,
+  );
 }
 
-export function nextAssistanceState(state: AssistanceState, input: AssistanceInput): AssistanceTransition {
+export function nextAssistanceState(
+  state: AssistanceState,
+  input: AssistanceInput,
+): AssistanceTransition {
   if (input.type === 'cpf_submit') {
     if (state.screenId !== 'IDE-08') return preserve(state);
     const parsed = parseAssistanceCpf(input.cpf);

@@ -11,11 +11,13 @@ export function Header({ connection, typing }: { connection: Connection; typing:
   return (
     <header className="chat-header">
       <div className="chat-header__avatar" aria-hidden="true">
-        S
+        d
       </div>
       <div className="chat-header__text">
-        <h1 className="chat-header__title">Assistente Seguradora</h1>
-        <span className="chat-header__status">{typing ? 'digitando…' : STATUS[connection]}</span>
+        <h1 className="chat-header__title">Digio Assistências</h1>
+        <span className="chat-header__status">
+          Conta comercial · {typing ? 'digitando…' : STATUS[connection]}
+        </span>
       </div>
     </header>
   );
