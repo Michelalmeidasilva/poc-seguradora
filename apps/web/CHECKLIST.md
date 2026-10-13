@@ -39,6 +39,7 @@
 - [x] Cotação: `cpf` e `nascimento` são `sensitive` na tela `DADOS`; o resumo mostra `••••` e o E2E confere que nem a bolha nem o sessionStorage guardam os valores (só o `user.flow_submit` os leva ao gateway)
 - [x] Fonte única dos Flows: os JSON canônicos ficam em `apps/chatbot/src/domain/flows/`; `src/flows/fixtures/` guarda cópias só para os testes unitários, e `apps/chatbot/src/domain/flows-sync.test.ts` falha se as cópias divergirem
 - [x] Task 7 round 1: revisão com valores seguros, correção pré-preenchida, CPF mascarado e dados iniciais ausentes de saves/loads persistidos
+- [x] Task 7 round 2: load regrava a sessão saneada antes de retornar; Flows dependentes do draft viram mensagem de expiração sem CTA na persistência, preservando o Flow ativo em memória
 
 ### Decisões próprias (Plano 5)
 

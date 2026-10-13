@@ -112,9 +112,21 @@ describe('persistence', () => {
       type: 'message.flow' as const,
       payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'review' as const, values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' } } },
     };
-    saveChat(sessionStorage, chatReducer(sample(), { type: 'server_event', event }));
+    const live = chatReducer(sample(), { type: 'server_event', event });
+    saveChat(sessionStorage, live);
     expect(sessionStorage.getItem(KEY)).not.toContain('CPF-CANARY-98765432100');
     expect(sessionStorage.getItem(KEY)).not.toContain('initialData');
+    const liveFlow = live.items.find((item) => item.kind === 'bot' && item.event.type === 'message.flow');
+    expect(liveFlow).toMatchObject({ kind: 'bot', event: { type: 'message.flow', payload: { ctaLabel: 'Abrir', initialData: { intent: 'review' } } } });
+    const saved = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as {
+      items: Array<{
+        kind: string;
+        event?: { type: string; payload?: { text?: string; ctaLabel?: string } };
+      }>;
+    };
+    const expired = saved.items.find((item) => item.kind === 'bot' && item.event?.payload?.text?.includes('expirou'));
+    expect(expired?.event?.type).toBe('message.text');
+    expect(expired?.event?.payload?.ctaLabel).toBeUndefined();
   });
 
   it('scrubs volatile Flow initialData from legacy persisted messages on load', () => {
@@ -125,9 +137,17 @@ describe('persistence', () => {
         payload: { flowId: 'DEP-06', body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } } },
       } }],
     }));
-    const serialized = JSON.stringify(loadChat(sessionStorage));
+    const loaded = loadChat(sessionStorage);
+    const serialized = JSON.stringify(loaded);
     expect(serialized).not.toContain('CPF-CANARY-98765432100');
     expect(serialized).not.toContain('initialData');
+    const storedImmediatelyAfterLoad = sessionStorage.getItem(KEY) ?? '';
+    expect(storedImmediatelyAfterLoad).not.toContain('CPF-CANARY-98765432100');
+    expect(storedImmediatelyAfterLoad).not.toContain('initialData');
+    expect(serialized).not.toContain('message.flow');
+    const expired = loaded?.items.find((item) => item.kind === 'bot' && item.event.type === 'message.text');
+    expect(expired?.kind === 'bot' && expired.event.type === 'message.text' && expired.event.payload.text).toMatch(/expirou/i);
+    expect(storedImmediatelyAfterLoad).not.toContain('message.flow');
   });
 
   it('does not throw when the storage is full or unavailable', () => {
