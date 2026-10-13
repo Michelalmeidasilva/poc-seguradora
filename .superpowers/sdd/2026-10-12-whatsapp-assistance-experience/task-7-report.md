@@ -105,3 +105,20 @@ Os quatro cenários `audio` são `AUD-01` (compreensão completa), `AUD-03` (par
 ### Autorrevisão round 2
 
 - Apenas arquivos da ownership web-chat (`src/chat/persistence.ts`, seu teste e `apps/web/CHECKLIST.md`) foram alterados. O `task-1-report.md` preexistente não foi staged nem incluído. Nenhum outro escopo foi alterado.
+
+## Fix round 3 — expiração de REVIEW legado sem initialData
+
+### TDD — RED/GREEN
+
+- RED: novo teste instalou um snapshot legado de `message.flow` sem `initialData`, com exatamente uma tela terminal `REVIEW`; `loadChat` retornou e armazenou o Flow intacto, inclusive o texto de revisão e o CTA `Confirmar solicitação` (1 falha; 14 testes de persistência existentes passaram).
+- GREEN: após reconhecer essa assinatura estrutural legada, persistência + renderer + FlowSheet passaram: 4 arquivos, 46/46 testes. O teste verifica que o estado carregado e o valor imediatamente armazenado não contêm o dado canário nem `message.flow`/CTA, e contêm apenas `message.text`. O teste de save existente continua comprovando que o Flow ao vivo não é alterado nem perde interação antes de reload.
+- `pnpm --filter @seguradora/web typecheck`, ESLint focado em `persistence.ts`/`persistence.test.ts` e `git diff --check`: passaram.
+
+### Implementação e escopo
+
+- `expireDraftFlow` converte para a mensagem segura de expiração tanto eventos com `initialData` quanto snapshots legados cuja definição contém exatamente uma tela `REVIEW` marcada como terminal. A regra é aplicada na gravação e na restauração; Flows não correspondentes sem draft permanecem intactos.
+- Atualizado `apps/web/CHECKLIST.md` somente após os testes relevantes passarem. Mudanças restritas à ownership web-chat: persistência, teste e checklist. O arquivo preexistente `task-1-report.md` foi preservado e não incluído.
+
+### Commit round 3
+
+- `7e94073 fix(web-chat): expire legacy review Flows on restore`
