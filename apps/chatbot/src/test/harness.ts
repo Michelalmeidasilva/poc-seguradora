@@ -81,7 +81,7 @@ export interface RunningChatbot {
 }
 
 export async function startChatbot(
-  o: { env?: Record<string, string>; overrides?: Omit<ChatbotOverrides, 'logger'> } = {},
+  o: { env?: Record<string, string>; overrides?: ChatbotOverrides } = {},
 ): Promise<RunningChatbot> {
   const fake = await startFakeServices();
   const { app } = await createChatbot(testConfig(fake.url, o.env), {

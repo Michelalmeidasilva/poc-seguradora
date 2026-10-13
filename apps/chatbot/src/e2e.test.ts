@@ -1,12 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { afterEach, describe, expect, it } from 'vitest';
+import pino from 'pino';
 import type { Intent } from './domain/dialog';
 import { assistanceCatalog } from './domain/assistance-catalog';
 import { GuardedLlmProvider } from './infra/guarded-llm-provider';
 import { MockAssistance } from './infra/mock-assistance';
 import { runAssistanceTurn } from './application/assistance-turn';
 import { nextAssistanceState } from './domain/assistance-journey';
+import type { AssistancePort, ServicesPort } from './application/ports';
 
 type CatalogGraph = { entries: string[]; nodes: Array<{ id: string; destinations: string[] }> };
 
@@ -213,6 +215,71 @@ describe('chatbot end to end (fake internal services)', () => {
     expect(bot.fake.requests.filter((request) =>
       ['/v1/cotacoes', '/v1/apolices', '/v1/sinistros'].includes(request.path),
     )).toEqual([]);
+  });
+
+  it('drives a dependent from one sentence through review, correction and confirmation over HTTP', async () => {
+    const cpfCanary = '123.456.789-10';
+    const logLines: string[] = [];
+    const mutationCalls: string[] = [];
+    const legacyServiceCalls: string[] = [];
+    const mock = new MockAssistance({ capacity: 8, ttlMs: 60_000 });
+    const mutationMethods = new Set([
+      'addDependent', 'updateDependent', 'removeDependent', 'changeModality', 'renewAssistance',
+      'updateAddress', 'requestFuneralAssistance', 'cancelAssistance', 'regularizeBilling',
+      'updatePreferences', 'createRequest',
+    ]);
+    const assistance = new Proxy(mock, {
+      get(target, property) {
+        const member = Reflect.get(target, property, target) as unknown;
+        if (typeof property !== 'string' || typeof member !== 'function') return member;
+        return (...args: unknown[]) => {
+          if (mutationMethods.has(property)) mutationCalls.push(property);
+          return member.apply(target, args);
+        };
+      },
+    }) as AssistancePort;
+    const services = new Proxy({} as ServicesPort, {
+      get(_target, property) {
+        return async () => {
+          legacyServiceCalls.push(String(property));
+          return { ok: false, error: 'unavailable' } as const;
+        };
+      },
+    });
+    bot = await startChatbot({
+      overrides: {
+        assistance,
+        services,
+        logger: pino({ level: 'debug' }, { write: (line: string) => logLines.push(line) }),
+      },
+    });
+
+    const session = 'dependent-correction';
+    const oneSentence = 'Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.';
+    const gated = await turn(bot.url, textReq(oneSentence, { session }));
+    expect(findEvent(gated.events, 'message.flow').payload.flowId).toBe('IDE-01');
+    await turn(bot.url, choiceReq('IDE-08', { session }));
+    const acceptedCpf = await turn(bot.url, flowSubmitReq({ cpf: cpfCanary }, { session, flowId: 'IDE-08' }));
+    expect(textsOf(acceptedCpf.events)).not.toContain(cpfCanary);
+
+    const captured = await turn(bot.url, textReq(oneSentence, { session }));
+    expect(textsOf(captured.events)).toContain('João');
+    const supplement = await turn(bot.url, choiceReq('DEP-34', { session }));
+    expect(findEvent(supplement.events, 'message.flow').payload.flowId).toBe('DEP-34');
+    const review = await turn(bot.url, flowSubmitReq({ phone: '11987654321', biologicalSex: 'Masculino' }, { session, flowId: 'DEP-34' }));
+    expect(findEvent(review.events, 'message.flow').payload.flowId).toBe('DEP-06');
+    const correction = await turn(bot.url, flowSubmitReq({ correction: true }, { session, flowId: 'DEP-06' }));
+    expect(textsOf(correction.events)).toContain('corrigir');
+    await turn(bot.url, choiceReq('DEP-16', { session }));
+    const revised = await turn(bot.url, choiceReq('DEP-17', { session }));
+    expect(findEvent(revised.events, 'message.flow').payload.flowId).toBe('DEP-17');
+    const confirmed = await turn(bot.url, flowSubmitReq({}, { session, flowId: 'DEP-17' }));
+
+    expect(textsOf(confirmed.events)).toContain('Recebi sua confirmação');
+    expect(mutationCalls).toEqual(['addDependent']);
+    const repliesAndLogs = JSON.stringify({ events: [gated.events, acceptedCpf.events, captured.events, supplement.events, review.events, correction.events, revised.events, confirmed.events], logs: logLines });
+    expect(repliesAndLogs).not.toContain(cpfCanary);
+    expect(legacyServiceCalls).toEqual([]);
   });
 
   it('answers a greeting with typing indicators, text and the main menu', async () => {

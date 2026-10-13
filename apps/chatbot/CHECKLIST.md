@@ -36,8 +36,8 @@
 
 ## Plano WhatsApp Assistance Experience — Task 9
 
-- [ ] E2E valida IDs/modos/conteúdo/ações; ainda não comprova alcance total: a travessia a partir dos 24 `group.steps[0]` registra 54 telas sem caminho. Três nós também têm `action.target` duplicado (`IDE-01`, `IDE-03`, `DEP-11`); o teste detecta essas duplicidades e protege o baseline até a correção do catálogo. Revisão Task 9 não concluída.
-- [ ] Evidência HTTP existente cobre produtos públicos e gate CPF; ainda faltam as jornadas integradas de dependente frase→revisão→correção→confirmação, isolamento/mutação por sessão, cancelamento/solicitação, áudio/documento, indisponibilidade/idempotência/expiração/retry e canary em logger + prova via `ServicesPort`
+- [ ] E2E enumera os 247 IDs e seus modos/conteúdos/ações, mas não comprova alcance total: a travessia a partir dos 24 `group.steps[0]` ainda registra 54 telas sem caminho; essas telas não são declaradas cobertas nem têm destinos inventados. Bloqueio de produto: decidir quais entradas de grupo são válidas ou quais telas alternativas devem existir e resolver os alvos duplicados em `IDE-01`, `IDE-03` e `DEP-11`. O teste registra esse baseline; revisão Task 9 permanece pendente.
+- [ ] Um cenário HTTP cobre a frase única de dependente, revisão, navegação pela correção, confirmação com exatamente uma mutação `addDependent`, ausência do CPF-canário em respostas/logs e zero chamadas à `ServicesPort` legada. A API existente não aceita edição de campo no ramo `DEP-14`/`DEP-16`; assim, a confirmação exercita os dados originais do rascunho, não uma correção efetiva. Permanecem sem cobertura integrada por HTTP: alteração/leitura persistente e isolamento de sessões, cancelamento/solicitação, áudio fixture/documento e indisponibilidade/retry/expiração/idempotência de mutação.
 - [x] Smoke Compose 7/7 da pilha web → gateway → chatbot → fake-services é evidência da pilha geral; não percorre jornadas de assistência e não conta como aceite Task 9
 
 ## Estrutura
