@@ -47,11 +47,7 @@ function customerFacingStep(step: AssistanceStep): AssistanceStep {
         } : {}),
       }
     : step.flow;
-  const behavior = step.id === 'IDE-03'
-    ? 'Apenas o formato do CPF foi aceito; nenhuma verificação de identidade foi realizada.'
-    : step.behavior;
-
-  return { ...step, actions, flow, behavior };
+  return { ...step, actions, flow, behavior: step.bot };
 }
 
 function transition(state: AssistanceState, step: AssistanceStep, gateApproved = state.gateApproved): AssistanceTransition {

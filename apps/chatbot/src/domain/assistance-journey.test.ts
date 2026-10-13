@@ -49,7 +49,7 @@ describe('assistance journey transitions', () => {
     const accepted = nextAssistanceState(state, { type: 'cpf_submit', cpf: '123.456.789-00' });
 
     expect(accepted.step.id).toBe('IDE-03');
-    expect(accepted.step.behavior).toBe('Apenas o formato do CPF foi aceito; nenhuma verificação de identidade foi realizada.');
+    expect(accepted.step.behavior).toBe('O formato do CPF foi aceito. Os dados seguintes pertencem a um cenário fictício.');
     expect(accepted.state).toEqual({ journeyId: 'IDE', screenId: 'IDE-03', gateApproved: true });
     expect(JSON.stringify(accepted)).not.toContain('12345678900');
 
@@ -61,10 +61,11 @@ describe('assistance journey transitions', () => {
   it('keeps an invalid CPF gate closed and blocks a subsequent personal target', () => {
     const rejected = nextAssistanceState(
       { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false },
-      { type: 'cpf_submit', cpf: '1234' },
+      { type: 'cpf_submit', cpf: '9876543210' },
     );
     expect(rejected.step.id).toBe('IDE-04');
     expect(rejected.state).toEqual({ journeyId: 'IDE', screenId: 'IDE-04', gateApproved: false });
+    expect(JSON.stringify(rejected)).not.toContain('9876543210');
 
     const personal = nextAssistanceState(rejected.state, { type: 'open', target: 'CON-02' });
     expect(personal.step.id).toBe('IDE-01');
@@ -81,21 +82,14 @@ describe('assistance journey transitions', () => {
         { type: 'open', target: id },
       );
       const step = transition.step;
-      const flow = step.flow as {
-        title?: string;
-        fields?: Array<{ label?: string; placeholder?: string }>;
-        submit?: string;
-        note?: string;
-      } | undefined;
       const customerText = [
         step.title,
+        step.user,
         step.bot,
+        step.behavior,
         ...step.actions.map(({ label }) => label),
-        flow?.title,
-        ...(flow?.fields ?? []).flatMap((field) => [field.label, field.placeholder]),
-        flow?.submit,
-        flow?.note,
-      ].filter((value): value is string => typeof value === 'string').join(' ');
+        JSON.stringify(step.flow ?? null),
+      ].join(' ');
 
       expect(step.id).toBe(id);
       expect(customerText).not.toMatch(forbidden);
