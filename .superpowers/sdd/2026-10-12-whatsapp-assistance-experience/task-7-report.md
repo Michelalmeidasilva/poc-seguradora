@@ -82,3 +82,26 @@ Os quatro cenários `audio` são `AUD-01` (compreensão completa), `AUD-03` (par
 - Revisado o diff commit a commit: protocol toca somente contrato/teste/checklist; chatbot contém projeção e estado de jornada, gerador, cópias canônicas/testes/checklist; web-flows contém runtime/FlowSheet/fixtures/teste/checklist; web-chat contém apenas persistência/testes e passagem do renderer. Nenhum arquivo do WORKBOARD foi tocado.
 - `task-1-report.md` já estava modificado antes deste round e não foi staged nem incluído nos commits. O relatório Task 7 está sendo incluído em commit próprio; `.superpowers/sdd/.gitignore` ignora relatórios, portanto será adicionado explicitamente sem alterar a regra global.
 - Ressalva: não foi criado um Playwright cross-step novo para a sequência completa; essa sequência é testada por chamadas multi-turn reais de `runAssistanceTurn` com assert de mutação única e pelo FlowSheet integrado. Playwright foi repetido para áudio (1/1). O restante está coberto pelos testes de integração/unitários acima.
+
+## Fix round 2 — descarte seguro de drafts ao restaurar
+
+### TDD — RED/GREEN
+
+- RED (save normal): o teste falhou porque o snapshot não continha a mensagem de expiração (`expected undefined to be 'message.text'`); `message.flow` sem `initialData` persistia com CTA.
+- RED (legacy load): o estado retornado era saneado, mas `sessionStorage.getItem(KEY)` ainda continha `CPF-CANARY-98765432100` e `initialData` imediatamente após `loadChat`; o item continuava sendo `message.flow` com confirmação abrível.
+- GREEN: `src/chat/persistence.test.ts` 14/14; renderers `registry.test.tsx` + `FlowMessage.test.tsx` 9/9; `FlowSheet.test.tsx` 22/22; web typecheck, ESLint focado e `git diff --check` passaram.
+
+### Implementação
+
+- `saveChat` grava snapshots com rascunho dependente substituído por `message.text` de expiração sem `flowId`, `flowJson` ou CTA; não altera o estado ativo, que segue como `message.flow` enquanto a aba vive.
+- `loadChat` sanitiza os itens, grava sincronamente o snapshot seguro no mesmo `sessionStorage` antes de retornar, e não restaura a sessão se a gravação falhar (tenta remover a chave insegura). O Flow legado transforma-se em texto sem ação; não pode confirmar nem submeter sem o draft volátil.
+- Teste legado verifica logo após a chamada: estado retornado e chave armazenada não contêm canário, `initialData` nem `message.flow`. Teste de save verifica snapshot expirado e, separadamente, que o estado ao vivo conserva o Flow aberto.
+- `apps/web/CHECKLIST.md` recebeu o item round 2 marcado somente após essas garantias e verificações passarem.
+
+### Commit round 2
+
+- `652a16b fix(web-chat): expire draft Flows on restore`
+
+### Autorrevisão round 2
+
+- Apenas arquivos da ownership web-chat (`src/chat/persistence.ts`, seu teste e `apps/web/CHECKLIST.md`) foram alterados. O `task-1-report.md` preexistente não foi staged nem incluído. Nenhum outro escopo foi alterado.
