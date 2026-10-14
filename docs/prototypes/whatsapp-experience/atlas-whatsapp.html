@@ -2036,22 +2036,22 @@ dialog::backdrop {
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
-        { actions: [action('Pedir ajuda', 'HUM-01')] },
+        'Para continuar, informe seu CPF.',
+        { actions: [] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
-        'Informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
+        'Informe seu CPF.',
         { actions: [] },
       ),
       screen(
         'IDE-03',
         'Acesso liberado',
         'CPF informado.',
-        'Tudo pronto. Vamos continuar seu pedido.',
-        { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
+        'Confira seus contratos.',
+        { actions: [] },
       ),
       screen(
         'IDE-04',
@@ -2060,7 +2060,7 @@ dialog::backdrop {
         'Confira o formato do CPF: use 11 números ou o formato XXX.XXX.XXX-XX.',
         {
          ...variant(),
-          actions: [action('Tentar novamente', 'IDE-08'), action('Pedir ajuda', 'HUM-01')],
+          actions: [action('Tentar novamente', 'IDE-08')],
         },
       ),
       screen(
@@ -2068,7 +2068,7 @@ dialog::backdrop {
         'Sessão expirada',
         'Quero continuar.',
         'Sua sessão expirou. Informe seu CPF para continuar seu pedido.',
-        {...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
+        {...variant(), actions: [] },
       ),
       screen(
         'IDE-06',
@@ -2076,7 +2076,7 @@ dialog::backdrop {
         'Quero confirmar o cancelamento.',
         'Informe seu CPF para continuar a revisão do cancelamento.',
         {
-          actions: [action('Pedir ajuda', 'HUM-01')],
+          actions: [],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
@@ -2091,8 +2091,8 @@ dialog::backdrop {
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
-        { actions: [action('Pedir ajuda', 'HUM-01')] },
+        'Para continuar, informe seu CPF.',
+        { actions: [] },
       ),
     ],
   );
@@ -4842,7 +4842,7 @@ window.DEPENDENT_PARSER = exports.parseDependentStatement;
   let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
   const discoveryState = { page: 0, service: null, modality: null, intent: null };
-  let identityReturn = 'CON-02';
+  let identityReturn = 'CON-01';
   let authenticatedUntil = 0;
   let sessionTimer;
   const isAuthenticated = () => Date.now() < authenticatedUntil;
@@ -4886,6 +4886,7 @@ window.DEPENDENT_PARSER = exports.parseDependentStatement;
     }
     if (['IDE-01', 'IDE-02', 'IDE-08'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
       if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
+      else if (current === 'ENT-02') identityReturn = 'CON-01';
       else if (current === 'DES-10') identityReturn = 'ADE-01';
     }
     if (id === 'IDE-05' || id === 'IDE-06' || id === 'IDE-07') {
@@ -4904,8 +4905,7 @@ window.DEPENDENT_PARSER = exports.parseDependentStatement;
       if (id !== 'IDE-03') identityReturn = id;
       id = 'IDE-01';
     }
-    if (id === 'IDE-03')
-      index['IDE-03'].actions[0] = { label: 'Continuar pedido', target: identityReturn };
+    if (id === 'IDE-03' && isAuthenticated()) id = identityReturn;
     if (['ADE-01', 'ADE-02'].includes(id) && isAuthenticated()) id = 'ADE-03';
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
@@ -5440,8 +5440,6 @@ window.DEPENDENT_PARSER = exports.parseDependentStatement;
         go('IDE-05');
       }, 15 * 60 * 1000);
       go(identityReturn);
-      additions.unshift({ user: false, text: index['IDE-03'].bot });
-      render();
       return;
     }
     if (/solicitac|protocolo|meus pedidos/.test(clean)) {

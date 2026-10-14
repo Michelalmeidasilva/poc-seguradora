@@ -70,7 +70,7 @@ describe('assistance journey transitions', () => {
     const accepted = nextAssistanceState(state, { type: 'cpf_submit', cpf: '123.456.789-00' });
 
     expect(accepted.step.id).toBe('IDE-03');
-    expect(accepted.step.behavior).toBe('Tudo pronto. Vamos continuar seu pedido.');
+    expect(accepted.step.behavior).toBe('Confira seus contratos.');
     expect(accepted.state).toEqual({ journeyId: 'IDE', screenId: 'IDE-03', gateApproved: true });
     expect(JSON.stringify(accepted)).not.toContain('12345678900');
 

@@ -35,7 +35,9 @@ test('typed identity rejects invalid whole messages and resumes the pending cont
     await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toHaveCount(0);
   }
   await identifyByChat(page, '00000000000');
-  await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
+  ).toBeVisible();
   expect(identityFlows).toEqual([]);
 });
 
@@ -45,5 +47,20 @@ test('formatted eleven digits identify through chat without checksum validation'
   await page.goto('/');
   await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
   await identifyByChat(page, '111.111.111-11');
-  await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
+  ).toBeVisible();
+});
+
+test('CPF entry has no help or success detour before contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
+  await expect(page.getByText('Para continuar, informe seu CPF.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pedir ajuda', exact: true })).toHaveCount(0);
+  await identifyByChat(page);
+  await expect(
+    page.getByText('Qual contrato você deseja consultar?', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continuar pedido', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toHaveCount(0);
 });

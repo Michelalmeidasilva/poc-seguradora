@@ -284,3 +284,10 @@ A coleta conversacional preserva dados válidos, pede apenas campos faltantes/in
 Evidências: suíte raiz aprovada; correções posteriores revisadas e workspace chatbot 711 testes aprovado, cinco E2E reais/offline aprovados (CPF reutilizado, formulário, chat completo/parcial e troca de canal com celular inválido). Typecheck/lint, validação do atlas e diff verificados; resultados e correções registradas em TASK-20261014-016. Revisão independente aprovada após reforço da validação legada e correção das vagas. Integração em develop e atualização local seguem a entrega autorizada.
 
 Entrega concluída: implementação `dd18c60` integrada em develop pelo merge `7e32933`, sem conflitos. Suíte raiz final aprovada (962 web, 711 chatbot, 177 gateway, 93 protocol, 63 resilience, 116 verificadores e 52 cenários herméticos), tipos/lint aprovados, build Compose concluído. Quatro containers healthy em http://localhost:8080: web 3c3099b4beb6, chatbot a041876ad5de, gateway 4c3de1086442, fake-services 92e5957b0024. Smoke 7/7 e quatro E2E reais contra a stack atualizada passaram; o caso offline passou na rodada isolada e foi excluído somente da execução contra Docker. Sem push/master/GCP; artefatos não rastreados preservados.
+
+
+## 2026-10-14 — CPF objetivo e retorno direto ao contrato
+
+A identificação pede apenas “Para continuar, informe seu CPF.” e remove “Pedir ajuda” das etapas de CPF. Após validar o formato, a resposta segue diretamente à jornada pendente; a entrada Meu contrato abre a lista Meus contratos. Não há recibo do CPF, mensagem genérica de sucesso nem botões Continuar pedido/Ver contrato entre a identificação e seu destino. Erros de formato continuam permitindo nova tentativa; CPF do titular não é persistido nem repetido nas respostas.
+
+A fonte canônica, o gerador e o atlas offline reproduzem o mesmo caminho. Testes HTTP/handler cobrem destino padrão e pendente, erro sem recibo e descarte do CPF. E2E cobre prompt objetivo, ausência de ajuda/confirmações, CPF formatado e regressão da inclusão de dependentes. Métricas em TASK-20261014-017; conversa de exemplo registrada somente em resumo, sem CPF pessoal.

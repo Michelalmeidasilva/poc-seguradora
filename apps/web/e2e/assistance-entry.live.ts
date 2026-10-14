@@ -45,8 +45,10 @@ test('personal contract entry asks for CPF and accepts eleven digits without che
   await identifyByChat(page, '00000000000');
   await expect(
     page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
 });
 
 test('unsupported insurance text keeps actionable assistance choices without showing legacy screens', async ({

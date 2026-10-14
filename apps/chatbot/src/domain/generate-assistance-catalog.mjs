@@ -28,14 +28,14 @@ const groups = canonical.groups
         if (converted.id.startsWith('IDE-')) {
           const ide = {
             'IDE-01': [
-              'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
+              'Para continuar, informe seu CPF.',
               'Informe o CPF',
               'chat',
             ],
-            'IDE-02': ['Recebi seu CPF. Vamos continuar.', 'Validando formato', 'chat'],
-            'IDE-03': ['Tudo pronto. Vamos continuar seu pedido.', 'Formato aceito', 'chat'],
+            'IDE-02': ['Informe seu CPF.', 'Validando formato', 'chat'],
+            'IDE-03': ['Confira seus contratos.', 'Formato aceito', 'chat'],
             'IDE-04': [
-              'O CPF precisa ter 11 dígitos. Tente novamente ou peça ajuda.',
+              'O CPF precisa ter 11 dígitos. Tente novamente.',
               'Formato inválido',
               'chat',
             ],
@@ -55,7 +55,7 @@ const groups = canonical.groups
               'chat',
             ],
             'IDE-08': [
-              'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
+              'Para continuar, informe seu CPF.',
               'Informar CPF',
               'chat',
             ],
@@ -72,7 +72,7 @@ const groups = canonical.groups
               target:
                 action.target === 'IDE-02' || action.target === 'IDE-01' ? 'IDE-08' : action.target,
             }));
-          // SPEC 5.5: receipt is transient, then format success/error follows automatically.
+          // CPF receipt and approval are internal states; successful identification resumes the destination directly.
           if (converted.id === 'IDE-02') converted.actions = [];
           delete converted.flow;
         }

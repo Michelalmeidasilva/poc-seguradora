@@ -957,19 +957,6 @@ export async function runAssistanceTurn(
   if (step.id === 'IDE-06' && state.journeyId !== 'IDE' && currentStep?.mode === 'review') {
     nextState = { ...nextState, pendingStep: state.screenId };
   }
-  const gateReplies: ReplyBody[] = [];
-  if (transitionInput.type === 'cpf_submit' && isAssistanceCpfPrompt(state.screenId)) {
-    gateReplies.push({
-      type: 'message.text',
-      payload: { text: assistanceCatalog.byId['IDE-02']!.bot },
-    } as ReplyBody);
-    if (nextState.gateApproved && state.pendingStep) {
-      gateReplies.push({
-        type: 'message.text',
-        payload: { text: assistanceCatalog.byId['IDE-03']!.bot },
-      } as ReplyBody);
-    }
-  }
   if (statement)
     nextState = {
       ...nextState,
@@ -999,8 +986,15 @@ export async function runAssistanceTurn(
       temporaryData: { ...state.temporaryData, ...stringFields(submitted) },
     };
   }
-  if (transitionInput.type === 'cpf_submit' && nextState.gateApproved && state.pendingStep) {
-    const pending = nextAssistanceState(nextState, { type: 'open', target: state.pendingStep });
+  if (
+    transitionInput.type === 'cpf_submit' &&
+    nextState.gateApproved &&
+    isAssistanceCpfPrompt(state.screenId)
+  ) {
+    const pending = nextAssistanceState(nextState, {
+      type: 'open',
+      target: state.pendingStep ?? 'CON-01',
+    });
     nextState = { ...pending.state };
     delete nextState.pendingStep;
     step = pending.step;
@@ -1097,7 +1091,7 @@ export async function runAssistanceTurn(
       const empty = nextAssistanceState(nextState, { type: 'open', target: 'IDE-07' });
       return ok({
         state: empty.state,
-        replies: [...gateReplies, ...textReply(empty.step, empty.state)],
+        replies: textReply(empty.step, empty.state),
       });
     }
     listChoices = dependents.value.map((person, index) => ({
@@ -1172,7 +1166,7 @@ export async function runAssistanceTurn(
       payload: { text: `Dependentes cadastrados: ${dependents.value.length}.` },
     } as ReplyBody);
   }
-  return ok({ state: nextState, replies: [...gateReplies, ...replies] });
+  return ok({ state: nextState, replies: replies });
 }
 
 /** Bounded, expiring state store for assistance journeys; CPF gate input is never stored. */

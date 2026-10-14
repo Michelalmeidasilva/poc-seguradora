@@ -63,7 +63,9 @@ for (const id of ids) {
       await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
       await expectTextIdentityGate(page);
       await cpf(page);
-      await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
+      ).toBeVisible();
     } else if (id === 'AUD-01') {
       await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
       await cpf(page);

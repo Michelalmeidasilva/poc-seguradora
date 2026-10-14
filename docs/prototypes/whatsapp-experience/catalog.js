@@ -356,22 +356,22 @@
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
-        { actions: [action('Pedir ajuda', 'HUM-01')] },
+        'Para continuar, informe seu CPF.',
+        { actions: [] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
-        'Informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
+        'Informe seu CPF.',
         { actions: [] },
       ),
       screen(
         'IDE-03',
         'Acesso liberado',
         'CPF informado.',
-        'Tudo pronto. Vamos continuar seu pedido.',
-        { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
+        'Confira seus contratos.',
+        { actions: [] },
       ),
       screen(
         'IDE-04',
@@ -380,7 +380,7 @@
         'Confira o formato do CPF: use 11 números ou o formato XXX.XXX.XXX-XX.',
         {
          ...variant(),
-          actions: [action('Tentar novamente', 'IDE-08'), action('Pedir ajuda', 'HUM-01')],
+          actions: [action('Tentar novamente', 'IDE-08')],
         },
       ),
       screen(
@@ -388,7 +388,7 @@
         'Sessão expirada',
         'Quero continuar.',
         'Sua sessão expirou. Informe seu CPF para continuar seu pedido.',
-        {...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
+        {...variant(), actions: [] },
       ),
       screen(
         'IDE-06',
@@ -396,7 +396,7 @@
         'Quero confirmar o cancelamento.',
         'Informe seu CPF para continuar a revisão do cancelamento.',
         {
-          actions: [action('Pedir ajuda', 'HUM-01')],
+          actions: [],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
@@ -411,8 +411,8 @@
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
-        { actions: [action('Pedir ajuda', 'HUM-01')] },
+        'Para continuar, informe seu CPF.',
+        { actions: [] },
       ),
     ],
   );

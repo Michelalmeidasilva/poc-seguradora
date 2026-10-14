@@ -34,7 +34,7 @@
   let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
   const discoveryState = { page: 0, service: null, modality: null, intent: null };
-  let identityReturn = 'CON-02';
+  let identityReturn = 'CON-01';
   let authenticatedUntil = 0;
   let sessionTimer;
   const isAuthenticated = () => Date.now() < authenticatedUntil;
@@ -78,6 +78,7 @@
     }
     if (['IDE-01', 'IDE-02', 'IDE-08'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
       if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
+      else if (current === 'ENT-02') identityReturn = 'CON-01';
       else if (current === 'DES-10') identityReturn = 'ADE-01';
     }
     if (id === 'IDE-05' || id === 'IDE-06' || id === 'IDE-07') {
@@ -96,8 +97,7 @@
       if (id !== 'IDE-03') identityReturn = id;
       id = 'IDE-01';
     }
-    if (id === 'IDE-03')
-      index['IDE-03'].actions[0] = { label: 'Continuar pedido', target: identityReturn };
+    if (id === 'IDE-03' && isAuthenticated()) id = identityReturn;
     if (['ADE-01', 'ADE-02'].includes(id) && isAuthenticated()) id = 'ADE-03';
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
@@ -632,8 +632,6 @@
         go('IDE-05');
       }, 15 * 60 * 1000);
       go(identityReturn);
-      additions.unshift({ user: false, text: index['IDE-03'].bot });
-      render();
       return;
     }
     if (/solicitac|protocolo|meus pedidos/.test(clean)) {
