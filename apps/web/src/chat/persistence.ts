@@ -186,3 +186,12 @@ export function loadChat(storage: Storage): ChatState | undefined {
   }
   return restored;
 }
+
+/** Forget only this chat; presentation preferences belong to the user. */
+export function clearChat(storage: Storage): void {
+  try {
+    storage.removeItem(KEY);
+  } catch {
+    // In-memory reset still works when browser storage is unavailable.
+  }
+}

@@ -137,3 +137,12 @@ Registro histórico de entregas, decisões e pendências; não é gate de conclu
 - DIGIO Care integrado localmente em develop pelo merge 81bd846. Imagem chatbot 10f37c9956de reconstruída/recriada com gateway, web e fake-services; todos saudáveis em localhost:8080.
 - Suíte raiz e tipos raiz passaram no resultado integrado; smoke 7/7 e quatro cenários E2E reais de identificação e descoberta/contratação passaram. Sem push, master ou GCP.
 - Operação e evidências detalhadas em web.md e TASK-20261014-010. Continuam pendentes as imagens/novas interações ainda não escolhidas pelo usuário e as Tasks 9–10 gerais anteriores.
+
+
+## 2026-10-14 — contratação em um único Flow
+
+A entrada ADE-03 reúne nome, e-mail e escolha do pagamento em “Dados e pagamento”. A próxima tela do mesmo Flow mostra serviço/plano/valor selecionados, dados informados, meio escolhido, condições e documentos, exigindo aceite desmarcado antes de “Confirmar contratação”. Somente a conclusão envia os dados ao chatbot e retorna ao processamento/resultados existentes. O caminho principal deixa de passar por ADE-04/05, PAG-02/03/04 e revisões abertas em Flows separados. Dependentes do plano Familiar podem ser incluídos após a contratação pelo caminho existente.
+
+Correções preservam nome, e-mail e pagamento; alterar qualquer desses campos dentro do Flow invalida o aceite anterior. Dados pessoais de exemplo foram removidos da entrada. A revisão Individual informa somente titular. Entradas antigas de pagamento são redirecionadas à contratação unificada após o gate de CPF. O atlas offline reproduz formulário, revisão e aceite no mesmo Flow.
+
+Evidências: suíte raiz passou (955 web, 671 chatbot, 177 gateway, 93 protocol, 63 resilience, 116 verificadores e 52 cenários de deploy hermético); tipos e lint aprovados. Três E2E reais em portas isoladas cobriram Funeral/Farmácia/Telemedicina, planos Individual/Familiar, os dois meios, seleção preservada, navegação Voltar, consentimento e um único envio ADE-03. Revisão independente aprovada após corrigir texto Individual, invalidação do aceite e comportamento do atlas. Testes HTTP anteriores foram atualizados para a sequência nova; o teste do atlas respeita a abertura automática após CPF. E2E do atlas offline aprovado após a correção da sincronização. Métricas TASK-20261014-012. Sem merge/push/deploy ou alteração dos containers compartilhados.

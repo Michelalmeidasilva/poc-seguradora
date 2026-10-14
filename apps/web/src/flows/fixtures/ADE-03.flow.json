@@ -6,23 +6,27 @@
     ],
     "REVIEW": []
   },
+  "resetConsentOnEdit": [
+    "holder",
+    "email",
+    "payment"
+  ],
   "screens": [
     {
       "id": "FORM",
-      "title": "Dados do titular",
+      "title": "Dados e pagamento",
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           {
             "type": "TextBody",
-            "text": "Confira os dados do titular necessários à contratação."
+            "text": "Confira seus dados e escolha o pagamento. Você poderá revisar o plano, o valor e as condições antes de confirmar."
           },
           {
             "type": "TextInput",
             "name": "holder",
             "label": "Nome completo",
             "required": true,
-            "init-value": "Ana Silva",
             "input-type": "text"
           },
           {
@@ -30,12 +34,27 @@
             "name": "email",
             "label": "E-mail para documentos",
             "required": true,
-            "init-value": "ana@example.com",
             "input-type": "email"
           },
           {
+            "type": "Dropdown",
+            "name": "payment",
+            "label": "Forma de pagamento",
+            "required": true,
+            "data-source": [
+              {
+                "id": "Cartão cadastrado •• 2048",
+                "title": "Cartão cadastrado •• 2048"
+              },
+              {
+                "id": "Outro meio disponível",
+                "title": "Outro meio disponível"
+              }
+            ]
+          },
+          {
             "type": "Footer",
-            "label": "Continuar",
+            "label": "Revisar contratação",
             "on-click-action": {
               "name": "navigate",
               "next": {
@@ -50,7 +69,7 @@
     },
     {
       "id": "REVIEW",
-      "title": "Revisar dados",
+      "title": "Revisar contratação",
       "terminal": true,
       "success": true,
       "layout": {
@@ -58,7 +77,19 @@
         "children": [
           {
             "type": "TextHeading",
-            "text": "Revise os dados"
+            "text": "Revise sua contratação"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Serviços de Assistência Familiar"
+          },
+          {
+            "type": "TextBody",
+            "text": "R$ 39,90/mês"
+          },
+          {
+            "type": "TextCaption",
+            "text": "Somente titular nesta etapa. No plano Familiar, você pode incluir dependentes após a contratação."
           },
           {
             "type": "TextBody",
@@ -69,13 +100,46 @@
             "text": "E-mail para documentos: ${form.email}"
           },
           {
+            "type": "TextBody",
+            "text": "Forma de pagamento: ${form.payment}"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Condições e documentos"
+          },
+          {
+            "type": "TextBody",
+            "text": "Vigência após confirmação da emissão. Consulte carências, limites e condições de cancelamento nos documentos do produto."
+          },
+          {
+            "type": "TextBody",
+            "text": "Termo de adesão"
+          },
+          {
+            "type": "TextBody",
+            "text": "Condições do produto"
+          },
+          {
+            "type": "TextCaption",
+            "text": "A cobrança mensal depende do seu aceite. Outro meio será autorizado no ambiente seguro da instituição."
+          },
+          {
+            "type": "OptIn",
+            "name": "consent",
+            "label": "Confirmo os dados e aceito as condições contratuais apresentadas, incluindo a cobrança recorrente indicada.",
+            "required": true,
+            "init-value": false
+          },
+          {
             "type": "Footer",
-            "label": "Enviar formulário",
+            "label": "Confirmar contratação",
             "on-click-action": {
               "name": "complete",
               "payload": {
                 "holder": "${form.holder}",
-                "email": "${form.email}"
+                "email": "${form.email}",
+                "payment": "${form.payment}",
+                "consent": "${form.consent}"
               }
             }
           }

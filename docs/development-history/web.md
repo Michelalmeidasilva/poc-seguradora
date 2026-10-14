@@ -228,3 +228,19 @@ Pendências (detalhes na seção Pendências do runbook):
 - Verificação: suíte raiz em workspaces sequenciais e typecheck raiz passaram; build das quatro imagens; smoke 7/7; quatro E2E reais de identificação e contratação Individual/Familiar passaram.
 - Duas esperas de teste corrigidas: auditoria visual aguarda imagens lazy; E2E aguarda o novo botão Continuar em vez do botão desabilitado da mensagem anterior. Sem mudança de aplicação por esses ajustes.
 - A primeira conferência visual sofreu timeout da revisão automática de permissão, sem execução; a repetição permitida foi aprovada e concluída. TASK-20261014-010 contém os tempos e resultados, incluindo as tentativas falhas.
+
+
+## 2026-10-14 — comando /reset no chat
+
+O comando exato `/reset` (com espaços externos opcionais) é interpretado localmente pelo web, sem criar bolha ou enviar o comando ao chatbot. Encerra o cliente anterior, descarta envios pendentes/rascunhos e histórico persistido e cria uma sessão nova; a saudação inicial segue o fluxo existente. Preferências de apresentação permanecem. Eventos atrasados da sessão anterior são ignorados. A sessão antiga no servidor segue seu TTL normal; não há exclusão de registros no backend.
+
+Validação: suíte web 949 testes aprovada; após ajuste da revisão, todos os 30 testes de useChat passaram, incluindo reset e troca de ownership entre abas. E2E Chromium verificou cookie novo, saudação única, ausência de envio de /reset e histórico limpo após reload. Typecheck e lint aprovados. Revisão identificou e foi corrigida a preservação de status failed no encerramento comum do cliente, mantendo reenvio após troca de aba. Branch feat/web-reset-command; sem merge, push ou atualização dos containers nesta tarefa.
+
+
+## 2026-10-14 — contratação em um único Flow
+
+A entrada ADE-03 reúne nome, e-mail e escolha do pagamento em “Dados e pagamento”. A próxima tela do mesmo Flow mostra serviço/plano/valor selecionados, dados informados, meio escolhido, condições e documentos, exigindo aceite desmarcado antes de “Confirmar contratação”. Somente a conclusão envia os dados ao chatbot e retorna ao processamento/resultados existentes. O caminho principal deixa de passar por ADE-04/05, PAG-02/03/04 e revisões abertas em Flows separados. Dependentes do plano Familiar podem ser incluídos após a contratação pelo caminho existente.
+
+Correções preservam nome, e-mail e pagamento; alterar qualquer desses campos dentro do Flow invalida o aceite anterior. Dados pessoais de exemplo foram removidos da entrada. A revisão Individual informa somente titular. Entradas antigas de pagamento são redirecionadas à contratação unificada após o gate de CPF. O atlas offline reproduz formulário, revisão e aceite no mesmo Flow.
+
+Evidências: suíte raiz passou (955 web, 671 chatbot, 177 gateway, 93 protocol, 63 resilience, 116 verificadores e 52 cenários de deploy hermético); tipos e lint aprovados. Três E2E reais em portas isoladas cobriram Funeral/Farmácia/Telemedicina, planos Individual/Familiar, os dois meios, seleção preservada, navegação Voltar, consentimento e um único envio ADE-03. Revisão independente aprovada após corrigir texto Individual, invalidação do aceite e comportamento do atlas. Testes HTTP anteriores foram atualizados para a sequência nova; o teste do atlas respeita a abertura automática após CPF. E2E do atlas offline aprovado após a correção da sincronização. Métricas TASK-20261014-012. Sem merge/push/deploy ou alteração dos containers compartilhados.

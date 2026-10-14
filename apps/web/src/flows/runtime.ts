@@ -259,7 +259,15 @@ function step(flow: FlowJson, s: RuntimeState, e: RuntimeEvent): RuntimeState {
       if (typeof e.name !== 'string') return s;
       if (!visibleFieldNames(currentScreen(flow, s), scopeOf(s)).has(e.name)) return s;
       if (e.type === 'set') {
-        const next = { ...s, form: { ...s.form, [e.name]: e.value } };
+        const form = { ...s.form, [e.name]: e.value };
+        if (
+          e.source !== 'init' &&
+          flow.resetConsentOnEdit?.includes(e.name) &&
+          s.form[e.name] !== e.value
+        ) {
+          form.consent = false;
+        }
+        const next = { ...s, form };
         return e.source === 'init' || s.edited ? next : { ...next, edited: true as const };
       }
       if (Object.hasOwn(s.touched, e.name)) return s;

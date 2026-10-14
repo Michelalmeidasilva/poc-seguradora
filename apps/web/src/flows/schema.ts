@@ -92,6 +92,8 @@ export type FlowScreen = {
 };
 
 export type FlowJson = {
+  /** Editing these fields invalidates a previous acceptance in this Flow. */
+  resetConsentOnEdit?: string[];
   version: string;
   screens: FlowScreen[];
   routing_model?: Record<string, string[]>;
@@ -528,6 +530,17 @@ export function parseFlow(raw: unknown): Result<FlowJson, FlowIssue[]> {
   }
 
   const issues = new Issues();
+  if (
+    raw.resetConsentOnEdit !== undefined &&
+    (!Array.isArray(raw.resetConsentOnEdit) ||
+      raw.resetConsentOnEdit.length > 20 ||
+      raw.resetConsentOnEdit.some(
+        (name) => typeof name !== 'string' || !/^[A-Za-z_]\w*$/.test(name),
+      ))
+  ) {
+    issues.add('resetConsentOnEdit', 'invalid_fields', 'Campos de revisão inválidos.');
+  }
+
   if (typeof raw.version !== 'string' || raw.version === '') {
     issues.add('version', 'version_required', 'O Flow precisa de "version".');
   }

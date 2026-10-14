@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import cotacao from './fixtures/cotacao.flow.json';
+import contracting from './fixtures/ADE-03.flow.json';
 import address from './fixtures/CAD-02.flow.json';
 import addressReview from './fixtures/CAD-03.flow.json';
 import dependentForm from './fixtures/DEP-05.flow.json';
@@ -36,6 +37,47 @@ async function toDados(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
+  it('keeps holder, payment, review and explicit consent in one dialog and submits once', async () => {
+    const { user, submit, exchange, onClose } = setup({ flowId: 'ADE-03', flowJson: contracting });
+    const original = dialog();
+    await user.type(screen.getByLabelText('Nome completo'), 'Beatriz Costa');
+    await user.type(screen.getByLabelText('E-mail para documentos'), 'beatriz@example.com');
+    await user.selectOptions(screen.getByLabelText('Forma de pagamento'), 'Outro meio disponível');
+    await user.click(screen.getByRole('button', { name: 'Revisar contratação' }));
+    expect(dialog()).toBe(original);
+    expect(screen.getByText('Nome completo: Beatriz Costa')).toBeInTheDocument();
+    expect(screen.getByText('Forma de pagamento: Outro meio disponível')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(submit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Confirmar contratação' }));
+    expect(submit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Beatriz Costa');
+    expect(screen.getByLabelText('Forma de pagamento')).toHaveValue('Outro meio disponível');
+    await user.selectOptions(
+      screen.getByLabelText('Forma de pagamento'),
+      'Cartão cadastrado •• 2048',
+    );
+    await user.click(screen.getByRole('button', { name: 'Revisar contratação' }));
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Confirmar contratação' }));
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith(
+      'ADE-03',
+      {
+        holder: 'Beatriz Costa',
+        email: 'beatriz@example.com',
+        payment: 'Cartão cadastrado •• 2048',
+        consent: true,
+      },
+      expect.any(String),
+    );
+    expect(exchange).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['Individual', 'Familiar'])(
     'connects service details and %s selection to contracting in just one more screen',
     async (plan) => {

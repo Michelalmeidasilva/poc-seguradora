@@ -11,6 +11,7 @@ import {
 } from './model';
 
 export type Action =
+  | { type: 'clear' }
   | { type: 'restore'; state: ChatState }
   | { type: 'session'; sessionId: string }
   | { type: 'session_reset'; ts: string }
@@ -31,6 +32,9 @@ const isMessage = (e: ServerEvent): e is BotMessageEvent => e.type.startsWith('m
 
 export function chatReducer(state: ChatState, action: Action): ChatState {
   switch (action.type) {
+    case 'clear':
+      return initialState();
+
     case 'restore':
       return { ...action.state, connection: 'connecting', typing: false };
 

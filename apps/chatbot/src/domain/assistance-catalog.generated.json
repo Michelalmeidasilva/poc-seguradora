@@ -1312,36 +1312,56 @@
         },
         {
           "id": "ADE-03",
-          "title": "Dados do titular",
+          "title": "Dados e pagamento",
           "user": "Identidade verificada.",
-          "bot": "Confira os dados do titular necessários à contratação.",
+          "bot": "Confira seus dados e escolha o pagamento. Você poderá revisar o plano, o valor e as condições antes de confirmar.",
           "mode": "form",
           "actions": [],
           "alternative": false,
           "flow": {
-            "title": "Dados do titular",
+            "title": "Dados e pagamento",
             "fields": [
               {
                 "name": "holder",
                 "label": "Nome completo",
-                "value": "Ana Silva",
                 "required": true
               },
               {
                 "name": "email",
                 "label": "E-mail para documentos",
                 "type": "email",
-                "value": "ana@example.com",
+                "required": true
+              },
+              {
+                "name": "payment",
+                "label": "Forma de pagamento",
+                "type": "select",
+                "choices": [
+                  "Selecione",
+                  "Cartão cadastrado •• 2048",
+                  "Outro meio disponível"
+                ],
                 "required": true
               }
             ],
-            "submit": "Continuar",
-            "target": "ADE-04"
+            "submit": "Revisar contratação",
+            "target": "ADE-08",
+            "contracting": {
+              "product": "Serviços de Assistência Familiar",
+              "price": "R$ 39,90/mês",
+              "conditions": "Vigência após confirmação da emissão. Consulte carências, limites e condições de cancelamento nos documentos do produto.",
+              "participants": "Somente titular nesta etapa. No plano Familiar, você pode incluir dependentes após a contratação.",
+              "documents": [
+                "Termo de adesão",
+                "Condições do produto"
+              ],
+              "consent": "Confirmo os dados e aceito as condições contratuais apresentadas, incluindo a cobrança recorrente indicada."
+            }
           },
           "requiresAuth": true,
           "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Identidade verificada.",
-          "behavior": "Confira os dados do titular necessários à contratação.",
+          "behavior": "Confira seus dados e escolha o pagamento. Você poderá revisar o plano, o valor e as condições antes de confirmar.",
           "next": "ADE-04",
           "journeyId": "ADE"
         },
@@ -1377,8 +1397,8 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Escolher pagamento",
-              "target": "PAG-02"
+              "label": "Dados e pagamento",
+              "target": "ADE-03"
             }
           ],
           "alternative": false,
@@ -1679,8 +1699,8 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Ver opções",
-              "target": "PAG-02"
+              "label": "Dados e pagamento",
+              "target": "ADE-03"
             }
           ],
           "alternative": false,
@@ -1842,11 +1862,11 @@
           "actions": [
             {
               "label": "Tentar novamente",
-              "target": "PAG-04"
+              "target": "ADE-03"
             },
             {
               "label": "Trocar pagamento",
-              "target": "PAG-02"
+              "target": "ADE-03"
             },
             {
               "label": "Pedir ajuda",

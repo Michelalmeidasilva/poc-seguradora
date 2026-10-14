@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { ChatClient, type ChatClientOptions, type Draft } from '../transport/chat-client';
 import { randomId } from '../transport/random-id';
 import { initialState, type ChatState, type UserContent, type UserItem } from './model';
-import { loadChat, saveChat } from './persistence';
+import { clearChat, loadChat, saveChat } from './persistence';
 import { chatReducer } from './reducer';
 import type { TabGuard, TabStatus } from './tab-lock';
 import { useTabGuard } from './useTabGuard';
@@ -81,6 +81,8 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     () => (storage && loadChat(storage)) || initialState(),
   );
   const guard = useTabGuard(options.guard);
+  const [sessionGeneration, restartSession] = useReducer((n: number) => n + 1, 0);
+  const stopClientRef = useRef<(() => void) | undefined>(undefined);
   const clientRef = useRef<ChatClientLike | undefined>(undefined);
   // Drafts of messages sent in this page lifetime; survives client re-creation (e.g. a tab
   // demotion and takeover) and covers what draftFor() cannot rebuild (voice).
@@ -94,25 +96,33 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     if (guard.status !== 'active') return;
     const activeSends = activeSendsRef.current;
     const create = options.createClient ?? ((o: ChatClientOptions) => new ChatClient(o));
+    let cancelled = false;
+    let started = false;
     const client = create({
       onServerEvent: (event) => {
+        if (cancelled) return;
         if (event.type === 'status.delivered') activeSends.delete(event.payload.messageId);
         dispatch({ type: 'server_event', event });
       },
-      onConnection: (connection) => dispatch({ type: 'connection', connection }),
+      onConnection: (connection) => {
+        if (!cancelled) dispatch({ type: 'connection', connection });
+      },
       onOutgoing: (id, status) => {
+        if (cancelled) return;
         if (status === 'sending') activeSends.add(id);
         if (status === 'failed') activeSends.delete(id);
         dispatch({ type: 'user_status', id, status });
       },
-      onSession: (sessionId) => dispatch({ type: 'session', sessionId }),
-      onSessionReset: () => dispatch({ type: 'session_reset', ts: new Date(now()).toISOString() }),
+      onSession: (sessionId) => {
+        if (!cancelled) dispatch({ type: 'session', sessionId });
+      },
+      onSessionReset: () => {
+        if (!cancelled) dispatch({ type: 'session_reset', ts: new Date(now()).toISOString() });
+      },
     });
     clientRef.current = client;
     // Defer start() to a microtask: React StrictMode runs effect -> cleanup -> effect
     // synchronously in dev, and a cancelled first run must not fire a second POST /v1/session.
-    let cancelled = false;
-    let started = false;
     queueMicrotask(() => {
       if (cancelled) return;
       started = true;
@@ -121,15 +131,21 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
         saved.sessionId ? { sessionId: saved.sessionId, lastSeq: saved.lastSeq } : undefined,
       );
     });
-    return () => {
-      cancelled = true;
+    const stop = (discard = false) => {
+      if (cancelled) return;
+      // Ordinary ownership loss must mark in-flight messages failed for retry.
+      // Explicit reset discards even synchronous callbacks from the old client.
+      if (discard) cancelled = true;
       if (started) client.stop();
+      cancelled = true;
       activeSends.clear();
       clientRef.current = undefined;
     };
-    // The client is created once per ownership change; options are read at that moment.
+    stopClientRef.current = () => stop(true);
+    return () => stop();
+    // Recreate on ownership changes or an explicit reset; read options at that moment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guard.status]);
+  }, [guard.status, sessionGeneration]);
 
   // Persist the conversation (debounced).
   useEffect(() => {
@@ -173,6 +189,16 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
     sendText: (text) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+      if (trimmed === '/reset') {
+        if (guard.status !== 'active') return;
+        stopClientRef.current?.();
+        draftsRef.current.clear();
+        activeSendsRef.current.clear();
+        if (storage) clearChat(storage);
+        dispatch({ type: 'clear' });
+        restartSession();
+        return;
+      }
       queue({ type: 'user.text', payload: { text: trimmed } }, { type: 'text', text: trimmed });
     },
     sendChoice: (optionId, title, replyToId) =>
@@ -211,6 +237,7 @@ export function useChat(options: UseChatOptions = {}): ChatApi {
       const item = stateRef.current.items.find((i) => i.kind === 'user' && i.id === id);
       const draft =
         draftsRef.current.get(id) ?? (item?.kind === 'user' ? draftFor(item.content) : undefined);
+      if (!item && !draft) return;
       if (draft) draftsRef.current.set(id, draft);
       const client = clientRef.current;
       if (!client) return;
