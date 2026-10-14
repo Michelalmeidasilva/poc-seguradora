@@ -214,12 +214,18 @@ describe('chatbot end to end (fake internal services)', () => {
       ['2', 'public-telemedicine', 'Telemedicina'],
     ] as const) {
       const publicStart = await turn(bot.url, textReq('O que vocês oferecem?', { session }));
-      expect(findEvent(publicStart.events, 'message.flow').payload.flowId).toBe('DES-01');
+      const discovery = findEvent(publicStart.events, 'message.flow').payload;
+      expect(discovery.flowId).toBe('DES-01');
+      expect(JSON.stringify(discovery.flowJson)).toContain(product);
       const publicChoice = await turn(
         bot.url,
-        flowSubmitReq({ choice }, { session, flowId: 'DES-01' }),
+        flowSubmitReq(
+          { service: choice, modality: 'familiar', intent: 'finish' },
+          { session, flowId: 'DES-01' },
+        ),
       );
-      expect(textsOf(publicChoice.events)).toContain(product);
+      expect(bot.screenId(session)).toBe('DES-11');
+      expect(textsOf(publicChoice.events)).toContain('Você pode retomar');
     }
 
     const privateStart = await turn(

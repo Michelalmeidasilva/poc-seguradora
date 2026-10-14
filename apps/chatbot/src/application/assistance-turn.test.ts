@@ -212,7 +212,7 @@ describe('runAssistanceTurn', () => {
     });
     expect(assistance.addDependent).not.toHaveBeenCalled();
   });
-  it('serves the versioned catalog Flow and resolves a list choice to its catalog destination', async () => {
+  it('serves a single discovery Flow and gates its final contracting intent', async () => {
     const assistance = port();
     const opened = await runAssistanceTurn(
       { type: 'open', target: 'DES-01' },
@@ -228,7 +228,11 @@ describe('runAssistanceTurn', () => {
       payload: { flowId: 'DES-01', flowJson: { version: '7.1', screens: expect.any(Array) } },
     });
     const chosen = await runAssistanceTurn(
-      { type: 'flow_submit', flowId: 'DES-01', data: { choice: '2' } },
+      {
+        type: 'flow_submit',
+        flowId: 'DES-01',
+        data: { intent: 'contract', service: '2', modality: 'individual' },
+      },
       {
         port: assistance,
         state: { journeyId: 'DES', screenId: 'DES-01', gateApproved: false },
@@ -236,7 +240,10 @@ describe('runAssistanceTurn', () => {
         context: ctx,
       },
     );
-    expect(chosen.ok && chosen.value.state.screenId).toBe('DES-14');
+    expect(chosen.ok && chosen.value.state.screenId).toBe('IDE-01');
+    expect(chosen.ok && chosen.value.state.pendingStep).toBe('ADE-01');
+    expect(chosen.ok && chosen.value.state.temporaryData?.modality).toBe('individual');
+    expect(assistance.createRequest).not.toHaveBeenCalled();
   });
   it('rejects an unselected catalog form option at the chatbot boundary', async () => {
     const result = await runAssistanceTurn(

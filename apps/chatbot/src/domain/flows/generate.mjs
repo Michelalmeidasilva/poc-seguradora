@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { URL } from 'node:url';
+import { buildDiscoveryFlow } from './discovery.mjs';
 
 // Run from the repository root: node apps/chatbot/src/domain/flows/generate.mjs
 // Catalog copy/order/fields are authoritative; generated JSON is committed for both consumers.
@@ -26,6 +27,7 @@ const isSensitiveField = (field) =>
 
 function build(step) {
   const source = step.flow ?? {};
+  if (source.discovery) return buildDiscoveryFlow(source);
   const title = step.id === 'IDE-08' ? 'Informar CPF' : (source.title ?? step.title);
   const children = [{ type: 'TextBody', text: step.bot }];
   let payload = {};

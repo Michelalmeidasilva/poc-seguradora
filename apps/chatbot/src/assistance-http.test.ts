@@ -20,6 +20,87 @@ afterEach(async () => {
 });
 const readContext = { correlationId: 'assert-state', idempotencyKey: 'assert-state' };
 
+it.each(['individual', 'familiar'])(
+  'preserves the selected %s plan through CPF and the contracting review',
+  async (modality) => {
+    const mock = new MockAssistance({ capacity: 8, ttlMs: 60_000 });
+    bot = await startChatbot({ overrides: { assistance: mock } });
+    const session = 'discovery-to-review';
+    await turn(bot.url, textReq('O que vocês oferecem?', { session }));
+    await turn(
+      bot.url,
+      flowSubmitReq({ intent: 'contract', service: '0', modality }, { session, flowId: 'DES-01' }),
+    );
+    await turn(bot.url, choiceReq('IDE-08', { session }));
+    const resumed = await turn(
+      bot.url,
+      flowSubmitReq({ cpf: '11111111111' }, { session, flowId: 'IDE-08' }),
+    );
+    const title = modality === 'individual' ? 'Individual' : 'Familiar';
+    expect(textsOf(resumed.events)).toContain(`Assistência ${title}`);
+    await turn(bot.url, choiceReq('ADE-02', { session }));
+    await turn(bot.url, choiceReq('ADE-03', { session }));
+    await turn(
+      bot.url,
+      flowSubmitReq(
+        { holder: 'Ana Silva', email: 'ana@example.com' },
+        { session, flowId: 'ADE-03' },
+      ),
+    );
+    expect(bot.screenId(session)).toBe(modality === 'individual' ? 'ADE-05' : 'ADE-04');
+    const review = await turn(bot.url, textReq('Escolhi o pagamento.', { session }));
+    const json = JSON.stringify(findEvent(review.events, 'message.flow').payload.flowJson);
+    expect(json).toContain(`Plano: ${title}`);
+    expect(json).toContain(modality === 'individual' ? 'R$ 29,90' : 'R$ 39,90');
+    const state = await mock.getSessionSnapshot(session, readContext);
+    expect(state.ok && state.value.requests).toEqual([]);
+  },
+);
+
+it.each([
+  { choice: '2' },
+  { intent: 'contract', service: 'invalid', modality: 'individual' },
+  { intent: 'unknown', service: '2', modality: 'individual' },
+  { intent: 'contract', service: '2', modality: 'premium' },
+  { intent: 'contract', service: '2', modality: 'individual', target: 'CAN-07' },
+])('rejects partial or tampered discovery completions: %j', async (data) => {
+  bot = await startChatbot();
+  await turn(bot.url, textReq('O que vocês oferecem?'));
+  const rejected = await turn(bot.url, flowSubmitReq(data, { flowId: 'DES-01' }));
+  expect(bot.screenId('s1')).toBe('DES-01');
+  expect(textsOf(rejected.events)).toContain('não foi enviado corretamente');
+  expect(findEvent(rejected.events, 'message.flow').payload.flowId).toBe('DES-01');
+  expect(bot.fake.requests).toEqual([]);
+});
+
+it.each(['finish', 'contract'])(
+  'completes the single discovery Flow with %s without early mutation',
+  async (intent) => {
+    const mock = new MockAssistance({ capacity: 8, ttlMs: 60_000 });
+    bot = await startChatbot({ overrides: { assistance: mock } });
+    const session = 'single-discovery';
+    const opened = await turn(bot.url, textReq('O que vocês oferecem?', { session }));
+    const flow = findEvent(opened.events, 'message.flow').payload.flowJson as {
+      screens: Array<{ terminal?: boolean }>;
+    };
+    expect(flow.screens.filter((screen) => screen.terminal)).toHaveLength(1);
+    expect(flow.screens[0]?.terminal).not.toBe(true);
+    const before = await mock.getSessionSnapshot(session, readContext);
+    expect(before.ok && before.value.requests).toEqual([]);
+    const request = flowSubmitReq(
+      { intent, service: '2', modality: 'individual' },
+      { session, flowId: 'DES-01' },
+    );
+    const result = await turn(bot.url, request);
+    expect(bot.screenId(session)).toBe(intent === 'contract' ? 'IDE-01' : 'DES-11');
+    if (intent === 'contract') expect(textsOf(result.events)).toContain('11 dígitos');
+    await turn(bot.url, request);
+    const after = await mock.getSessionSnapshot(session, readContext);
+    expect(after.ok && after.value.requests).toEqual([]);
+    expect(bot.fake.requests).toEqual([]);
+  },
+);
+
 it.each([false, true])(
   'confirms only a compatible selected modality (has dependents: %s)',
   async (hasDependents) => {

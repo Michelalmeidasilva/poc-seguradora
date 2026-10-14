@@ -882,7 +882,60 @@
                 "target": "DES-14"
               }
             ],
-            "submit": "Ver detalhes"
+            "submit": "Ver detalhes",
+            "discovery": {
+              "services": [
+                {
+                  "id": "0",
+                  "title": "Assistência Funeral",
+                  "description": "A Assistência Funeral oferece suporte ao titular e aos dependentes. A utilização depende das condições, limites e elegibilidade previstos no serviço contratado.",
+                  "note": "Não prometer cobertura, valores, carência ou procedimentos sem confirmação das condições vigentes."
+                },
+                {
+                  "id": "1",
+                  "title": "Assistência Farmácia",
+                  "description": "A Assistência Farmácia oferece descontos em redes credenciadas. As redes participantes e as condições de uso devem ser confirmadas antes da utilização.",
+                  "note": "Não informar percentual, preço ou rede específica sem confirmação das condições vigentes."
+                },
+                {
+                  "id": "2",
+                  "title": "Telemedicina",
+                  "description": "A Telemedicina acontece no ambiente do prestador, conforme disponibilidade, limites e condições do serviço contratado.",
+                  "note": "Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador."
+                }
+              ],
+              "comparison": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
+              "plans": [
+                {
+                  "id": "individual",
+                  "title": "Individual",
+                  "price": "R$ 29,90/mês",
+                  "composition": "Somente titular.",
+                  "description": "R$ 29,90/mês · somente titular"
+                },
+                {
+                  "id": "familiar",
+                  "title": "Familiar",
+                  "price": "R$ 39,90/mês",
+                  "composition": "Titular e até 3 dependentes elegíveis neste exemplo.",
+                  "description": "R$ 39,90/mês · titular e dependentes elegíveis"
+                }
+              ],
+              "conditions": "Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.",
+              "note": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.",
+              "outcomes": [
+                {
+                  "id": "finish",
+                  "label": "Concluir descoberta",
+                  "target": "DES-11"
+                },
+                {
+                  "id": "contract",
+                  "label": "Iniciar contratação",
+                  "target": "ADE-01"
+                }
+              ]
+            }
           },
           "requiresAuth": false,
           "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",

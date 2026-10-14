@@ -114,13 +114,20 @@ try {
   assert.equal(rendered, total, 'Every screen must be shown in the video');
 
   await page.evaluate(() => window.PROTOTYPE.go('DES-01'));
-  await page.locator('input[name="choice"]').first().check();
+  await page.locator('input[name="service"]').first().check();
   await page.locator('#flow-form button[type="submit"]').click();
-  assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'DES-12', 'The funeral discovery Flow must open its details');
-  await page.locator('#chat button[data-go="DES-05"]').click();
-  assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'DES-05', 'The service quick reply must open its options');
+  assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'DES-01', 'Service details stay inside the same discovery Flow');
+  assert.ok((await page.locator('#flow-form').innerText()).includes('suporte ao titular e aos dependentes'));
+  await page.locator('#flow-form button[type="submit"]').click();
+  await page.locator('input[name="modality"][value="individual"]').check();
+  await page.locator('#flow-form button[type="submit"]').click();
+  assert.ok((await page.locator('#flow-form').innerText()).includes('R$ 29,90/mês'));
+  await page.locator('#flow-form button[type="submit"]').click();
+  await page.locator('input[name="intent"][value="finish"]').check();
+  await page.locator('#flow-form button[type="submit"]').click();
+  assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'DES-11', 'Only the final discovery decision returns to chat');
   assert.deepEqual(pageErrors, [], 'No JavaScript exceptions should occur while rendering the journeys');
-  console.log(`Mobile E2E passed: ${groups.length} journeys, ${rendered}/${total} screens, CPF gate, service Flow, quick reply, and no horizontal overflow.`);
+  console.log(`Mobile E2E passed: ${groups.length} journeys, ${rendered}/${total} catalog screens, CPF gate, single discovery Flow, and no horizontal overflow.`);
 } finally {
   if (context) await context.close();
   await browser?.close();

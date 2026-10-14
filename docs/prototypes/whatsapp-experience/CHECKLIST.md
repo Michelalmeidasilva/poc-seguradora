@@ -12,8 +12,10 @@
 - [x] Gate demonstrativo de CPF nas jornadas pessoais, validação somente por formato, sem código nem consulta de identidade, retomada do pedido e expiração de sessão; testes de link direto, validação, galeria e recarregamento.
 - [x] Registro histórico HTML da comparação: 45 itens, sete fluxos e links para as 34 telas Figma; diferenças em relação ao catálogo atual explicitadas.
 - [x] Lacunas do legado equalizadas no catálogo: resumo do titular, dados de dependentes sem inferência, FAQ, motivo opcional, encerramento de conversa e CPF mascarado; comparativo e atlas atualizados.
-- [x] Descoberta: DES-01 preserva a lista WhatsApp Flow; detalhes em DES-12–14 usam texto conversacional e quick replies dentro dos limites do WhatsApp, com rotas para lista e opções verificadas no navegador.
+- [x] Descoberta DES-01 consolidada em um único Flow: serviços, detalhes, planos, condições e conclusão; voltar preserva escolhas, sem envio intermediário. Saída para encerramento ou contratação com gate CPF; aplicação e atlas verificados no navegador em 2026-10-13. DES-12–14 permanecem referências de conteúdo, não etapas intermediárias dessa entrada.
 - [x] Nomenclatura equalizada: “Serviços de Assistência” identifica somente as telas de gestão; catálogo e HTML standalone mantêm o escopo de serviços aprovado.
 
 - [x] Entrada CPF-only aceita qualquer sequência de 11 dígitos ou formato XXX.XXX.XXX-XX; rejeita outros formatos; testes executáveis de navegador e atlas regenerado.
 - [x] E2E mobile percorre 24 jornadas/247 telas em 390 × 844, valida CPF, descoberta, quick reply e overflow, e grava vídeo legendado em WebM.
+
+Nota: o vídeo acima é evidência histórica do atlas. O script foi adaptado ao novo Flow e sua sintaxe verificada; uma nova gravação integral e o vídeo executivo ainda estão pendentes.

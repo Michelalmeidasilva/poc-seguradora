@@ -25,8 +25,10 @@ for (const [product, detail] of products) {
       await expect(dialog.getByRole('radio', { name: new RegExp(name) })).toBeVisible();
     await dialog.getByRole('radio', { name: new RegExp(product) }).check();
     await dialog.getByRole('button', { name: 'Ver detalhes', exact: true }).click();
-    await expect(page.getByText(detail, { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Voltar aos serviços' })).toBeVisible();
+    const details = page.getByRole('dialog', { name: 'Detalhes do serviço' });
+    await expect(details.getByText(detail, { exact: false })).toBeVisible();
+    await expect(details.getByRole('button', { name: 'Ver planos', exact: true })).toBeVisible();
+    await expect(details.getByRole('button', { name: 'Voltar', exact: true })).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Informar CPF' })).toHaveCount(0);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -48,7 +50,9 @@ test('personal contract entry asks for CPF and accepts eleven digits without che
   await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
 });
 
-test('unsupported insurance text keeps actionable assistance choices without showing legacy screens', async ({ page }) => {
+test('unsupported insurance text keeps actionable assistance choices without showing legacy screens', async ({
+  page,
+}) => {
   await openWelcome(page);
   await page.getByRole('textbox', { name: 'Mensagem' }).fill('quero cotar meu carro');
   await page.getByRole('textbox', { name: 'Mensagem' }).press('Enter');
@@ -56,7 +60,9 @@ test('unsupported insurance text keeps actionable assistance choices without sho
   const products = page.getByRole('button', { name: 'Conhecer produtos', exact: true }).last();
   await expect(products).toBeEnabled({ timeout: 5_000 });
   await products.click();
-  await expect(page.getByRole('button', { name: 'Selecionar uma opção', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toHaveCount(0);
 });
 

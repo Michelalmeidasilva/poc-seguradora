@@ -17,6 +17,7 @@ it('explores the filled dependent review even after observing an incomplete revi
     expect(audit.missing).not.toContain('ENT-08');
     expect(audit.missing).not.toContain('PLA-07');
     expect(audit.missing).not.toContain('CAN-06');
+    expect(audit.rows.find((row) => row.id === 'DES-11')?.path ?? []).toContain('submit:DES-01');
     expect(audit.rows.find((row) => row.id === 'IDE-04')?.path ?? []).toContain('submit:IDE-08');
     expect(audit.rows.find((row) => row.id === 'FUN-07')?.path ?? []).toContain('submit:FUN-04');
   } finally {

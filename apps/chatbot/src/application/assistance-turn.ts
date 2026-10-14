@@ -71,6 +71,18 @@ function validateFlowData(
   input: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
   const flow = recordOf(step.flow);
+  if (flow?.discovery) {
+    const parsed = z
+      .object({
+        intent: z.enum(['finish', 'contract']),
+        service: z.enum(['0', '1', '2']),
+        modality: z.enum(['individual', 'familiar']),
+      })
+      .strict()
+      .safeParse(input);
+    if (!parsed.success) return undefined;
+    return { ...parsed.data, target: parsed.data.intent === 'contract' ? 'ADE-01' : 'DES-11' };
+  }
   const fields = Array.isArray(flow?.fields)
     ? flow.fields.map(recordOf).filter((item) => item !== undefined)
     : [];
@@ -198,10 +210,17 @@ const textReply = (
       description: string;
     }>;
   }
-  const personalize = (text: string) =>
-    step.journeyId === 'EXC' && draft?.dependentName
-      ? text.replace(/Maria Silva|Maria/g, () => draft.dependentName!)
-      : text;
+  const individualPlan =
+    draft?.modality === 'individual' && ['ADE', 'PAG'].includes(step.journeyId);
+  const personalize = (text: string) => {
+    const personalized =
+      step.journeyId === 'EXC' && draft?.dependentName
+        ? text.replace(/Maria Silva|Maria/g, () => draft.dependentName!)
+        : text;
+    return individualPlan
+      ? personalized.replaceAll('Familiar', 'Individual').replaceAll('R$ 39,90', 'R$ 29,90')
+      : personalized;
+  };
   body = personalize(body);
   if (step.id === 'DEP-33' && draft?.name) {
     const birth = draft.birth?.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1');
@@ -248,7 +267,9 @@ const textReply = (
               ? 'Abrir revisão'
               : 'Abrir formulário',
         flowJson:
-          body === step.bot && !listChoices && !draft?.dependentName ? flowJson : hydrate(flowJson),
+          body === step.bot && !listChoices && !draft?.dependentName && !individualPlan
+            ? flowJson
+            : hydrate(flowJson),
         ...(initialData ? { initialData } : {}),
       },
     } as ReplyBody);
@@ -758,6 +779,13 @@ export async function runAssistanceTurn(
     nextState = { ...pending.state };
     delete nextState.pendingStep;
     step = pending.step;
+  }
+  // The Individual choice carries through the same gate and skips dependent
+  // collection, matching the already approved prototype's contracting branch.
+  if (nextState.temporaryData?.modality === 'individual' && step.id === 'ADE-04') {
+    const individual = nextAssistanceState(nextState, { type: 'open', target: 'ADE-05' });
+    nextState = individual.state;
+    step = individual.step;
   }
 
   if (input.type === 'text' && (state.screenId === 'DEP-33' || state.screenId === 'DEP-04')) {

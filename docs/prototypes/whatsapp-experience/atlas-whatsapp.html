@@ -4647,6 +4647,27 @@ dialog::backdrop {
       index[step.id] = step;
     });
   }
+  // One informational experience: its internal screens never submit to chat.
+  // Existing catalog states remain references for their approved copy.
+  index['DES-01'].flow.discovery = {
+    services: ['DES-12', 'DES-13', 'DES-14'].map((id, position) => ({
+      id: String(position), title: index['DES-01'].flow.choices[position].label,
+      description: index[id].bot, note: index[id].rule,
+    })),
+    comparison: index['DES-06'].bot,
+    plans: [
+      { id: 'individual', title: 'Individual', price: 'R$ 29,90/mês', composition: 'Somente titular.',
+        description: index['DES-05'].flow.choices[0].detail },
+      { id: 'familiar', title: 'Familiar', price: 'R$ 39,90/mês', composition: 'Titular e até 3 dependentes elegíveis neste exemplo.',
+        description: index['DES-05'].flow.choices[1].detail },
+    ],
+    conditions: 'Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.',
+    note: 'Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.',
+    outcomes: [
+      { id: 'finish', label: 'Concluir descoberta', target: 'DES-11' },
+      { id: 'contract', label: 'Iniciar contratação', target: 'ADE-01' },
+    ],
+  };
   window.EXPERIENCE = {
     groups,
     index,
@@ -4691,6 +4712,7 @@ dialog::backdrop {
   let additions = [];
   let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
+  const discoveryState = { page: 0, service: null, modality: null, intent: null };
   let identityReturn = 'CON-02';
   let authenticatedUntil = 0;
   let sessionTimer;
@@ -4873,6 +4895,11 @@ dialog::backdrop {
       $('overlay').hidden = true;
       return;
     }
+    if (flow.discovery) {
+      Object.assign(discoveryState, { page: 0, service: null, modality: null, intent: null });
+      renderDiscoveryFlow(step);
+      return;
+    }
     let content = '';
     if (step.mode === 'form') content = fieldsMarkup(flow.fields);
     if (step.mode === 'list')
@@ -4954,6 +4981,56 @@ dialog::backdrop {
         }
       }
       if (target) go(target);
+    });
+  }
+  function renderDiscoveryFlow(step) {
+    const d = step.flow.discovery;
+    const { page, service, modality } = discoveryState;
+    const rich = (value) => escape(value).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    const paragraph = (value) => `<p>${rich(value)}</p>`;
+    const options = (name, items, selected) => items.map((item) =>
+      `<label class="flow-option"><input type="radio" name="${name}" value="${escape(item.id)}" required ${selected === item.id ? 'checked' : ''} /><span><strong>${escape(item.title)}</strong>${item.description ? `<small>${escape(item.description)}</small>` : ''}</span></label>`,
+    ).join('');
+    const plan = d.plans.find((item) => item.id === modality);
+    const summary = plan ? `<h4>${escape(plan.title)}</h4>${paragraph(plan.price)}${paragraph(plan.composition)}` : '';
+    const titles = ['Conhecer produtos', 'Detalhes do serviço', 'Planos e comparação', 'Condições do plano', 'Concluir descoberta'];
+    const buttons = ['Ver detalhes', 'Ver planos', 'Ver condições', 'Continuar', 'Concluir'];
+    let content;
+    if (page === 0) content = paragraph('Explore os três serviços, veja os detalhes e compare os planos sem sair deste Flow.') + options('service', d.services.map((item, i) => ({ ...item, description: step.flow.choices[i].detail })), service) + paragraph(d.note);
+    if (page === 1) {
+      const chosen = d.services.find((item) => item.id === service);
+      content = `<h4>${escape(chosen.title)}</h4>${paragraph(chosen.description)}<div class="flow-alert">${escape(chosen.note)}</div>${paragraph('Use Voltar para conhecer outro serviço. Todas as etapas continuam neste mesmo Flow.')}`;
+    }
+    if (page === 2) content = '<h4>Comparação de planos</h4>' + paragraph(d.comparison) + options('modality', d.plans, modality) + paragraph(d.note);
+    if (page === 3) content = summary + paragraph(d.conditions) + paragraph(d.note);
+    if (page === 4) content = summary + paragraph('Você pode concluir a descoberta ou iniciar uma contratação. Iniciar não contrata nem cobra: primeiro será necessário informar o CPF e revisar os dados e condições.') + options('intent', d.outcomes.map((item) => ({ id: item.id, title: item.label })), discoveryState.intent);
+    $('overlay').innerHTML = `<form id="flow-form" class="sheet" aria-label="${escape(titles[page])}"><div class="sheet-handle"></div><header class="sheet-header">${page ? '<button type="button" class="sheet-close" data-discovery-back aria-label="Voltar">←</button>' : ''}<div><h3>${escape(titles[page])}</h3><p>Explore sem sair deste Flow</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${buttons[page]}</button><p class="flow-note">Digio · experiência estruturada no WhatsApp</p></footer></form>`;
+    $('overlay').hidden = false;
+    $('flow-form').querySelector('[data-discovery-back]')?.addEventListener('click', () => {
+      discoveryState.page--;
+      renderDiscoveryFlow(step);
+    });
+    const title = $('flow-form').querySelector('.sheet-header h3');
+    title.setAttribute('tabindex', '-1');
+    title.focus();
+    $('flow-form').addEventListener('change', (event) => {
+      if (['service', 'modality', 'intent'].includes(event.target.name))
+        discoveryState[event.target.name] = event.target.value;
+    });
+    $('flow-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      if (page === 0) discoveryState.service = data.get('service');
+      if (page === 2) discoveryState.modality = data.get('modality');
+      if (page < 4) {
+        discoveryState.page++;
+        renderDiscoveryFlow(step);
+        return;
+      }
+      const outcome = d.outcomes.find((item) => item.id === data.get('intent'));
+      if (!outcome) return;
+      selectedPlan = plan.title;
+      go(outcome.target);
     });
   }
   function renderInspector(step, group) {

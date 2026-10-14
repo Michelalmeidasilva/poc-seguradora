@@ -194,6 +194,7 @@ async function startFakeGateway(delays = {}) {
     events: 0,
     reply: 0,
     products: ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina'],
+    additionalScreens: [],
     ...delays,
   };
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -274,6 +275,7 @@ async function startFakeGateway(delays = {}) {
                   ],
                 },
               },
+              ...d.additionalScreens,
             ],
           },
         });
@@ -367,6 +369,40 @@ describe('runSmoke deadlines (scaled-down budgets)', () => {
       'ok cpf-contract',
       'ok replay',
     ]);
+  });
+
+  it('accepts plans and final intents inside the discovery Flow without treating them as extra services', async () => {
+    const fake = await startFakeGateway({
+      additionalScreens: [
+        {
+          id: 'PLANS',
+          layout: {
+            children: [
+              {
+                type: 'RadioButtonsGroup',
+                'data-source': [{ title: 'Individual' }, { title: 'Familiar' }],
+              },
+            ],
+          },
+        },
+        {
+          id: 'FINISH',
+          layout: {
+            children: [
+              {
+                type: 'RadioButtonsGroup',
+                'data-source': [{ title: 'Concluir descoberta' }, { title: 'Iniciar contratação' }],
+              },
+            ],
+          },
+        },
+      ],
+    });
+    try {
+      await runSmoke(fake.url, { log: quiet, ...budgets });
+    } finally {
+      await fake.close();
+    }
   });
 
   it('rejects a public catalog with services outside the three approved assistance services', async () => {

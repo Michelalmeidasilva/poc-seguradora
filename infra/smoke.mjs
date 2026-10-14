@@ -360,6 +360,7 @@ export async function runSmoke(
       const screens = catalog.data?.payload?.flowJson?.screens;
       const options = Array.isArray(screens)
         ? screens
+            .slice(0, 1)
             .flatMap((screen) => screen.layout?.children ?? [])
             .filter((component) => component.type === 'RadioButtonsGroup')
             .flatMap((component) => component['data-source'] ?? [])

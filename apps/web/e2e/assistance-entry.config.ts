@@ -7,6 +7,8 @@ export default defineConfig({
     'assistance-entry.live.ts',
     'assistance-fidelity.live.ts',
     'assistance-dependent.live.ts',
+    'discovery-single-flow.live.ts',
+    'discovery-prototype.live.ts',
   ],
   outputDir: '/tmp/seguradora-assistance-entry-artifacts',
   workers: 1,

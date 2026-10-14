@@ -17,7 +17,13 @@ test('includes a dependent from one sentence then schedules and undoes exclusion
   await dialog.getByRole('button', { name: 'Validar formato', exact: true }).click();
   await expect(page.getByText('Entendi os dados de Ana Lima:', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Completar dados', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
+  // Wait for the response belonging to this request, not the earlier CPF form
+  // whose identical opener remains in the conversation history.
+  await page
+    .getByRole('group', { name: 'Formulário do assistente' })
+    .filter({ hasText: 'Qual é o celular de Ana Lima' })
+    .getByRole('button', { name: 'Abrir formulário', exact: true })
+    .click();
   dialog = page.getByRole('dialog');
   await dialog.getByLabel('Celular do dependente', { exact: true }).fill('11987654321');
   await dialog

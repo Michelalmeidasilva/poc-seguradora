@@ -287,9 +287,26 @@ export async function auditAssistancePaths(
           correction?: string;
           fields?: Array<{ name: string; choices?: string[]; type?: string; required?: boolean }>;
           consent?: string;
+          discovery?: { outcomes: Array<{ id: string; target: string }> };
         }
       | undefined;
-    for (const [index, choice] of (flow?.choices ?? []).entries()) {
+    for (const outcome of flow?.discovery?.outcomes ?? []) {
+      const target = assistanceCatalog.byId[outcome.target];
+      if (target)
+        queue.push({
+          step: target,
+          path: [
+            ...path,
+            {
+              type: 'flow',
+              id: step.id,
+              data: { intent: outcome.id, service: '2', modality: 'familiar' },
+            },
+          ],
+        });
+      else failures.add(`${step.id}->${outcome.target}:unknown target`);
+    }
+    for (const [index, choice] of (flow?.discovery ? [] : (flow?.choices ?? [])).entries()) {
       const target = assistanceCatalog.byId[choice.target];
       if (target)
         queue.push({

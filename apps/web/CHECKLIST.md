@@ -119,6 +119,8 @@ Pendências (detalhes na seção Pendências do runbook):
 
 ## Qualidade
 
+- [x] Descoberta em um único Flow com retorno nativo preservando escolhas e envio somente na conclusão. Verificação de 2026-10-13: 940 testes web, 19 E2E padrão; 13 cenários live passando e regressão de dependente repetida separadamente com sucesso após corrigir seletor concorrente.
+
 - [x] Testes unitários e de componente
 - [x] Lint, formatação e tsconfig estrito sem erros
 

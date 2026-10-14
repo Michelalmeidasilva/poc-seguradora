@@ -84,6 +84,8 @@
 
 ## Qualidade
 
+- [x] DES-01 reúne serviços, detalhes, planos e condições em um único Flow; validação estrita da conclusão e plano preservado após o gate CPF. Verificação de 2026-10-13: 645 testes chatbot passando; aceite geral das Tasks 9–10 permanece pendente.
+
 - [x] Testes unitários (domain e application)
 - [x] Testes do diálogo com o classificador real (mock LLM) e frases digitadas por estado (`src/infra/typed-journeys.test.ts`)
 - [x] Testes de contrato com serviços fake

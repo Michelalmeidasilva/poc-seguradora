@@ -36,6 +36,64 @@ async function toDados(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
+  it.each(['Individual', 'Familiar'])(
+    'keeps service details, comparison and %s conditions inside one Flow until completion',
+    async (plan) => {
+      const { user, submit, exchange, onClose } = setup({ flowId: 'DES-01', flowJson: products });
+      const original = dialog();
+      for (const [service, detail] of [
+        ['Assistência Funeral', /suporte ao titular e aos dependentes/i],
+        ['Assistência Farmácia', /descontos em redes credenciadas/i],
+        ['Telemedicina', /ambiente do prestador/i],
+      ] as const) {
+        await user.click(screen.getByRole('radio', { name: new RegExp(service) }));
+        await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+        expect(dialog()).toBe(original);
+        expect(within(dialog()).getByText(detail)).toBeInTheDocument();
+        expect(submit).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('button', { name: 'Voltar' }));
+      }
+      await user.click(screen.getByRole('radio', { name: /Telemedicina/ }));
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+      await user.click(screen.getByRole('button', { name: 'Ver planos' }));
+      expect(
+        within(dialog()).getByRole('heading', { name: 'Comparação de planos' }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog()).getByText('R$ 29,90/mês · somente titular', { exact: true }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog()).getByText('R$ 39,90/mês · titular e dependentes elegíveis', {
+          exact: true,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked),
+      ).toBe(true);
+      await user.click(screen.getByRole('radio', { name: new RegExp(`^${plan}`) }));
+      await user.click(screen.getByRole('button', { name: 'Ver condições' }));
+      expect(dialog()).toBe(original);
+      expect(
+        within(dialog()).getByText(
+          plan === 'Individual'
+            ? 'Somente titular.'
+            : 'Titular e até 3 dependentes elegíveis neste exemplo.',
+        ),
+      ).toBeInTheDocument();
+      expect(submit).not.toHaveBeenCalled();
+      await user.click(screen.getByRole('button', { name: 'Continuar' }));
+      await user.click(screen.getByRole('radio', { name: 'Concluir descoberta' }));
+      await user.click(screen.getByRole('button', { name: 'Concluir' }));
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledWith(
+        'DES-01',
+        { intent: 'finish', service: '2', modality: plan.toLowerCase() },
+        expect.any(String),
+      );
+      expect(exchange).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    },
+  );
   it('explains the list interaction and identifies the structured demonstration like the atlas', () => {
     setup({ flowId: 'DES-01', flowJson: products });
     expect(screen.getByText('Selecione uma opção para continuar')).toBeInTheDocument();

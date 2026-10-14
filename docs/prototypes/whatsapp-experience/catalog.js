@@ -2962,6 +2962,27 @@
       index[step.id] = step;
     });
   }
+  // One informational experience: its internal screens never submit to chat.
+  // Existing catalog states remain references for their approved copy.
+  index['DES-01'].flow.discovery = {
+    services: ['DES-12', 'DES-13', 'DES-14'].map((id, position) => ({
+      id: String(position), title: index['DES-01'].flow.choices[position].label,
+      description: index[id].bot, note: index[id].rule,
+    })),
+    comparison: index['DES-06'].bot,
+    plans: [
+      { id: 'individual', title: 'Individual', price: 'R$ 29,90/mês', composition: 'Somente titular.',
+        description: index['DES-05'].flow.choices[0].detail },
+      { id: 'familiar', title: 'Familiar', price: 'R$ 39,90/mês', composition: 'Titular e até 3 dependentes elegíveis neste exemplo.',
+        description: index['DES-05'].flow.choices[1].detail },
+    ],
+    conditions: 'Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.',
+    note: 'Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.',
+    outcomes: [
+      { id: 'finish', label: 'Concluir descoberta', target: 'DES-11' },
+      { id: 'contract', label: 'Iniciar contratação', target: 'ADE-01' },
+    ],
+  };
   window.EXPERIENCE = {
     groups,
     index,
