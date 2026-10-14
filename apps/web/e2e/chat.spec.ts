@@ -24,6 +24,36 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
 });
 
+test('/reset starts a fresh session and removes the previous conversation across reloads', async ({
+  page,
+}) => {
+  await say(page, 'histórico para limpar');
+  await expect(page.getByText('Você disse: histórico para limpar')).toBeVisible();
+  const previousSid = (await page.context().cookies()).find(
+    (cookie) => cookie.name === 'sid',
+  )?.value;
+  await page.evaluate(() => sessionStorage.setItem('reset-preference', 'preserved'));
+  await say(page, '/reset');
+  await expect
+    .poll(
+      async () => (await page.context().cookies()).find((cookie) => cookie.name === 'sid')?.value,
+    )
+    .not.toBe(previousSid);
+  await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
+  await expect(page.getByText('histórico para limpar', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Você disse: histórico para limpar')).toHaveCount(0);
+  await expect(page.getByText('/reset', { exact: true })).toHaveCount(0);
+  expect((await posted(page)).map((event) => event.payload.text)).toEqual(['Oi']);
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('seguradora-chat:v1')))
+    .not.toBeNull();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Fazer cotação' })).toBeVisible();
+  await expect(page.getByText('Você disse: histórico para limpar')).toHaveCount(0);
+  expect(await page.evaluate(() => sessionStorage.getItem('reset-preference'))).toBe('preserved');
+  expect((await posted(page)).map((event) => event.payload.text)).toEqual(['Oi']);
+});
+
 test('greets and shows the quick replies; tapping one opens the flow message', async ({ page }) => {
   await expect(page.getByText('Eu sou o', { exact: false })).toBeVisible();
   await expect(page.locator('strong', { hasText: 'assistente' })).toBeVisible();
@@ -377,7 +407,9 @@ test.describe('flows', () => {
 
     // ---- INICIO: text, images, carousel, link, navigation list
     const inicio = page.getByRole('dialog', { name: 'Sua solicitação' });
-    await expect(inicio.getByRole('heading', { name: 'Sua solicitação', exact: true })).toBeFocused();
+    await expect(
+      inicio.getByRole('heading', { name: 'Sua solicitação', exact: true }),
+    ).toBeFocused();
     await expect(inicio.getByRole('heading', { name: 'Todos os componentes' })).toBeVisible();
     await expect(inicio.getByRole('heading', { name: 'Dados do atendimento' })).toBeVisible();
     await expect(inicio.locator('strong', { hasText: 'todos' })).toBeVisible();

@@ -61,6 +61,51 @@ const activeGuard = () => ({
 });
 
 describe('useChat', () => {
+  it('resets locally, forgets pending drafts and storage, and ignores the old client', async () => {
+    const clients = [fakeClient(), fakeClient()];
+    const stops = [vi.fn(), vi.fn()];
+    const create = vi.fn((o: ChatClientOptions) => {
+      const index = create.mock.calls.length - 1;
+      return { ...clients[index]!.create(o), stop: stops[index]! };
+    });
+    sessionStorage.setItem('theme', 'dark');
+    const { result } = renderHook(() => useChat({ createClient: create, guard: activeGuard() }));
+    await act(async () => {});
+    act(() => clients[0]!.emit(botText(1, 'conversa anterior')));
+    act(() => result.current.sendText('pendente'));
+    const oldId = result.current.state.items.at(-1)!.id;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(sessionStorage.getItem('seguradora-chat:v1')).toContain('conversa anterior');
+    await act(async () => {
+      result.current.sendText('  /reset  ');
+      clients[0]!.emit(botText(2, 'resposta atrasada'));
+      clients[0]!.options().onSession('sess-old', 'resumed');
+    });
+    expect(stops[0]).toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(clients[1]!.started()).toBe('fresh');
+    expect(clients[0]!.sent).toHaveLength(1);
+    expect(clients[1]!.sent).toEqual([]);
+    expect(result.current.state.items).toEqual([]);
+    expect(result.current.state.lastSeq).toBe(0);
+    expect(result.current.state.sessionId).toBe('sess-new');
+    expect(result.current.hasPendingSend).toBe(false);
+    expect(result.current.canResend(oldId)).toBe(false);
+    act(() => result.current.resend(oldId));
+    expect(clients[1]!.resent).toEqual([]);
+    expect(sessionStorage.getItem('seguradora-chat:v1')).toBeNull();
+    expect(sessionStorage.getItem('theme')).toBe('dark');
+    act(() => clients[1]!.emit(botText(1, 'nova conversa')));
+    expect(result.current.state.items).toHaveLength(1);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(sessionStorage.getItem('seguradora-chat:v1')).toContain('nova conversa');
+    expect(sessionStorage.getItem('seguradora-chat:v1')).not.toContain('conversa anterior');
+  });
+
   it('keeps the raw CPF in the active bubble while debounce persists only a mask', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
@@ -263,6 +308,31 @@ describe('useChat', () => {
     expect(result.current.tab).toBe('other-tab');
     act(() => result.current.takeOver());
     expect(guard.takeOver).toHaveBeenCalled();
+  });
+
+  it('keeps interrupted sends retryable after another tab takes ownership', async () => {
+    let change: (status: 'active' | 'other-tab') => void = () => undefined;
+    const guard = {
+      ...activeGuard(),
+      subscribe: (fn: typeof change) => {
+        change = fn;
+        return () => undefined;
+      },
+    };
+    const f = fakeClient();
+    const create = (o: ChatClientOptions) => ({
+      ...f.create(o),
+      stop: () => o.onOutgoing(uuid(2001), 'failed'),
+    });
+    const { result } = renderHook(() => useChat({ createClient: create, guard }));
+    await act(async () => {});
+    act(() => result.current.sendText('pendente'));
+    act(() => change('other-tab'));
+    expect(result.current.state.items[0]).toMatchObject({ status: 'failed' });
+    await act(async () => change('active'));
+    expect(result.current.canResend(uuid(2001))).toBe(true);
+    act(() => result.current.resend(uuid(2001)));
+    expect(f.resent).toEqual([uuid(2001)]);
   });
 
   it('does not keep accepted messages pending when their client has been replaced', async () => {
