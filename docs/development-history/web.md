@@ -244,3 +244,12 @@ A entrada ADE-03 reúne nome, e-mail e escolha do pagamento em “Dados e pagame
 Correções preservam nome, e-mail e pagamento; alterar qualquer desses campos dentro do Flow invalida o aceite anterior. Dados pessoais de exemplo foram removidos da entrada. A revisão Individual informa somente titular. Entradas antigas de pagamento são redirecionadas à contratação unificada após o gate de CPF. O atlas offline reproduz formulário, revisão e aceite no mesmo Flow.
 
 Evidências: suíte raiz passou (955 web, 671 chatbot, 177 gateway, 93 protocol, 63 resilience, 116 verificadores e 52 cenários de deploy hermético); tipos e lint aprovados. Três E2E reais em portas isoladas cobriram Funeral/Farmácia/Telemedicina, planos Individual/Familiar, os dois meios, seleção preservada, navegação Voltar, consentimento e um único envio ADE-03. Revisão independente aprovada após corrigir texto Individual, invalidação do aceite e comportamento do atlas. Testes HTTP anteriores foram atualizados para a sequência nova; o teste do atlas respeita a abertura automática após CPF. E2E do atlas offline aprovado após a correção da sincronização. Métricas TASK-20261014-012. Sem merge/push/deploy ou alteração dos containers compartilhados.
+
+
+## 2026-10-14 — /reset e contratação integrados em develop e atualizados localmente
+
+Merge `96253d3` integra `/reset` (8211772) e contratação em Flow único (36e220c) em develop, sem conflitos. Quatro imagens reconstruídas e containers recriados/healthy em http://localhost:8080. Containers: web cf26d8387568 (imagem 81d67a1988e8), chatbot 5d34c1861725 (536cccefbd90), gateway 895d18ad0f75 (269f1ee1cfe0), fake-services b77fa12e2382 (7b7e544d64d4).
+
+Validação no merge: suíte raiz aprovada (955 web/671 chatbot e demais workspaces; 116 verificadores e 52 cenários herméticos), typecheck, build Compose, smoke 7/7 e quatro E2E reais contra os containers atualizados. Três cenários de contratação cobrem os três produtos, os planos e meios de pagamento; reset comprova sessão nova, descarte do histórico e ausência do histórico antigo após reload. Duração do E2E reset inclui recuperação automática do limite de criação de sessões. TASK-20261014-013 registra tempos.
+
+A CLI de nuvem retornou código 3 por falta de ADC e acesso ao Docker no sandbox. O acesso ao socket foi confirmado com permissão elevada; atualização feita pela receita local Compose do runbook, sem usar ADC/GCP. Artefatos não rastreados preservados. Sem push remoto ou alteração de master. Os containers permanecem disponíveis para teste local.
