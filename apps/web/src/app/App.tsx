@@ -1,26 +1,28 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import '../ui/base.css';
 import { ChatScreen } from '../chat/ChatScreen';
 import { useChat } from '../chat/useChat';
 import { FlowSheet } from '../flows';
 import type { OpenFlowRequest } from '../renderers/flow-host';
-
-function applyThemeFromUrl(): void {
-  const theme = new URLSearchParams(window.location.search).get('theme');
-  if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme;
-  else document.documentElement.dataset.theme = 'dark';
-  document.title = 'Digio Assistências';
-}
+import { ExperienceShell } from './ExperienceShell';
+import { ComponentCatalog } from './ComponentCatalog';
 
 export function App() {
   const chat = useChat();
   // `key` changes on every open, so reopening the same Flow starts it over.
-  const [flow, setFlow] = useState<{ request: OpenFlowRequest; key: number } | undefined>();
+  const [flow, setFlow] = useState<
+    { request: OpenFlowRequest; key: number; demo: boolean } | undefined
+  >();
+  const [catalogResult, setCatalogResult] = useState('');
   const opens = useRef(0);
+  const flowOpener = useRef<HTMLElement | null>(null);
+  const hadFlow = useRef(false);
   const greetedSession = useRef<string | undefined>(undefined);
   const passive = chat.tab === 'other-tab';
 
-  useLayoutEffect(applyThemeFromUrl, []);
+  useEffect(() => {
+    document.title = 'Digio Assistências';
+  }, []);
 
   useEffect(() => {
     const session = chat.state.sessionId ?? 'initial';
@@ -48,30 +50,60 @@ export function App() {
   const openFlow = useCallback(
     (request: OpenFlowRequest) => {
       if (passive) return;
+      flowOpener.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       opens.current += 1;
-      setFlow({ request, key: opens.current });
+      setFlow({ request, key: opens.current, demo: false });
     },
     [passive],
   );
   const closeFlow = useCallback(() => setFlow(undefined), []);
+  const openCatalogFlow = useCallback((request: OpenFlowRequest) => {
+    flowOpener.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    opens.current += 1;
+    setFlow({ request, key: opens.current, demo: true });
+  }, []);
+
+  // Restore after React removes inert, rather than during the sheet's layout cleanup.
+  useEffect(() => {
+    if (!flow && hadFlow.current) {
+      if (flowOpener.current?.isConnected) flowOpener.current.focus();
+      flowOpener.current = null;
+    }
+    hadFlow.current = Boolean(flow);
+  }, [flow]);
 
   // Demoted to a passive tab: drop the open Flow without submitting.
   useEffect(() => {
-    if (passive) setFlow(undefined);
+    if (passive) setFlow((current) => (current?.demo ? current : undefined));
   }, [passive]);
 
   return (
-    <>
-      <ChatScreen chat={chat} openFlow={openFlow} />
-      {flow && !passive ? (
-        <FlowSheet
-          key={flow.key}
-          request={flow.request}
-          onClose={closeFlow}
-          submit={chat.sendFlowSubmit}
-          exchange={chat.sendFlowDataExchange}
+    <ExperienceShell
+      conversation={<ChatScreen chat={chat} openFlow={openFlow} />}
+      catalog={
+        <ComponentCatalog
+          openFlow={openCatalogFlow}
+          result={catalogResult}
+          onResult={setCatalogResult}
         />
-      ) : null}
-    </>
+      }
+      overlay={
+        flow && (flow.demo || !passive) ? (
+          <FlowSheet
+            key={flow.key}
+            request={flow.request}
+            onClose={closeFlow}
+            submit={
+              flow.demo
+                ? () => setCatalogResult('Exemplo concluído. Nenhuma solicitação foi enviada.')
+                : chat.sendFlowSubmit
+            }
+            exchange={flow.demo ? () => undefined : chat.sendFlowDataExchange}
+          />
+        ) : null
+      }
+    />
   );
 }

@@ -4,6 +4,39 @@ Registro histórico de entregas, decisões e pendências; não é gate de conclu
 
 Última atualização: 2026-10-13
 
+## Entrada e catálogo de componentes — 2026-10-14
+
+Entregue em React a apresentação aprovada na prévia HTML (`5066b3c`, branch
+`feat/web-preview-shell`). A aplicação oferece abas Conversa/Catálogo e seletores
+iPhone/Android/Desktop e Claro/Escuro/Sistema. No celular, detecta o SO e ocupa
+a tela; o botão no cabeçalho abre configurações com navegação entre as abas.
+
+A conversa e o rascunho permanecem montados durante as trocas. A sessão do gateway,
+a saudação inicial e os envios reais continuam geridos pelo `useChat`. O tema
+inicial passa a seguir o sistema, mantendo os overrides `?theme=light|dark`.
+
+O catálogo reutiliza os renderizadores reais de mensagens (texto, respostas
+rápidas, template, carrossel, documentos, código, localização, áudio e Flow),
+bolhas com estados de envio, avisos e indicador de digitação. As ilustrações
+são SVGs locais e o áudio ilustrativo é gerado localmente. O Flow de demonstração
+inclui todos os tipos registrados, com um seletor de mídia por tela, e usa callbacks
+isolados: seleções, uploads e conclusão não enviam eventos ao gateway nem são
+gravados no histórico de chat. A fonte canônica das jornadas reais não mudou.
+
+A moldura impede rolagem externa ao focar os diálogos; a rolagem permanece no
+conteúdo. Flows e documentos ficam contidos no aparelho selecionado. O retorno do
+foco é feito após remover `inert`, preservando o acesso ao botão de abertura.
+
+Evidência proporcional: 946 testes web passaram; typecheck e ESLint dos arquivos
+afetados limpos; seis E2E da apresentação passaram em Chromium desktop/iPhone 13/
+Pixel 7; dois E2E de regressão dos Flows reais passaram (cotação ponta a ponta e
+Voltar/Fechar/foco). O build Vite foi realizado pelas execuções E2E. Screenshots
+do catálogo e do formulário foram revisados visualmente. Workboard e whitespace
+validados. Branch de entrega: `feat/web-experience-shell`.
+
+Esta entrega é local, sem merge, push ou deploy. As pendências anteriores de
+fidelidade e aceite das Tasks 9–10 continuam fora deste escopo.
+
 ## Estrutura
 
 - [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows entregues no Plano 5)
