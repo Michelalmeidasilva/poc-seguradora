@@ -16,6 +16,7 @@
 - [x] Nomenclatura equalizada: “Serviços de Assistência” identifica somente as telas de gestão; catálogo e HTML standalone mantêm o escopo de serviços aprovado.
 
 - [x] Entrada CPF-only aceita qualquer sequência de 11 dígitos ou formato XXX.XXX.XXX-XX; rejeita outros formatos; testes executáveis de navegador e atlas regenerado.
+- [x] Identificação CPF por mensagem no chat, sem Flow nem botão intermediário obrigatório; erro permite retry por texto e sucesso retoma o pedido. Atlas regenerado; auth-browser-test verificou formatos, entrada direta, retomada, 207 telas protegidas, expiração e reload em 2026-10-14.
 - [x] E2E mobile percorre 24 jornadas/247 telas em 390 × 844, valida CPF, descoberta, quick reply e overflow, e grava vídeo legendado em WebM.
 
 Nota: o vídeo acima é evidência histórica do atlas. O script foi adaptado ao novo Flow e sua sintaxe verificada; uma nova gravação integral e o vídeo executivo ainda estão pendentes.

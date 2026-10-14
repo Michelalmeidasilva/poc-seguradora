@@ -357,15 +357,15 @@
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        'Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
         'Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        { actions: [] },
       ),
       screen(
         'IDE-03',
@@ -389,7 +389,7 @@
         'Sessão expirada',
         'Quero continuar.',
         'Sua sessão demonstrativa expirou. Os dados da solicitação estão salvos nesta página. Informe o CPF novamente para continuar.',
-        { ...variant(), actions: [action('Informar CPF', 'IDE-08')] },
+        { ...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-06',
@@ -397,7 +397,7 @@
         'Quero confirmar o cancelamento.',
         'Informe o CPF para renovar o acesso demonstrativo. Depois, você poderá revisar o cancelamento.',
         {
-          actions: [action('Informar CPF', 'IDE-08')],
+          actions: [action('Pedir ajuda', 'HUM-01')],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
@@ -412,10 +412,8 @@
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.',
-        form('Informar CPF', [
-          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '000.000.000-00', required: true },
-        ], 'Continuar', 'IDE-03'),
+        'Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
     ],
   );

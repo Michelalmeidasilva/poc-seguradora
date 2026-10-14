@@ -32,7 +32,7 @@ describe('assistance journey catalog', () => {
         expect(actual.journeyId).toBe('IDE');
         expect(actual.bot).not.toMatch(/c[oó]digo|otp|identidade verificada/i);
         expect(actual.destinations).not.toContain('IDE-09');
-        const sourceActions = (original.actions as Array<{ label: string; target: string }>).map(
+        const sourceActions = (original.actions as Array<{ label: string; target: string }>).filter((action) => action.label !== 'Informar CPF').map(
           (action) => ({
             ...action,
             target:
@@ -42,9 +42,8 @@ describe('assistance journey catalog', () => {
         // IDE-02 is an automatic receipt/validation state under SPEC 5.5, not a second input.
         expect(actual.actions).toEqual(original.id === 'IDE-02' ? [] : sourceActions);
         if (original.id === 'IDE-08') {
-          expect(
-            (actual.flow as { fields: Array<{ name: string }> }).fields.map((field) => field.name),
-          ).toEqual(['cpf']);
+          expect(actual.mode).toBe('chat');
+          expect(actual.flow).toBeUndefined();
         }
       } else {
         expect({

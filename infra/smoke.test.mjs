@@ -280,18 +280,10 @@ async function startFakeGateway(delays = {}) {
           },
         });
       else if (body.payload.text === 'Quero ver meu contrato.')
-        push('message.quick_replies', {
-          text: 'Informe o CPF demonstrativo',
-          options: [{ id: 'IDE-08', title: 'Informar CPF' }],
+        push('message.text', {
+          text: 'Digite o CPF demonstrativo aqui na conversa: 11 números.',
         });
-      else if (body.type === 'user.quick_reply' && body.payload.optionId === 'IDE-08')
-        push('message.flow', {
-          flowId: 'IDE-08',
-          body: 'Informe o CPF',
-          ctaLabel: 'Abrir formulário',
-          flowJson: {},
-        });
-      else if (body.type === 'user.flow_submit' && body.payload.flowId === 'IDE-08')
+      else if (body.type === 'user.text' && body.payload.text === '11111111111')
         push('message.flow', {
           flowId: 'CON-01',
           body: 'Contrato demonstrativo',

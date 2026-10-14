@@ -34,7 +34,7 @@ it.each(['individual', 'familiar'])(
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const resumed = await turn(
       bot.url,
-      flowSubmitReq({ cpf: '11111111111' }, { session, flowId: 'IDE-08' }),
+      textReq('11111111111', { session }),
     );
     const title = modality === 'individual' ? 'Individual' : 'Familiar';
     expect(textsOf(resumed.events)).toContain(`Assistência ${title}`);
@@ -172,7 +172,7 @@ it.each([
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const resumed = await turn(
       bot.url,
-      flowSubmitReq({ cpf: '11111111111' }, { session, flowId: 'IDE-08' }),
+      textReq('11111111111', { session }),
     );
     expect(textsOf(resumed.events)).toContain(name);
     const supplement = await turn(bot.url, choiceReq('DEP-34', { session }));
@@ -209,7 +209,7 @@ async function identify(session: string) {
   await turn(bot.url, choiceReq('IDE-08', { session }));
   const accepted = await turn(
     bot.url,
-    flowSubmitReq({ cpf: '11111111111' }, { session, flowId: 'IDE-08' }),
+    textReq('11111111111', { session }),
   );
   expect(findEvent(accepted.events, 'message.flow').payload.flowId).toBe('CON-01');
 }
@@ -300,7 +300,7 @@ it('hydrates the actual exclusion list when the personal request resumes after C
   await turn(bot.url, choiceReq('IDE-08', { session }));
   const resumed = await turn(
     bot.url,
-    flowSubmitReq({ cpf: '11111111111' }, { session, flowId: 'IDE-08' }),
+    textReq('11111111111', { session }),
   );
   expect(JSON.stringify(findEvent(resumed.events, 'message.flow').payload.flowJson)).toContain(
     'Ana Lima',
@@ -417,9 +417,8 @@ it.each([60_000, 60_001])(
     );
     expect(bot.screenId('expired')).toBe('IDE-05');
     expect(textsOf(expired.events)).toContain('sessão demonstrativa expirou');
-    expect(findEvent(expired.events, 'message.quick_replies').payload.options[0]?.id).toBe(
-      'IDE-08',
-    );
+    expect(expired.events.some((event) => event.type === 'message.flow')).toBe(false);
+    expect(JSON.stringify(expired.events)).not.toContain('Informar CPF');
     const snapshot = await mock.getSessionSnapshot('expired', readContext);
     expect(snapshot.ok && snapshot.value.contract.status).toBe('active');
     const restart = await turn(bot.url, textReq('Quero ver meu contrato.', { session: 'expired' }));
@@ -427,26 +426,22 @@ it.each([60_000, 60_001])(
   },
 );
 
-it('emits a single terminal CPF form without a second review or CPF in its initial data', async () => {
+it('prompts for typed CPF without emitting an identification Flow', async () => {
   bot = await startChatbot();
   await turn(bot.url, textReq('Quero ver meu contrato.'));
   const form = await turn(bot.url, choiceReq('IDE-08'));
-  const flow = findEvent(form.events, 'message.flow').payload.flowJson as {
-    screens: Array<{ terminal?: boolean; layout: { children: Array<Record<string, unknown>> } }>;
-  };
-  expect(flow.screens).toHaveLength(1);
-  expect(flow.screens[0]?.terminal).toBe(true);
-  expect(flow.screens[0]?.layout.children.at(-1)).toMatchObject({
-    type: 'Footer',
-    'on-click-action': { name: 'complete' },
-  });
+  expect(form.events.some((event) => event.type === 'message.flow')).toBe(false);
+  expect(textsOf(form.events)).toContain('aqui no chat');
+  const obsolete = await turn(bot.url, flowSubmitReq({ cpf: '11111111111' }, { flowId: 'IDE-08' }));
+  expect(bot.screenId('s1')).not.toBe('CON-01');
+  expect(obsolete.events.some((event) => event.type === 'message.flow')).toBe(false);
 });
 
 it('emits CPF receipt and format approval before resuming a protected request', async () => {
   bot = await startChatbot();
   await turn(bot.url, textReq('Quero ver meu contrato.'));
   await turn(bot.url, choiceReq('IDE-08'));
-  const result = await turn(bot.url, flowSubmitReq({ cpf: '98765432100' }, { flowId: 'IDE-08' }));
+  const result = await turn(bot.url, textReq('98765432100'));
   const messages = result.events
     .filter((event) => event.type === 'message.text')
     .map((event) => event.payload.text);

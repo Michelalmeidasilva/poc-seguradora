@@ -163,16 +163,18 @@ Manter os oito IDs `IDE-01` a `IDE-08` para rastreabilidade e cobertura, mas sub
 
 | ID | Comportamento de implementação |
 |---|---|
-| `IDE-01` | Explica que é necessário informar CPF em formato válido para abrir a demonstração; não menciona envio de código nem verificação de identidade. A ação leva a `IDE-08`. |
+| `IDE-01` | Solicita CPF digitado diretamente no chat; não abre Flow nem menciona código ou verificação de identidade. A ação opcional leva à orientação textual `IDE-08`. |
 | `IDE-02` | Estado demonstrativo de recebimento/validação do CPF, sem campo de código. Segue para `IDE-03` se o formato for aceito ou `IDE-04` se inválido. |
 | `IDE-03` | Confirma apenas que o formato foi aceito. Não exibe identidade, titularidade ou nome inferido do CPF; pode informar que os dados seguintes são do cenário fictício. |
-| `IDE-04` | Erro de formato/quantidade de dígitos, preserva o pedido e oferece nova entrada via `IDE-08` ou ajuda. Não é erro de código. |
-| `IDE-05` | Sessão demonstrativa expirada; solicita o CPF novamente via `IDE-08`. Nenhuma confirmação por código. Dados só permanecem enquanto o estado volátil da sessão existir. |
-| `IDE-06` | Confirmação explícita da ação solicitada (por exemplo, cancelamento), sem segunda autenticação. A confirmação do CPF não substitui o aceite explícito da operação. |
+| `IDE-04` | Erro de formato/quantidade de dígitos, preserva o pedido e aceita nova tentativa digitada diretamente no chat ou ajuda. Não é erro de código. |
+| `IDE-05` | Sessão demonstrativa expirada; solicita o CPF novamente por texto no chat. Nenhuma confirmação por código. Dados só permanecem enquanto o estado volátil da sessão existir. |
+| `IDE-06` | Orientação de renovação de acesso por CPF digitado no chat, sem Flow de identificação; retoma a revisão da ação solicitada. Validar CPF não confirma nem executa cancelamento ou outra operação. |
 | `IDE-07` | Informa que o cenário mockado não tem o dado/contrato solicitado e oferece suporte; não afirma divergência de identidade ou vínculo real. |
-| `IDE-08` | Único formulário de CPF, aceitando qualquer valor no formato definido na seção 7.1; após submit segue pelo resultado descrito em `IDE-02`/`IDE-03` ou `IDE-04`. |
+| `IDE-08` | Orientação textual para digitar CPF no chat, sem formulário/Flow; valida a mensagem completa no formato da seção 7.1, emite resultado `IDE-02`/`IDE-03` ou erro `IDE-04` e retoma o pedido pendente se aceito. |
 
 Esta adaptação mantém todos os IDs, mas substitui copy/regra que prometia OTP, cadastro localizado ou identidade verificada. Não implementar código demonstrativo, entrega de código, opção “já tenho código” ou segundo fator.
+
+Atualização aprovada em 2026-10-14: a identificação recebe `user.text`, nunca `user.flow_submit`. Aceitar somente a mensagem inteira após trim, com 11 dígitos ASCII ou XXX.XXX.XXX-XX; não extrair CPF de uma frase arbitrária. Submits antigos do Flow de identificação não liberam o gate. Não guardar CPF inicial em rascunho, logs ou storage; preservar plano e pedido na retomada. CPF de dependente continua sendo campo do cadastro, não autenticação.
 
 ### 5.6 Documentos demonstrativos
 

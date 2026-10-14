@@ -544,19 +544,19 @@
           "id": "IDE-01",
           "title": "Informe o CPF",
           "user": "",
-          "bot": "Para abrir esta demonstração, informe um CPF com 11 dígitos. Este formato não confirma identidade.",
+          "bot": "Para abrir esta demonstração, digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX. Este formato não confirma identidade.",
           "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero consultar meu contrato.",
-          "behavior": "Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.",
+          "behavior": "Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.",
           "next": "IDE-02",
           "journeyId": "IDE"
         },
@@ -631,8 +631,8 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": true,
@@ -645,14 +645,14 @@
         },
         {
           "id": "IDE-06",
-          "title": "Confirmar ação",
+          "title": "Renovar acesso",
           "user": "",
-          "bot": "Confirme explicitamente se deseja concluir esta ação demonstrativa.",
-          "mode": "review",
+          "bot": "Digite o CPF aqui no chat para renovar o acesso demonstrativo e retomar a revisão da ação.",
+          "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": false,
@@ -685,29 +685,21 @@
         },
         {
           "id": "IDE-08",
-          "title": "CPF",
+          "title": "Informar CPF",
           "user": "",
-          "bot": "Informe um CPF com 11 dígitos para abrir a demonstração.",
-          "mode": "form",
-          "actions": [],
+          "bot": "Digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX, para abrir a demonstração.",
+          "mode": "chat",
+          "actions": [
+            {
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
+            }
+          ],
           "alternative": false,
-          "flow": {
-            "title": "Informar CPF",
-            "fields": [
-              {
-                "name": "cpf",
-                "label": "CPF",
-                "required": true,
-                "sensitive": true
-              }
-            ],
-            "submit": "Continuar",
-            "target": "IDE-02"
-          },
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Vou informar meu CPF.",
-          "behavior": "Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.",
+          "behavior": "Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.",
           "next": null,
           "journeyId": "IDE"
         }

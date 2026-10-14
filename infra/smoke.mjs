@@ -382,32 +382,16 @@ export async function runSmoke(
     await step('assistance', async (deadline) => {
       let from = stream.events.length;
       await postEvent(deadline, 'user.text', { text: 'Quero ver meu contrato.' });
-      const gate = await expect(
+      await expect(
         deadline,
         stream,
         (e) =>
-          e.event === 'message.quick_replies' &&
-          e.data?.payload?.options?.some((option) => option.id === 'IDE-08'),
+          e.event === 'message.text' && /CPF/i.test(e.data?.payload?.text ?? ''),
         'CPF gate before contract',
         from,
       );
       from = stream.events.length;
-      await postEvent(deadline, 'user.quick_reply', {
-        optionId: 'IDE-08',
-        replyToId: gate.data.id,
-      });
-      await expect(
-        deadline,
-        stream,
-        (e) => e.event === 'message.flow' && e.data?.payload?.flowId === 'IDE-08',
-        'single CPF form',
-        from,
-      );
-      from = stream.events.length;
-      await postEvent(deadline, 'user.flow_submit', {
-        flowId: 'IDE-08',
-        data: { cpf: '11111111111' },
-      });
+      await postEvent(deadline, 'user.text', { text: '11111111111' });
       await expect(
         deadline,
         stream,

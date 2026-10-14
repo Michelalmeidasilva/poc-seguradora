@@ -27,7 +27,7 @@ const groups = canonical.groups
         if (converted.id.startsWith('IDE-')) {
           const ide = {
             'IDE-01': [
-              'Para abrir esta demonstração, informe um CPF com 11 dígitos. Este formato não confirma identidade.',
+              'Para abrir esta demonstração, digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX. Este formato não confirma identidade.',
               'Informe o CPF',
               'chat',
             ],
@@ -52,38 +52,30 @@ const groups = canonical.groups
               'chat',
             ],
             'IDE-06': [
-              'Confirme explicitamente se deseja concluir esta ação demonstrativa.',
-              'Confirmar ação',
-              'review',
+              'Digite o CPF aqui no chat para renovar o acesso demonstrativo e retomar a revisão da ação.',
+              'Renovar acesso',
+              'chat',
             ],
             'IDE-07': [
               'Não há esse dado no cenário demonstrativo. Posso oferecer ajuda.',
               'Dado indisponível',
               'chat',
             ],
-            'IDE-08': ['Informe um CPF com 11 dígitos para abrir a demonstração.', 'CPF', 'form'],
+            'IDE-08': ['Digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX, para abrir a demonstração.', 'Informar CPF', 'chat'],
           }[converted.id];
           converted.title = ide[1];
           converted.bot = ide[0];
           converted.mode = ide[2];
           converted.user = '';
           converted.requiresAuth = false;
-          converted.actions = converted.actions.map((action) => ({
+          converted.actions = converted.actions.filter((action) => action.label !== 'Informar CPF').map((action) => ({
             ...action,
             target:
               action.target === 'IDE-02' || action.target === 'IDE-01' ? 'IDE-08' : action.target,
           }));
           // SPEC 5.5: receipt is transient, then format success/error follows automatically.
           if (converted.id === 'IDE-02') converted.actions = [];
-          if (converted.flow) {
-            converted.flow = {
-              ...converted.flow,
-              fields: [{ name: 'cpf', label: 'CPF', required: true, sensitive: true }],
-              target: 'IDE-02',
-            };
-            delete converted.flow.choices;
-            delete converted.flow.sections;
-          }
+          delete converted.flow;
         }
         return converted;
       }),

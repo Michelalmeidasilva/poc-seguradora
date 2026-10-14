@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { identifyByChat } from './identity-text.helpers';
 
 const products = [
   ['Assistência Funeral', 'A Assistência Funeral oferece suporte ao titular e aos dependentes.'],
@@ -41,11 +42,7 @@ test('personal contract entry asks for CPF and accepts eleven digits without che
 }) => {
   await openWelcome(page);
   await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
-  await page.getByRole('button', { name: 'Informar CPF', exact: true }).click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Informar CPF' });
-  await dialog.getByLabel('CPF', { exact: true }).fill('00000000000');
-  await dialog.getByRole('button', { name: 'Validar formato', exact: true }).click();
+  await identifyByChat(page, '00000000000');
   await expect(page.getByText('O formato do CPF foi aceito.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
 });

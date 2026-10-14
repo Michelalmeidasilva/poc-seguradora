@@ -110,7 +110,6 @@ export async function auditAssistancePaths(
     }
   };
   const formData: Record<string, Record<string, unknown>> = {
-    'IDE-08': { cpf: '11111111111' },
     'DES-07': { composition: 'Somente eu' },
     'ADE-03': { holder: 'Ana Silva', email: 'ana@example.com' },
     'DEP-34': { phone: '11987654321', biologicalSex: 'Masculino' },
@@ -186,8 +185,7 @@ export async function auditAssistancePaths(
   };
   const gate: Action[] = [
     { type: 'text', text: 'Quero ver meu contrato.' },
-    { type: 'choice', id: 'IDE-08' },
-    { type: 'flow', id: 'IDE-08', data: { cpf: '11111111111' } },
+    { type: 'text', text: '11111111111' },
   ];
   const queue: Array<{ step: AssistanceStep; path: Action[] }> = [];
   // Exercise the actual CPF validation branch; the happy-path gate cannot
@@ -196,8 +194,7 @@ export async function auditAssistancePaths(
     step: assistanceCatalog.byId['IDE-04']!,
     path: [
       { type: 'text', text: 'Quero ver meu contrato.' },
-      { type: 'choice', id: 'IDE-08' },
-      { type: 'flow', id: 'IDE-08', data: { cpf: '12345' } },
+      { type: 'text', text: '12345' },
     ],
   });
   const textKey = (text: string) => text.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
@@ -234,8 +231,7 @@ export async function auditAssistancePaths(
       )
     ) {
       path.push(
-        { type: 'choice', id: 'IDE-08' },
-        { type: 'flow', id: 'IDE-08', data: { cpf: '11111111111' } },
+        { type: 'text', text: '11111111111' },
       );
       result = await replay(path);
     }

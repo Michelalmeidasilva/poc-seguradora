@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import { buildDiscoveryFlow } from './discovery.mjs';
 
@@ -177,6 +177,13 @@ function build(step) {
   };
 }
 
+// Identification is chat-only; remove its obsolete generated artifact explicitly.
+for (const directory of process.argv.includes('--chatbot-only') ? [root] : [root, web]) {
+  for (const id of ['IDE-06', 'IDE-08']) {
+    const obsolete = new URL(`${id}.flow.json`, directory);
+    if (existsSync(obsolete)) unlinkSync(obsolete);
+  }
+}
 for (const step of steps) {
   const name = `${step.id}.flow.json`;
   const json = `${JSON.stringify(build(step), null, 2)}\n`;

@@ -84,6 +84,8 @@
 
 ## Qualidade
 
+- [x] Identificação por CPF digitado no chat (2026-10-14): mensagem inteira após trim, somente 11 dígitos ASCII ou formato canônico, sem checksum; erro preserva pedido e nova tentativa. Retomada mantém plano/dados do dependente enquanto o estado volátil existir; Flow antigo não libera gate e IDE-06 não confirma operações. Suíte chatbot 661/661, tipos e build verificados.
+
 - [x] DES-01 reúne serviços, detalhes, planos e condições em um único Flow; validação estrita da conclusão e plano preservado após o gate CPF. Verificação de 2026-10-13: 645 testes chatbot passando; aceite geral das Tasks 9–10 permanece pendente.
 
 - [x] Testes unitários (domain e application)

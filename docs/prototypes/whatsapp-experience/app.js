@@ -253,23 +253,6 @@
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       let target = flow.target;
-      if (step.id === 'IDE-08') {
-        const cpf = String(data.get('authCpf') || '');
-        if (!validCpf(cpf)) {
-          $('flow-error').textContent = 'Informe 11 números ou use o formato XXX.XXX.XXX-XX.';
-          $('flow-error').hidden = false;
-          return;
-        }
-        // Format-only demo gate. No identity lookup or CPF checksum validation.
-        authenticatedUntil = Date.now() + 15 * 60 * 1000;
-        clearTimeout(sessionTimer);
-        sessionTimer = setTimeout(() => {
-          toggleGallery(false);
-          go('IDE-05');
-        }, 15 * 60 * 1000);
-        go('IDE-03');
-        return;
-      }
       if (step.mode === 'list') {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
@@ -554,6 +537,23 @@
     }
     if (/atendente|pessoa|humano/.test(clean)) {
       go('HUM-01');
+      return;
+    }
+    if (['IDE-01', 'IDE-02', 'IDE-04', 'IDE-05', 'IDE-06', 'IDE-08'].includes(current)) {
+      if (!validCpf(text)) {
+        go('IDE-04');
+        return;
+      }
+      // Format-only demonstration. Never retain or repeat the identity CPF.
+      authenticatedUntil = Date.now() + 15 * 60 * 1000;
+      clearTimeout(sessionTimer);
+      sessionTimer = setTimeout(() => {
+        toggleGallery(false);
+        go('IDE-05');
+      }, 15 * 60 * 1000);
+      go(identityReturn);
+      additions.unshift({ user: false, text: index['IDE-03'].bot });
+      render();
       return;
     }
     if (/solicitac|protocolo|meus pedidos/.test(clean)) {

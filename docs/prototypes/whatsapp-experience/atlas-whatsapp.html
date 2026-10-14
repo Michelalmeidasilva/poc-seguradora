@@ -2042,15 +2042,15 @@ dialog::backdrop {
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        'Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
         'Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        { actions: [] },
       ),
       screen(
         'IDE-03',
@@ -2074,7 +2074,7 @@ dialog::backdrop {
         'Sessão expirada',
         'Quero continuar.',
         'Sua sessão demonstrativa expirou. Os dados da solicitação estão salvos nesta página. Informe o CPF novamente para continuar.',
-        { ...variant(), actions: [action('Informar CPF', 'IDE-08')] },
+        { ...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-06',
@@ -2082,7 +2082,7 @@ dialog::backdrop {
         'Quero confirmar o cancelamento.',
         'Informe o CPF para renovar o acesso demonstrativo. Depois, você poderá revisar o cancelamento.',
         {
-          actions: [action('Informar CPF', 'IDE-08')],
+          actions: [action('Pedir ajuda', 'HUM-01')],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
@@ -2097,10 +2097,8 @@ dialog::backdrop {
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.',
-        form('Informar CPF', [
-          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '000.000.000-00', required: true },
-        ], 'Continuar', 'IDE-03'),
+        'Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
     ],
   );
@@ -4934,23 +4932,6 @@ dialog::backdrop {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       let target = flow.target;
-      if (step.id === 'IDE-08') {
-        const cpf = String(data.get('authCpf') || '');
-        if (!validCpf(cpf)) {
-          $('flow-error').textContent = 'Informe 11 números ou use o formato XXX.XXX.XXX-XX.';
-          $('flow-error').hidden = false;
-          return;
-        }
-        // Format-only demo gate. No identity lookup or CPF checksum validation.
-        authenticatedUntil = Date.now() + 15 * 60 * 1000;
-        clearTimeout(sessionTimer);
-        sessionTimer = setTimeout(() => {
-          toggleGallery(false);
-          go('IDE-05');
-        }, 15 * 60 * 1000);
-        go('IDE-03');
-        return;
-      }
       if (step.mode === 'list') {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
@@ -5235,6 +5216,23 @@ dialog::backdrop {
     }
     if (/atendente|pessoa|humano/.test(clean)) {
       go('HUM-01');
+      return;
+    }
+    if (['IDE-01', 'IDE-02', 'IDE-04', 'IDE-05', 'IDE-06', 'IDE-08'].includes(current)) {
+      if (!validCpf(text)) {
+        go('IDE-04');
+        return;
+      }
+      // Format-only demonstration. Never retain or repeat the identity CPF.
+      authenticatedUntil = Date.now() + 15 * 60 * 1000;
+      clearTimeout(sessionTimer);
+      sessionTimer = setTimeout(() => {
+        toggleGallery(false);
+        go('IDE-05');
+      }, 15 * 60 * 1000);
+      go(identityReturn);
+      additions.unshift({ user: false, text: index['IDE-03'].bot });
+      render();
       return;
     }
     if (/solicitac|protocolo|meus pedidos/.test(clean)) {

@@ -1,7 +1,7 @@
 import { err, ok, type Result } from '@seguradora/protocol';
 import { z } from 'zod';
 import { assistanceCatalog, type AssistanceStep } from '../domain/assistance-catalog';
-import { nextAssistanceState, type AssistanceState } from '../domain/assistance-journey';
+import { isAssistanceCpfPrompt, nextAssistanceState, type AssistanceState } from '../domain/assistance-journey';
 import { assistanceFlows } from '../domain/flows';
 import { parseDependentStatement } from '../domain/dependent-statement';
 import type { AssistanceDocumentScreen } from './assistance-service';
@@ -511,7 +511,7 @@ export async function runAssistanceTurn(
 ): Promise<Result<AssistanceTurnResult, AssistanceFailure>> {
   const { state, port, sessionId, context } = deps;
   const statement =
-    input.type === 'text' && targetForText(input.text)?.id === 'DEP-33'
+    input.type === 'text' && !isAssistanceCpfPrompt(state.screenId) && targetForText(input.text)?.id === 'DEP-33'
       ? parseDependentStatement(input.text)
       : undefined;
   if (input.type === 'flow_data_exchange') return ok({ state, replies: [] });
@@ -592,9 +592,8 @@ export async function runAssistanceTurn(
       transitionInput = { type: 'cpf_submit', cpf: input.cpf };
       break;
     case 'text': {
-      if (state.screenId === 'IDE-08') {
-        const cpf = input.text.match(/\b(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})\b/)?.[0] ?? '';
-        transitionInput = { type: 'cpf_submit', cpf };
+      if (isAssistanceCpfPrompt(state.screenId)) {
+        transitionInput = { type: 'cpf_submit', cpf: input.text };
       } else if (state.screenId === 'DEP-33' || state.screenId === 'DEP-04') {
         transitionInput = { type: 'open', target: state.screenId };
       } else if (['DEP-14', 'DEP-16'].includes(state.screenId)) {
@@ -628,6 +627,8 @@ export async function runAssistanceTurn(
       }
       break;
     case 'flow_submit': {
+      if (input.flowId === 'IDE-08')
+        return ok(preserveReply(state, 'Digite o CPF diretamente no chat para validar o formato.'));
       if (input.flowId !== state.screenId)
         return ok(preserveReply(state, 'Este formulário não corresponde à etapa atual.'));
       submitted = recordOf(input.data);
@@ -687,10 +688,7 @@ export async function runAssistanceTurn(
           preserveReply(state, 'O destino deste formulário não corresponde à etapa atual.'),
         );
       }
-      if (state.screenId === 'IDE-08') {
-        const cpf = submitted.authCpf ?? submitted.cpf;
-        transitionInput = { type: 'cpf_submit', cpf: typeof cpf === 'string' ? cpf : '' };
-      } else if (typeof correction === 'string') {
+      if (typeof correction === 'string') {
         transitionInput = { type: 'open', target: correction };
       } else if (
         assistanceCatalog.byId[state.screenId]?.mode === 'review' ||
@@ -732,8 +730,11 @@ export async function runAssistanceTurn(
   const transition = nextAssistanceState(state, transitionInput);
   let nextState = transition.state;
   let step = transition.step;
+  if (step.id === 'IDE-06' && state.journeyId !== 'IDE' && currentStep?.mode === 'review') {
+    nextState = { ...nextState, pendingStep: state.screenId };
+  }
   const gateReplies: ReplyBody[] = [];
-  if (transitionInput.type === 'cpf_submit' && state.screenId === 'IDE-08') {
+  if (transitionInput.type === 'cpf_submit' && isAssistanceCpfPrompt(state.screenId)) {
     gateReplies.push({
       type: 'message.text',
       payload: { text: assistanceCatalog.byId['IDE-02']!.bot },

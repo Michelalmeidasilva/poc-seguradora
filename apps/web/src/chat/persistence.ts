@@ -1,4 +1,11 @@
-import { MAX_ITEMS, initialState, type BotItem, type ChatItem, type ChatState, type UserItem } from './model';
+import {
+  MAX_ITEMS,
+  initialState,
+  type BotItem,
+  type ChatItem,
+  type ChatState,
+  type UserItem,
+} from './model';
 
 const KEY = 'seguradora-chat:v1';
 const KEEP = 200;
@@ -6,8 +13,20 @@ const EXPIRED_FLOW_TEXT = 'Este formulário expirou ao recarregar. Reabra a etap
 // Legacy generated catalog reviews depended on a volatile draft. Keep this local;
 // persistence tests check membership against the canonical catalog without a runtime dependency.
 const CATALOG_REVIEW_IDS = new Set([
-  'IDE-06', 'ADE-06', 'ADE-07', 'PAG-04', 'DEP-06', 'DEP-17', 'DEP-21',
-  'EXC-03', 'PLA-06', 'CAD-03', 'FUN-06', 'COB-05', 'CAN-05', 'REN-02', 'REN-03',
+  'ADE-06',
+  'ADE-07',
+  'PAG-04',
+  'DEP-06',
+  'DEP-17',
+  'DEP-21',
+  'EXC-03',
+  'PLA-06',
+  'CAD-03',
+  'FUN-06',
+  'COB-05',
+  'CAN-05',
+  'REN-02',
+  'REN-03',
 ]);
 
 interface Stored {
@@ -51,6 +70,18 @@ function withoutRawCpf(item: UserItem): UserItem {
 function expireDraftFlow(item: BotItem): BotItem {
   if (item.event.type !== 'message.flow') return item;
   const { initialData, flowJson, flowId } = item.event.payload;
+  if (flowId === 'IDE-08' || flowId === 'IDE-06') {
+    return {
+      ...item,
+      event: {
+        ...item.event,
+        type: 'message.text',
+        payload: {
+          text: 'A identificação agora é pelo chat. Digite um CPF com 11 números ou XXX.XXX.XXX-XX para continuar.',
+        },
+      } as BotItem['event'],
+    };
+  }
   const screens = (flowJson as { screens?: unknown[] } | undefined)?.screens;
   const legacyTerminalReview =
     CATALOG_REVIEW_IDS.has(flowId) &&
@@ -135,7 +166,11 @@ export function loadChat(storage: Storage): ChatState | undefined {
     return undefined;
   }
   const items = (s.items.slice(-MAX_ITEMS) as ChatItem[]).map((i) =>
-    i.kind === 'user' ? withoutRawCpf(withoutFlowData(i)) : i.kind === 'bot' ? expireDraftFlow(i) : i,
+    i.kind === 'user'
+      ? withoutRawCpf(withoutFlowData(i))
+      : i.kind === 'bot'
+        ? expireDraftFlow(i)
+        : i,
   );
   const seen: Record<string, true> = {};
   for (const item of items) if (item.kind === 'bot') seen[item.id] = true;

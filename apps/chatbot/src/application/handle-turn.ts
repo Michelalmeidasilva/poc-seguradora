@@ -249,7 +249,9 @@ export class HandleTurn implements TurnRunner {
     if (input.type === 'text') {
       const step = assistanceStepForText(input.text);
       if (!step) return undefined;
-      return assistanceEntry(step.id).state;
+      // Let the turn apply the gate after reading the initial personal request,
+      // preserving dependent data separately from a later identity CPF message.
+      return { journeyId: step.journeyId, screenId: step.id, gateApproved: false };
     }
     if (input.type === 'voice' && assistanceStepForAudio(input.mediaId)) {
       return assistanceEntry(input.mediaId).state;

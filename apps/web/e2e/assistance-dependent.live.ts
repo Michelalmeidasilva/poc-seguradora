@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { identifyByChat } from './identity-text.helpers';
 
 test('includes a dependent from one sentence then schedules and undoes exclusion through the real stack', async ({
   page,
@@ -10,15 +11,11 @@ test('includes a dependent from one sentence then schedules and undoes exclusion
     'Quero incluir minha filha Ana Lima no plano. O CPF dela é 987.654.321-00 e ela nasceu em 20/05/2012.',
   );
   await message.press('Enter');
-  await page.getByRole('button', { name: 'Informar CPF', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
+  await identifyByChat(page);
   let dialog = page.getByRole('dialog');
-  await dialog.getByLabel('CPF', { exact: true }).fill('11111111111');
-  await dialog.getByRole('button', { name: 'Validar formato', exact: true }).click();
   await expect(page.getByText('Entendi os dados de Ana Lima:', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Completar dados', exact: true }).last().click();
-  // Wait for the response belonging to this request, not the earlier CPF form
-  // whose identical opener remains in the conversation history.
+  // Open the dependent registration form belonging to this request.
   await page
     .getByRole('group', { name: 'Formulário do assistente' })
     .filter({ hasText: 'Qual é o celular de Ana Lima' })

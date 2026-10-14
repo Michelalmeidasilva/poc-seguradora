@@ -9,7 +9,7 @@ it('explores the filled dependent review even after observing an incomplete revi
     expect(audit.rows.find((row) => row.id === 'DEP-08')?.path ?? []).toContain('submit:DEP-05');
     expect(audit.missing).not.toContain('DEP-08');
     expect(audit.failures).not.toContain('DEP-08:entry/transition did not render expected state');
-    expect(audit.rows.find((row) => row.id === 'IDE-02')?.path ?? []).toContain('submit:IDE-08');
+    expect(audit.rows.find((row) => row.id === 'IDE-02')?.path ?? []).toContain('user.text');
     expect(audit.missing).not.toContain('DEP-32');
     expect(audit.missing).not.toContain('IDE-04');
     expect(audit.missing).not.toContain('ENT-03');
@@ -18,7 +18,7 @@ it('explores the filled dependent review even after observing an incomplete revi
     expect(audit.missing).not.toContain('PLA-07');
     expect(audit.missing).not.toContain('CAN-06');
     expect(audit.rows.find((row) => row.id === 'DES-11')?.path ?? []).toContain('submit:DES-01');
-    expect(audit.rows.find((row) => row.id === 'IDE-04')?.path ?? []).toContain('submit:IDE-08');
+    expect(audit.rows.find((row) => row.id === 'IDE-04')?.path ?? []).toContain('user.text');
     expect(audit.rows.find((row) => row.id === 'FUN-07')?.path ?? []).toContain('submit:FUN-04');
   } finally {
     await bot.close();

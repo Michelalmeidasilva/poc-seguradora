@@ -69,6 +69,8 @@ Depois de alterar os arquivos-fonte, rode `node docs/prototypes/whatsapp-experie
 
 ## Verificação
 
+Identificação CPF: digitar diretamente no chat, inclusive na primeira solicitação e na tentativa após erro/expiração. Não existe Flow de identificação. Aceita somente a mensagem completa com 11 números ou XXX.XXX.XXX-XX, sem checksum nem consulta cadastral; retoma o pedido e não repete o CPF. O CPF de dependente continua no cadastro.
+
 `node docs/prototypes/whatsapp-experience/verify.mjs` verifica IDs, destinos, estrutura de componentes, ausência de telas legadas e ausência de autenticação por código. A interface também deve ser inspecionada no navegador para verificar renderização, formulários e responsividade.
 
 `node docs/prototypes/whatsapp-experience/experience-e2e-video.mjs` executa o E2E mobile em viewport de 390 × 844, valida acesso CPF-only, descoberta de serviços, quick reply, todas as 24 jornadas/247 telas e overflow horizontal. Também grava um vídeo WebM com legenda de jornada/ID em cada tela. O arquivo é salvo no diretório temporário do sistema; defina `WHATSAPP_VIDEO_OUTPUT` para escolher outro caminho.

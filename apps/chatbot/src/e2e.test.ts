@@ -234,16 +234,16 @@ describe('chatbot end to end (fake internal services)', () => {
     );
     expect(textsOf(privateStart.events)).toContain('11 dígitos');
     const cpfForm = await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
-    expect(findEvent(cpfForm.events, 'message.flow').payload.flowId).toBe('IDE-08');
+    expect(cpfForm.events.some((event) => event.type === 'message.flow')).toBe(false);
     const malformed = await turn(
       bot.url,
-      flowSubmitReq({ cpf: '12345' }, { session: 'private', flowId: 'IDE-08' }),
+      textReq('12345', { session: 'private' }),
     );
     expect(textsOf(malformed.events)).toContain('11 dígitos');
     await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
     const accepted = await turn(
       bot.url,
-      flowSubmitReq({ cpf: '52998224725' }, { session: 'private', flowId: 'IDE-08' }),
+      textReq('52998224725', { session: 'private' }),
     );
     expect(findEvent(accepted.events, 'message.flow').payload.flowId).toBe('CON-01');
     expect(
@@ -309,7 +309,7 @@ describe('chatbot end to end (fake internal services)', () => {
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const acceptedCpf = await turn(
       bot.url,
-      flowSubmitReq({ cpf: cpfCanary }, { session, flowId: 'IDE-08' }),
+      textReq(cpfCanary, { session }),
     );
     expect(textsOf(acceptedCpf.events)).not.toContain(cpfCanary);
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectTextIdentityGate, identifyByChat } from './identity-text.helpers';
 
 test.use({ baseURL: 'http://localhost:8080' });
 // The real gateway's session refill may exceed the transport-mock timeout.
@@ -32,27 +33,16 @@ test('integrated CPF format gate rejects short input, accepts any eleven digits 
 }) => {
   const canary = '98765432100';
   await say(page, 'Quero ver meu contrato.');
-  await page.getByRole('button', { name: 'Informar CPF', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
-  await page.getByLabel('CPF', { exact: true }).fill('12345');
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: 'Validar formato', exact: true })
-    .click();
+  await expectTextIdentityGate(page);
+  await say(page, '12345');
   await expect(page.getByText(/11 dígitos/).last()).toBeVisible();
-  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
-  await page.getByLabel('CPF', { exact: true }).fill(canary);
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: 'Validar formato', exact: true })
-    .click();
+  await identifyByChat(page, canary);
   await expect(
     page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
   ).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => JSON.stringify({ ...sessionStorage })))
-    .toContain('flow_submit');
+    .toContain('*********00');
   expect(
     await page.evaluate(() => JSON.stringify({ ...sessionStorage, ...localStorage })),
   ).not.toContain(canary);

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { identifyByChat } from './identity-text.helpers';
 
 for (const intent of ['finish', 'contract']) {
   test(`single discovery Flow keeps all details and plans local until ${intent}`, async ({
@@ -85,13 +86,11 @@ for (const intent of ['finish', 'contract']) {
     });
     await expect(modal()).toHaveCount(0);
     if (intent === 'contract') {
-      await page.getByRole('button', { name: 'Informar CPF', exact: true }).click();
-      await page.getByRole('button', { name: 'Abrir formulário', exact: true }).click();
-      await modal().getByLabel('CPF', { exact: true }).fill('11111111111');
-      await modal().getByRole('button', { name: 'Validar formato', exact: true }).click();
+      await identifyByChat(page);
       await expect(
         page.getByText('Você escolheu Serviços de Assistência Individual.', { exact: false }),
       ).toBeVisible();
+      expect(submissions).toHaveLength(1);
     } else
       await expect(
         page.getByText('Tudo bem. Você pode retomar por aqui.', { exact: false }),

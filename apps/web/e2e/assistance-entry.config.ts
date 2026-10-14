@@ -4,6 +4,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testMatch: [
+    'identity-text.live.ts',
     'assistance-entry.live.ts',
     'assistance-fidelity.live.ts',
     'assistance-dependent.live.ts',

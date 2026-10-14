@@ -4,6 +4,8 @@
 
 Coordenação 2026-10-14: após concluir DES-01 em 1e677d5, Codex modifica a identificação CPF para mensagem digitada no chat, validando somente formato e retomando pedido pendente, sem Flow de identificação. CPF de dependente permanece dado cadastral. Caminhos já reivindicados chatbot, web-chat/web-flows e ux-whatsapp-prototype; SPEC será equalizada somente nessa regra. Subtarefas sem sobreposição: implementação chatbot; testes E2E web; fonte do atlas e documentação pelo controlador. Tasks 9–10 continuam abertas.
 
+Marco 2026-10-14: CPF textual implementado, atlas/SPEC e migração de histórico atualizados. Suíte raiz passando (chatbot 661/web 942), E2E padrão 19/19, smoke local 7/7; 16 cenários mobile únicos verificados em rodada 14 passando e repetição isolada 2/2 após limite de sessões/seletor de teste. Revisão scoped aprovada; TTL continua descartando estado vencido. Tasks 9–10 não encerradas, sem GCP/vídeo executivo novo.
+
 Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec (`docs/superpowers/specs/2026-10-10-whatsapp-chatbot-poc-design.md`) e skill `workboard-protocol`.
 
 Coordenação 2026-10-13: usuário aprovou consolidar a descoberta de produtos DES-01 em um único Flow com serviços, detalhes, planos, comparação e condições; somente conclusão ou início de contratação sai para o chat, mantendo o gate de CPF. Codex executa nos caminhos já reivindicados de chatbot, web-flows/web-chat e ux-whatsapp-prototype, na branch feat/assistance-final-validation. As Tasks 9–10 gerais continuam abertas e não serão declaradas concluídas por este ajuste.

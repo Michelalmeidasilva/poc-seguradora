@@ -3,6 +3,11 @@ import { assistanceCatalog } from './assistance-catalog';
 import { nextAssistanceState } from './assistance-journey';
 
 describe('assistance journey transitions', () => {
+  it.each(['IDE-01', 'IDE-02', 'IDE-04', 'IDE-05', 'IDE-06', 'IDE-08'])('accepts a whole trimmed CPF from %s without storing it', (screenId) => {
+    const next = nextAssistanceState({ journeyId: 'IDE', screenId, gateApproved: false }, { type: 'cpf_submit', cpf: ' \t000.000.000-00\n' });
+    expect(next.state).toEqual({ journeyId: 'IDE', screenId: 'IDE-03', gateApproved: true });
+    expect(JSON.stringify(next.state)).not.toContain('000');
+  });
   it('blocks personal entry until the CPF format gate is approved', () => {
     const next = nextAssistanceState(
       { journeyId: 'CON', screenId: 'CON-01', gateApproved: false },

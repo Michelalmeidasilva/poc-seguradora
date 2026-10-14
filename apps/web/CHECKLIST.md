@@ -119,6 +119,8 @@ Pendências (detalhes na seção Pendências do runbook):
 
 ## Qualidade
 
+- [x] Identificação CPF sem formulário Flow; migração de histórico IDE-06/08 para orientação textual ao recarregar, mantendo mascaramento do CPF digitado em storage. Novas regressões RED→GREEN; suíte web 942/942, tipos e build verificados em 2026-10-14. CPF de dependente permanece campo cadastral.
+
 - [x] Descoberta em um único Flow com retorno nativo preservando escolhas e envio somente na conclusão. Verificação de 2026-10-13: 940 testes web, 19 E2E padrão; 13 cenários live passando e regressão de dependente repetida separadamente com sucesso após corrigir seletor concorrente.
 
 - [x] Testes unitários e de componente

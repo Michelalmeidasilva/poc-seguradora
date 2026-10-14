@@ -54,16 +54,14 @@ try {
 
   const authenticate = async () => {
     if ((await page.evaluate(() => window.PROTOTYPE.getCurrent())) !== 'IDE-08') {
-      await page.locator('#chat button[data-go="IDE-08"]').first().click();
+      await page.evaluate(() => window.PROTOTYPE.go('IDE-08'));
     }
-    await page.locator('input[name="authCpf"]').fill('11111111111');
-    await page.locator('#flow-form button[type="submit"]').click();
-    assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'IDE-03', 'Any 11-digit CPF should open the demonstration');
+    await page.locator('#message-input').fill('11111111111');
+    await page.locator('#composer').evaluate((form) => form.requestSubmit());
+    assert.ok(!(await page.evaluate(() => window.PROTOTYPE.getCurrent())).startsWith('IDE-'), 'Any 11-digit CPF resumes the request');
   };
 
-  await page.locator('#chat button[data-go="IDE-08"]').first().click();
   await authenticate();
-  await page.locator('#chat button[data-go="DEP-33"]').first().click();
   assert.equal(await page.evaluate(() => window.PROTOTYPE.getCurrent()), 'DEP-33', 'Authentication must resume the original request');
 
   await page.evaluate(() => {

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { expect, test, type Page } from '@playwright/test';
+import { expectTextIdentityGate, identifyByChat } from './identity-text.helpers';
 
 type Step = { id: string; user: string; bot: string; mode: string; requiresAuth: boolean };
 const sandbox: { window: { EXPERIENCE?: { index: Record<string, Step> } } } = { window: {} };
@@ -47,11 +48,7 @@ async function send(page: Page, text: string) {
   await input.press('Enter');
 }
 async function cpf(page: Page) {
-  await page.getByRole('button', { name: 'Informar CPF', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
-  const dialog = page.getByRole('dialog', { name: 'Informar CPF' });
-  await dialog.getByLabel('CPF', { exact: true }).fill('11111111111');
-  await dialog.getByRole('button', { name: 'Validar formato', exact: true }).click();
+  await identifyByChat(page);
 }
 for (const id of ids) {
   test(`canonical journey ${id.slice(0, 3)} captures representative ${id} in the real application`, async ({
@@ -64,9 +61,9 @@ for (const id of ids) {
     ).toBeVisible();
     if (id === 'IDE-08') {
       await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
-      await page.getByRole('button', { name: 'Informar CPF', exact: true }).last().click();
-      await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
-      await expect(page.getByRole('dialog', { name: 'Informar CPF' })).toBeVisible();
+      await expectTextIdentityGate(page);
+      await cpf(page);
+      await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
     } else if (id === 'AUD-01') {
       await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
       await cpf(page);

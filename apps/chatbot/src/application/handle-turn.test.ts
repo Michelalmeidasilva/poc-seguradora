@@ -663,14 +663,8 @@ describe('HandleTurn', () => {
     await collect(handler.run(quickReply('IDE-01', 404)));
     expect(assistanceStates.get('s1')).toMatchObject({ screenId: 'IDE-01', gateApproved: false });
     const cpf = await collect(handler.run(quickReply('IDE-08', 405)));
-    expect(cpf).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'message.flow',
-          payload: expect.objectContaining({ flowId: 'IDE-08' }),
-        }),
-      ]),
-    );
+    expect(cpf.some((event) => event.type === 'message.flow')).toBe(false);
+    expect(assistanceStates.get('s1')?.gateApproved).toBe(false);
   });
 
   it('routes valid assistance CPF submit, persists the exact domain state, and discards CPF', async () => {

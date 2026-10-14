@@ -6,6 +6,35 @@ import type { AssistancePort } from './ports';
 import { runAssistanceTurn } from './assistance-turn';
 
 const ctx = { correlationId: 'corr-demo', idempotencyKey: 'idem-demo' };
+it('renews access at IDE-06 and returns to the pending review without confirming a mutation', async () => {
+  const assistance = port();
+  const entered = await runAssistanceTurn({ type: 'open', target: 'IDE-06' }, {
+    port: assistance, sessionId: 'renew-review', context: ctx,
+    state: { journeyId: 'CAN', screenId: 'CAN-05', gateApproved: true, temporaryData: { reason: 'Mudança' } },
+  });
+  expect(entered.ok).toBe(true);
+  if (!entered.ok) return;
+  expect(entered.value.state.screenId).toBe('IDE-06');
+  expect(entered.value.state.gateApproved).toBe(false);
+  expect(entered.value.state.pendingStep).toBe('CAN-05');
+  const resumed = await runAssistanceTurn({ type: 'text', text: '11111111111' }, {
+    port: assistance, sessionId: 'renew-review', context: ctx, state: entered.value.state,
+  });
+  expect(resumed.ok && resumed.value.state.screenId).toBe('CAN-05');
+  expect(assistance.cancelAssistance).not.toHaveBeenCalled();
+});
+it.each(['IDE-01', 'IDE-08', 'IDE-04', 'IDE-05', 'IDE-02', 'IDE-06'])('accepts whole trimmed CPF chat at %s and preserves the pending draft', async (screenId) => {
+  const result = await runAssistanceTurn({ type: 'text', text: ' 000.000.000-00 ' }, {
+    port: port(), sessionId: 'typed-cpf', context: ctx,
+    state: { journeyId: 'IDE', screenId, gateApproved: false, pendingStep: 'ADE-04', temporaryData: { modality: 'individual', name: 'Ana' } },
+  });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.value.state.screenId).toBe('ADE-05');
+  expect(result.value.state.gateApproved).toBe(true);
+  expect(result.value.state.temporaryData).toEqual({ modality: 'individual', name: 'Ana' });
+  expect(JSON.stringify(result.value)).not.toContain('000.000.000-00');
+});
 const state = { journeyId: 'DEP', screenId: 'DEP-06', gateApproved: true };
 it.each([
   ['PLA', 'PLA-05', 'PLA-07'],
@@ -474,7 +503,7 @@ describe('runAssistanceTurn', () => {
     expect(assistance.getSessionSnapshot).not.toHaveBeenCalled();
   });
 
-  it('continues from CPF Flow submit to the pending personal destination', async () => {
+  it('rejects obsolete CPF Flow submit without opening the gate', async () => {
     const result = await runAssistanceTurn(
       { type: 'flow_submit', flowId: 'IDE-08', data: { cpf: '12345678901' } },
       {
@@ -484,10 +513,11 @@ describe('runAssistanceTurn', () => {
         context: ctx,
       },
     );
-    expect(result.ok && result.value.state.screenId).toBe('CON-02');
+    expect(result.ok && result.value.state.screenId).toBe('IDE-08');
+    expect(result.ok && result.value.state.gateApproved).toBe(false);
   });
 
-  it('extracts only a canonical CPF when the gate message also contains the pending request', async () => {
+  it('rejects a CPF embedded in a statement', async () => {
     const result = await runAssistanceTurn(
       { type: 'text', text: 'Meu CPF 12345678901, quero ver meu contrato' },
       {
@@ -497,7 +527,8 @@ describe('runAssistanceTurn', () => {
         context: ctx,
       },
     );
-    expect(result.ok && result.value.state.screenId).toBe('CON-02');
+    expect(result.ok && result.value.state.screenId).toBe('IDE-04');
+    expect(result.ok && result.value.state.gateApproved).toBe(false);
     expect(result.ok && JSON.stringify(result.value.state)).not.toContain('12345678901');
   });
 

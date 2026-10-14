@@ -25,8 +25,9 @@ try {
   const go = (id) => page.evaluate((target) => window.PROTOTYPE.go(target), id);
   const submitCpf = async (cpf) => {
     await go('IDE-08');
-    await page.locator('input[name="authCpf"]').fill(cpf);
-    await page.locator('#flow-form').evaluate((form) =>
+    assert.equal(await page.locator('[data-open-flow]').count(), 0, 'Identity is chat-only');
+    await page.locator('#message-input').fill(cpf);
+    await page.locator('#composer').evaluate((form) =>
       form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   };
   await page.goto(`${base}#DEP-33`);
@@ -34,18 +35,26 @@ try {
   assert.ok(!(await page.locator('#chat').innerText()).includes('João da Silva'));
   await go('IDE-03');
   assert.equal(await current(), 'IDE-01', 'Navigation to success cannot open the gate');
-  for (const cpf of ['', '123', '123456789012', 'abc12345678901', '123.456.789-0', '123 456 789 01']) {
+  await page.locator('#message-input').fill('123');
+  await page.locator('#composer').evaluate((form) => form.requestSubmit());
+  assert.equal(await current(), 'IDE-04', 'CPF can be typed directly at the first prompt');
+  await page.locator('#message-input').fill('00000000000');
+  await page.locator('#composer').evaluate((form) => form.requestSubmit());
+  assert.equal(await current(), 'DEP-33', 'Retry by text resumes without opening a Flow');
+  await go('IDE-05');
+  await go('DEP-33');
+  for (const cpf of ['123', '123456789012', 'abc12345678901', '123.456.789-0', '123 456 789 01', 'Meu CPF é 12345678901']) {
     await submitCpf(cpf);
-    assert.equal(await current(), 'IDE-08', `Malformed CPF must be rejected: ${cpf}`);
-    assert.ok(await page.locator('#flow-error').isVisible());
+    assert.equal(await current(), 'IDE-04', `Malformed CPF must be rejected: ${cpf}`);
+    assert.ok((await page.locator('#chat').innerText()).includes('Confira o formato'));
   }
   for (const cpf of ['00000000000', '111.111.111-11', '12345678901', '987.654.321-00']) {
     await submitCpf(cpf);
-    assert.equal(await current(), 'IDE-03', `Any correctly formatted CPF opens the demo gate: ${cpf}`);
+    assert.equal(await current(), 'DEP-33', `Any correctly formatted CPF resumes the request: ${cpf}`);
     assert.equal(await page.locator('input[name="verification"]').count(), 0);
     assert.ok(!/identidade verificada|titular identificado/i.test(await page.locator('#chat').innerText()));
-    await page.locator('#chat button').first().click();
-    assert.equal(await current(), 'DEP-33', 'Resume the original request');
+    assert.ok((await page.locator('#chat').innerText()).includes('Formato do CPF aceito'));
+    assert.ok(!(await page.locator('#chat').innerText()).includes(cpf), 'Identity CPF is not repeated');
     await go('IDE-05');
     await go('DEP-33');
     assert.equal(await current(), 'IDE-01', 'Expired session blocks personal screens');
