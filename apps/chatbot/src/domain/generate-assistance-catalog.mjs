@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import ts from 'typescript';
 import { fileURLToPath, URL } from 'node:url';
 
 const catalogUrl = new URL(
@@ -83,4 +84,20 @@ const output = JSON.stringify({ version: canonical.version, groups }, null, 2) +
 writeFileSync(
   fileURLToPath(new URL('./assistance-catalog.generated.json', import.meta.url)),
   output,
+);
+
+// The offline atlas uses the same field parser as the running chatbot.
+const parserSource = readFileSync(new URL('./dependent-statement.ts', import.meta.url), 'utf8');
+const parserJs = ts.transpileModule(parserSource, {
+  compilerOptions: {
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.CommonJS,
+  },
+}).outputText.replace(/^"use strict";\n/, '');
+writeFileSync(
+  new URL(
+    '../../../../docs/prototypes/whatsapp-experience/dependent-parser.generated.js',
+    import.meta.url,
+  ),
+  `/* global window */\n// Generated from apps/chatbot/src/domain/dependent-statement.ts.\n(() => { const exports = {};\n${parserJs}\nwindow.DEPENDENT_PARSER = exports.parseDependentStatement;\n})();\n`,
 );

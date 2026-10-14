@@ -20,3 +20,12 @@
 - [x] E2E mobile percorre 24 jornadas/247 telas em 390 × 844, valida CPF, descoberta, quick reply e overflow, e grava vídeo legendado em WebM.
 
 Nota: o vídeo acima é evidência histórica do atlas. O script foi adaptado ao novo Flow e sua sintaxe verificada; uma nova gravação integral e o vídeo executivo ainda estão pendentes.
+
+
+## 2026-10-14 — inclusão direta de dependentes
+
+“Incluir dependente” pede CPF do titular somente quando falta na sessão e abre diretamente a lista de contratos. Ao continuar no contrato Familiar, a orientação informa as vagas e os seis dados necessários, permitindo formulário ou mensagens no chat. “Preencher formulário” abre o Flow de cadastro em um clique. Foram removidos os passos intermediários de Continuar inclusão e Abrir formulário.
+
+A coleta conversacional preserva dados válidos, pede apenas campos faltantes/invalidos e abre a revisão após os seis campos, sem inferir sexo biológico. O formulário valida CPF, data real, celular e demais campos; a validação também cobre entradas legadas e a confirmação da revisão. A inclusão só muda o contrato após confirmação explícita. CPF fica mascarado na revisão e no histórico. Outra inclusão limpa os dados anteriores; contratos sem vagas seguem ao resultado apropriado, e a revisão informa as vagas restantes. O atlas offline compartilha o parser do chatbot e valida dados acumulados mesmo ao trocar de formulário para chat.
+
+Evidências: suíte raiz aprovada; correções posteriores revisadas e workspace chatbot 711 testes aprovado, cinco E2E reais/offline aprovados (CPF reutilizado, formulário, chat completo/parcial e troca de canal com celular inválido). Typecheck/lint, validação do atlas e diff verificados; resultados e correções registradas em TASK-20261014-016. Revisão independente aprovada após reforço da validação legada e correção das vagas. Integração em develop e atualização local seguem a entrega autorizada.

@@ -69,15 +69,14 @@
     ['Sexo biológico', '{{biologicalSex}}'],
   ];
   const dependentFields = [
-    { name: 'name', label: 'Nome completo', value: 'Maria Silva', required: true },
+    { name: 'name', label: 'Nome completo', required: true },
     {
       name: 'birth',
       label: 'Data de nascimento',
       type: 'date',
-      value: '2014-03-12',
       required: true,
     },
-    { name: 'document', label: 'CPF', value: '', placeholder: 'Informe o CPF', required: true },
+    { name: 'document', label: 'CPF', type: 'cpf', value: '', placeholder: 'Informe o CPF', required: true },
     {
       name: 'relationship',
       label: 'Parentesco',
@@ -85,7 +84,7 @@
       choices: ['Selecione', 'Filha', 'Filho', 'Cônjuge', 'Outro'],
       required: true,
     },
-    { name: 'phone', label: 'Celular do dependente', type: 'tel', placeholder: '(00) 00000-0000', required: true },
+    { name: 'phone', label: 'Celular do dependente', type: 'tel', minDigits: 10, maxDigits: 11, placeholder: '(00) 00000-0000', required: true },
     {
       name: 'biologicalSex',
       label: 'Sexo biológico (informado pela pessoa)',
@@ -116,7 +115,7 @@
         ['Mensalidade total', 'R$ 39,90'],
         ['Inclusão efetiva', '10/10/2026'],
         ['Telemedicina', 'Conforme condições do benefício'],
-        ['Vagas após inclusão', '1 vaga'],
+        ['Vagas após inclusão', '{{remainingSlots}}'],
       ],
     },
   ];
@@ -1114,16 +1113,16 @@
         'DEP-01',
         'Pedido de inclusão',
         'Quero incluir minha filha.',
-        'Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.',
-        { actions: [action('Continuar inclusão', 'DEP-02')] },
+        'Vamos selecionar o contrato para incluir o dependente.',
+        { actions: [action('Selecionar contrato', 'DEP-02')] },
       ),
       screen(
         'DEP-02',
         'Identificar contrato',
         'Minha sessão está válida.',
-        'Para qual contrato deseja incluir sua filha?',
+        'Selecione o contrato em que deseja incluir o dependente.',
         list(
-          'Selecionar assistência',
+          'Selecionar contrato',
           [
             {
               label: 'Serviços de Assistência Familiar',
@@ -1138,7 +1137,7 @@
         'DEP-03',
         'Consultar vagas e condições',
         'Serviços de Assistência Familiar',
-        'Seu plano tem 2 vagas disponíveis para inclusão de dependentes. No formulário, informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.',
+        'Seu plano tem 2 vagas disponíveis para inclusão de dependentes. Você pode preencher o formulário ou enviar os dados aqui no chat. Informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.',
         {
           actions: [
             action('Preencher formulário', 'DEP-05'),

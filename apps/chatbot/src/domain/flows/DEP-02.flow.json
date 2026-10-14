@@ -3,7 +3,7 @@
   "screens": [
     {
       "id": "LIST",
-      "title": "Selecionar assistência",
+      "title": "Selecionar contrato",
       "terminal": true,
       "success": true,
       "layout": {
@@ -11,12 +11,12 @@
         "children": [
           {
             "type": "TextBody",
-            "text": "Para qual contrato deseja incluir sua filha?"
+            "text": "Selecione o contrato em que deseja incluir o dependente."
           },
           {
             "type": "RadioButtonsGroup",
             "name": "choice",
-            "label": "Selecionar assistência",
+            "label": "Selecionar contrato",
             "required": true,
             "data-source": [
               {

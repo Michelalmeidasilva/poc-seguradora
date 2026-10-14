@@ -67,7 +67,7 @@ export function App() {
       if (item.kind !== 'bot' || seenFlowMessages.current.has(item.id)) continue;
       const automatic =
         item.event.type === 'message.flow' &&
-        item.event.payload.flowId === 'ADE-03' &&
+        ['ADE-03', 'DEP-02', 'DEP-05', 'DEP-06'].includes(item.event.payload.flowId) &&
         item.event.payload.flowJson.autoOpen === true;
       // A newer response or user interaction supersedes this automatic opening.
       if (

@@ -1749,15 +1749,14 @@ dialog::backdrop {
     ['Sexo biológico', '{{biologicalSex}}'],
   ];
   const dependentFields = [
-    { name: 'name', label: 'Nome completo', value: 'Maria Silva', required: true },
+    { name: 'name', label: 'Nome completo', required: true },
     {
       name: 'birth',
       label: 'Data de nascimento',
       type: 'date',
-      value: '2014-03-12',
       required: true,
     },
-    { name: 'document', label: 'CPF', value: '', placeholder: 'Informe o CPF', required: true },
+    { name: 'document', label: 'CPF', type: 'cpf', value: '', placeholder: 'Informe o CPF', required: true },
     {
       name: 'relationship',
       label: 'Parentesco',
@@ -1765,7 +1764,7 @@ dialog::backdrop {
       choices: ['Selecione', 'Filha', 'Filho', 'Cônjuge', 'Outro'],
       required: true,
     },
-    { name: 'phone', label: 'Celular do dependente', type: 'tel', placeholder: '(00) 00000-0000', required: true },
+    { name: 'phone', label: 'Celular do dependente', type: 'tel', minDigits: 10, maxDigits: 11, placeholder: '(00) 00000-0000', required: true },
     {
       name: 'biologicalSex',
       label: 'Sexo biológico (informado pela pessoa)',
@@ -1796,7 +1795,7 @@ dialog::backdrop {
         ['Mensalidade total', 'R$ 39,90'],
         ['Inclusão efetiva', '10/10/2026'],
         ['Telemedicina', 'Conforme condições do benefício'],
-        ['Vagas após inclusão', '1 vaga'],
+        ['Vagas após inclusão', '{{remainingSlots}}'],
       ],
     },
   ];
@@ -2794,16 +2793,16 @@ dialog::backdrop {
         'DEP-01',
         'Pedido de inclusão',
         'Quero incluir minha filha.',
-        'Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.',
-        { actions: [action('Continuar inclusão', 'DEP-02')] },
+        'Vamos selecionar o contrato para incluir o dependente.',
+        { actions: [action('Selecionar contrato', 'DEP-02')] },
       ),
       screen(
         'DEP-02',
         'Identificar contrato',
         'Minha sessão está válida.',
-        'Para qual contrato deseja incluir sua filha?',
+        'Selecione o contrato em que deseja incluir o dependente.',
         list(
-          'Selecionar assistência',
+          'Selecionar contrato',
           [
             {
               label: 'Serviços de Assistência Familiar',
@@ -2818,7 +2817,7 @@ dialog::backdrop {
         'DEP-03',
         'Consultar vagas e condições',
         'Serviços de Assistência Familiar',
-        'Seu plano tem 2 vagas disponíveis para inclusão de dependentes. No formulário, informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.',
+        'Seu plano tem 2 vagas disponíveis para inclusão de dependentes. Você pode preencher o formulário ou enviar os dados aqui no chat. Informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.',
         {
           actions: [
             action('Preencher formulário', 'DEP-05'),
@@ -4674,6 +4673,139 @@ dialog::backdrop {
 
 </script>
 <script>
+/* global window */
+// Generated from apps/chatbot/src/domain/dependent-statement.ts.
+(() => { const exports = {};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseDependentStatement = parseDependentStatement;
+const cleanValue = (text) => text
+    .trim()
+    .replace(/[.,;!?]+$/, '')
+    .trim();
+const parseName = (text) => {
+    const name = cleanValue(text);
+    return /^[\p{L}]+(?:[ '-][\p{L}]+)*$/u.test(name) &&
+        !/^(?:(?:um|uma)\s+)?(?:pessoa|dependente|algu[eé]m)$/i.test(name)
+        ? name
+        : undefined;
+};
+const parseCpf = (text) => {
+    const value = cleanValue(text);
+    return /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(value) ? value.replace(/\D/g, '') : undefined;
+};
+const parsePhone = (text) => {
+    const value = cleanValue(text);
+    if (!/^[\d\s().-]+$/.test(value))
+        return undefined;
+    const digits = value.replace(/\D/g, '');
+    return /^\d{10,11}$/.test(digits) ? digits : undefined;
+};
+const parseBiologicalSex = (text) => {
+    const value = cleanValue(text).toLocaleLowerCase('pt-BR');
+    if (value === 'feminino' || value === 'female')
+        return 'Feminino';
+    if (value === 'masculino' || value === 'male')
+        return 'Masculino';
+    if (/^(?:prefiro n[aã]o informar|n[aã]o informado|not_informed)$/.test(value))
+        return 'Prefiro não informar';
+    return undefined;
+};
+const parseDate = (text) => {
+    const value = cleanValue(text);
+    const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const local = value.match(/^(\d{2})[/.](\d{2})[/.](\d{4})$/);
+    const year = iso?.[1] ?? local?.[3];
+    const month = iso?.[2] ?? local?.[2];
+    const day = iso?.[3] ?? local?.[1];
+    if (!year || !month || !day)
+        return undefined;
+    const date = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+    if (date.getUTCFullYear() !== Number(year) ||
+        date.getUTCMonth() + 1 !== Number(month) ||
+        date.getUTCDate() !== Number(day))
+        return undefined;
+    return `${year}-${month}-${day}`;
+};
+const parseRelationship = (text) => {
+    const relationship = cleanValue(text).toLocaleLowerCase('pt-BR');
+    return /^(?:filha|filho|c[oô]njuge|esposa|esposo|m[aã]e|pai|irm[aã]|irm[aã]o|entead[oa]|net[oa]|sobrinh[oa]|outro|outra)$/.test(relationship)
+        ? relationship
+        : undefined;
+};
+const fieldParsers = {
+    name: parseName,
+    cpf: parseCpf,
+    birth: parseDate,
+    relationship: parseRelationship,
+    phone: parsePhone,
+    biologicalSex: parseBiologicalSex,
+};
+function parseDependentStatement(text, confirmed = {}, correcting) {
+    const parsed = {};
+    const labels = {
+        nome: 'name',
+        'nome completo': 'name',
+        cpf: 'cpf',
+        nascimento: 'birth',
+        'data de nascimento': 'birth',
+        parentesco: 'relationship',
+        celular: 'phone',
+        telefone: 'phone',
+        'sexo biológico': 'biologicalSex',
+        'sexo biologico': 'biologicalSex',
+    };
+    const labelPattern = 'nome(?: completo)?|cpf|(?:data de )?nascimento|parentesco|celular|telefone|sexo biol[oó]gico';
+    const labelled = new RegExp(`\\b(${labelPattern})\\s*:\\s*(.*?)(?=\\r?\\n|;|,?\\s*(?:${labelPattern})\\s*:|$)`, 'giu');
+    for (const match of text.matchAll(labelled)) {
+        const field = labels[match[1].toLocaleLowerCase('pt-BR')];
+        const value = fieldParsers[field](match[2]);
+        if (value !== undefined)
+            Object.assign(parsed, { [field]: value });
+    }
+    // Labelled answers belong to their own fields, so "Sexo biológico: filha"
+    // must not accidentally become a stated relationship.
+    const naturalText = text.replace(labelled, ' ');
+    const cpfMatch = naturalText.match(/\bcpf(?:\s+(?:dele|dela))?\s*(?:(?:é|eh)\s*)?[:#-]?\s*(\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?!\d)/i);
+    if (cpfMatch)
+        parsed.cpf = parseCpf(cpfMatch[1]);
+    const birthText = correcting === 'birth'
+        ? naturalText.replace(/\b(?:a\s+)?data\s+correta\s+(?:é|eh)\s+/i, 'nascimento em ')
+        : naturalText;
+    const birthMatch = birthText.match(/\b(?:ele\s+nasceu\s+em|ela\s+nasceu\s+em|nascid[oa] em|nascimento(?: em)?)\s+(\d{2}[/.]\d{2}[/.]\d{4}|\d{4}-\d{2}-\d{2})\b/i);
+    if (birthMatch)
+        parsed.birth = parseDate(birthMatch[1]);
+    const relation = naturalText.match(/\b(filha|filho|c[oô]njuge|esposa|esposo|m[aã]e|pai|outro|outra)\b/i)?.[1];
+    if (relation)
+        parsed.relationship = parseRelationship(relation);
+    const phoneMatch = naturalText.match(/\b(?:celular|telefone)(?:\s+(?:dele|dela))?\s*(?:(?:é|eh)\s*)?[:#]?\s*([\d(][\d\s().-]*\d)(?!\d)/i);
+    if (phoneMatch)
+        parsed.phone = parsePhone(phoneMatch[1]);
+    const sexMatch = naturalText.match(/\bsexo biol[oó]gico(?:\s+(?:dele|dela))?\s*(?:(?:é|eh)\s*)?[:#]?\s*(prefiro n[aã]o informar|n[aã]o informado|not_informed|feminino|masculino|female|male)\b/i);
+    if (sexMatch)
+        parsed.biologicalSex = parseBiologicalSex(sexMatch[1]);
+    if (parsed.name === undefined && correcting !== 'name') {
+        const nameSource = naturalText
+            .replace(/\b(?:minha\s+(?:filha|filho)|meu\s+(?:filho|dependente))\b\s*/i, '')
+            .replace(/\b(?:no plano|na assist[eê]ncia)\b.*$/i, '');
+        const nameMatch = nameSource.match(/(?:incluir|adicionar|dependente(?:\s+chamad[oa])?)\s+(.+?)(?=\s*,?\s*(?:cpf\b|nascid[oa]\b|nascimento\b|minha\s+(?:filha|filho)|meu\s+(?:filho|dependente)|filha\b|filho\b|c[oô]njuge\b|no plano\b)|[,.!?]|$)/iu);
+        if (nameMatch)
+            parsed.name = parseName(nameMatch[1].replace(/^minha\s+(?:filha|filho)\s+/i, ''));
+    }
+    if (correcting) {
+        const pureReply = correcting === 'name'
+            ? text.trim().replace(/^(?:quero incluir|incluir|corrigir para)\s+/i, '')
+            : text;
+        const value = parsed[correcting] ?? fieldParsers[correcting](pureReply);
+        return { ...confirmed, ...(value === undefined ? {} : { [correcting]: value }) };
+    }
+    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => value !== undefined));
+}
+
+window.DEPENDENT_PARSER = exports.parseDependentStatement;
+})();
+
+</script>
+<script>
 /* global window, document, location, history, navigator, FormData, setTimeout, clearTimeout */
 (() => {
   const { groups, index, total } = window.EXPERIENCE;
@@ -4690,6 +4822,7 @@ dialog::backdrop {
     relationship: 'Filha',
     phone: '',
     biologicalSex: '',
+    remainingSlots: '1 vaga',
     cancelReason: '',
     postal: '01000-000',
     address: 'Rua das Flores, 100',
@@ -4699,6 +4832,7 @@ dialog::backdrop {
     eventDate: '09/10/2026',
     eventPlace: 'São Paulo / SP',
   };
+  let dependentIntakeActive = false;
   let current = index[location.hash.slice(1)] ? location.hash.slice(1) : 'DEP-01';
   let stateFilter = 'all';
   let query = '';
@@ -4760,6 +4894,11 @@ dialog::backdrop {
       clearTimeout(sessionTimer);
       $('gallery').innerHTML = '';
       $('document-dialog').close();
+    }
+    if (id === 'DEP-01' || (id === 'DEP-03' && current === 'DEP-12')) {
+      dependentIntakeActive = true;
+      for (const key of ['name', 'birth', 'cpf', 'document', 'maskedDocument', 'relationship', 'phone', 'biologicalSex']) delete memory[key];
+      if (id === 'DEP-01') id = 'DEP-02';
     }
     if ((index[id].requiresAuth || id === 'IDE-03') && !isAuthenticated()) {
       if (id !== 'IDE-03') identityReturn = id;
@@ -4929,6 +5068,14 @@ dialog::backdrop {
       const field = flow.fields.find((item) => item.name === event.target.name);
       if (!field || field.type === 'file') return;
       memory[field.name] = field.type === 'checkbox' ? event.target.checked : event.target.value;
+      if (field.type === 'cpf' || field.minDigits) {
+        const value = event.target.value;
+        const digits = value.replace(/\D/g, '');
+        const min = field.type === 'cpf' ? 11 : field.minDigits;
+        const max = field.type === 'cpf' ? 11 : field.maxDigits;
+        const valid = /^[\d\s().-]+$/.test(value) && digits.length >= min && digits.length <= max;
+        event.target.setCustomValidity(valid ? '' : field.type === 'cpf' ? 'Informe um CPF com 11 dígitos.' : 'Informe um celular com 10 ou 11 dígitos.');
+      }
     });
     $('flow-form').addEventListener('submit', (event) => {
       event.preventDefault();
@@ -4963,6 +5110,7 @@ dialog::backdrop {
           else memory[field.name] = String(raw ?? '').trim();
         }
       }
+      if (step.id === 'DEP-05') memory.maskedDocument = `•••.•••.•••-${String(memory.document || '').replace(/\D/g, '').slice(-2)}`;
       if (target) go(target);
     });
   }
@@ -5249,6 +5397,28 @@ dialog::backdrop {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
     const step = index[current];
+    if (dependentIntakeActive && ['DEP-03', 'DEP-04', 'DEP-05'].includes(current) && !/^(?:menu|opcoes|falar com)/.test(clean)) {
+      const labels = { name: 'Nome completo', cpf: 'CPF do dependente', birth: 'Data de nascimento', relationship: 'Parentesco', phone: 'Celular do dependente', biologicalSex: 'Sexo biológico informado pela pessoa (ou Prefiro não informar)' };
+      const validMemory = () => Object.fromEntries(Object.keys(labels).map((key) => [key, window.DEPENDENT_PARSER(String(memory[key] ?? (key === 'cpf' ? memory.document : '') ?? ''), {}, key)[key]]));
+      const before = validMemory();
+      const missingBefore = Object.keys(labels).filter((key) => !before[key]);
+      const parsed = window.DEPENDENT_PARSER(text);
+      const focused = Object.keys(parsed).length === 0 && missingBefore.length === 1
+        ? window.DEPENDENT_PARSER(text, {}, missingBefore[0]) : parsed;
+      Object.assign(memory, focused);
+      const checked = validMemory();
+      const missing = Object.keys(labels).filter((key) => !checked[key]);
+      for (const key of Object.keys(labels)) if (checked[key]) memory[key] = checked[key];
+      if (missing.length === 0) {
+        memory.document = memory.cpf;
+        memory.maskedDocument = `•••.•••.•••-${memory.cpf.slice(-2)}`;
+        go('DEP-06');
+      } else {
+        additions.push({ user: true, text }, { user: false, text: `Para completar o cadastro, informe apenas:\n${missing.map((key) => `• ${labels[key]}`).join('\n')}\nOs dados já recebidos foram preservados.` });
+        renderChat(step);
+      }
+      return;
+    }
     if (/\b(menu|opcoes)\b/.test(clean)) {
       go('NAV-01');
       return;
@@ -5331,7 +5501,7 @@ dialog::backdrop {
     } else if (/voltar/.test(clean)) {
       move(-1);
       return;
-    } else if (step.journey === 'DEP' && ['DEP-03', 'DEP-04'].includes(current)) {
+    } else if (step.journey === 'DEP' && ['DEP-03', 'DEP-04', 'DEP-05'].includes(current)) {
       const date = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
       if (date) memory.birth = date[1];
       const name = text.match(/(?:nome (?:e|é)|chama(?:-se)?)\s+([^,.\n]+)/i);

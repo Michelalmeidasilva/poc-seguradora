@@ -2242,11 +2242,11 @@
           "id": "DEP-01",
           "title": "Pedido de inclusão",
           "user": "Quero incluir minha filha.",
-          "bot": "Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.",
+          "bot": "Vamos selecionar o contrato para incluir o dependente.",
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar inclusão",
+              "label": "Selecionar contrato",
               "target": "DEP-02"
             }
           ],
@@ -2254,7 +2254,7 @@
           "requiresAuth": true,
           "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero incluir minha filha.",
-          "behavior": "Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.",
+          "behavior": "Vamos selecionar o contrato para incluir o dependente.",
           "next": "DEP-02",
           "journeyId": "DEP"
         },
@@ -2262,12 +2262,12 @@
           "id": "DEP-02",
           "title": "Identificar contrato",
           "user": "Minha sessão está válida.",
-          "bot": "Para qual contrato deseja incluir sua filha?",
+          "bot": "Selecione o contrato em que deseja incluir o dependente.",
           "mode": "list",
           "actions": [],
           "alternative": false,
           "flow": {
-            "title": "Selecionar assistência",
+            "title": "Selecionar contrato",
             "choices": [
               {
                 "label": "Serviços de Assistência Familiar",
@@ -2280,7 +2280,7 @@
           "requiresAuth": true,
           "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Minha sessão está válida.",
-          "behavior": "Para qual contrato deseja incluir sua filha?",
+          "behavior": "Selecione o contrato em que deseja incluir o dependente.",
           "next": "DEP-03",
           "journeyId": "DEP"
         },
@@ -2288,7 +2288,7 @@
           "id": "DEP-03",
           "title": "Consultar vagas e condições",
           "user": "Serviços de Assistência Familiar",
-          "bot": "Seu plano tem 2 vagas disponíveis para inclusão de dependentes. No formulário, informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.",
+          "bot": "Seu plano tem 2 vagas disponíveis para inclusão de dependentes. Você pode preencher o formulário ou enviar os dados aqui no chat. Informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.",
           "mode": "chat",
           "actions": [
             {
@@ -2300,7 +2300,7 @@
           "requiresAuth": true,
           "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Serviços de Assistência Familiar",
-          "behavior": "Seu plano tem 2 vagas disponíveis para inclusão de dependentes. No formulário, informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.",
+          "behavior": "Seu plano tem 2 vagas disponíveis para inclusão de dependentes. Você pode preencher o formulário ou enviar os dados aqui no chat. Informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.",
           "next": "DEP-33",
           "journeyId": "DEP"
         },
@@ -2415,19 +2415,18 @@
               {
                 "name": "name",
                 "label": "Nome completo",
-                "value": "Maria Silva",
                 "required": true
               },
               {
                 "name": "birth",
                 "label": "Data de nascimento",
                 "type": "date",
-                "value": "2014-03-12",
                 "required": true
               },
               {
                 "name": "document",
                 "label": "CPF",
+                "type": "cpf",
                 "value": "",
                 "placeholder": "Informe o CPF",
                 "required": true
@@ -2449,6 +2448,8 @@
                 "name": "phone",
                 "label": "Celular do dependente",
                 "type": "tel",
+                "minDigits": 10,
+                "maxDigits": 11,
                 "placeholder": "(00) 00000-0000",
                 "required": true
               },
@@ -2537,7 +2538,7 @@
                   ],
                   [
                     "Vagas após inclusão",
-                    "1 vaga"
+                    "{{remainingSlots}}"
                   ]
                 ]
               }
@@ -2851,7 +2852,7 @@
                   ],
                   [
                     "Vagas após inclusão",
-                    "1 vaga"
+                    "{{remainingSlots}}"
                   ]
                 ]
               }

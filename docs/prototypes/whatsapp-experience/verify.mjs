@@ -115,7 +115,7 @@ assert.ok(
   'standalone must inline scripts and CSS',
 );
 const embeddedScripts = [...exported.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-assert.equal(embeddedScripts.length, 2);
+assert.equal(embeddedScripts.length, 3);
 const embeddedContext = createContext({ window: {} });
 new Script(embeddedScripts[0][1]).runInContext(embeddedContext);
 assert.equal(JSON.stringify(embeddedContext.window.EXPERIENCE), JSON.stringify(context.window.EXPERIENCE), 'standalone catalog must match the sources');

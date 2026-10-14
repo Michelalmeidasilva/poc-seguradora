@@ -102,27 +102,30 @@ afterEach(() => {
 });
 
 describe('App', () => {
-  it('opens a new direct contracting response once, but does not reopen it after closing', async () => {
-    const { rerender } = render(<App />);
-    mock.items = [
-      {
-        ...flowItem,
-        event: {
-          ...flowItem.event,
-          payload: {
-            ...flowItem.event.payload,
-            flowId: 'ADE-03',
-            flowJson: { ...flowJson, autoOpen: true },
+  it.each(['ADE-03', 'DEP-02', 'DEP-05', 'DEP-06'])(
+    'opens a new direct response %s once, but does not reopen it after closing',
+    async (flowId) => {
+      const { rerender } = render(<App />);
+      mock.items = [
+        {
+          ...flowItem,
+          event: {
+            ...flowItem.event,
+            payload: {
+              ...flowItem.event.payload,
+              flowId,
+              flowJson: { ...flowJson, autoOpen: true },
+            },
           },
         },
-      },
-    ];
-    rerender(<App />);
-    expect(screen.getByRole('dialog', { name: 'Cotação' })).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole('button', { name: /^Fechar$/ }));
-    rerender(<App />);
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
+      ];
+      rerender(<App />);
+      expect(screen.getByRole('dialog', { name: 'Cotação' })).toBeInTheDocument();
+      await userEvent.setup().click(screen.getByRole('button', { name: /^Fechar$/ }));
+      rerender(<App />);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    },
+  );
   it('does not open a new contracting response in a passive tab or later on takeover', () => {
     mock.tab = 'other-tab';
     const { rerender } = render(<App />);
