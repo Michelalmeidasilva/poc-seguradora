@@ -17,6 +17,7 @@ Coordenação documental: Codex atualiza somente a seção 5.3 da SPEC de experi
 | Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
 |---|---|---|---|---|---|---|---|
 | protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Task 1 concluída: `message.document`, schema estrito e parser sem seq; suíte protocol 92/92. Workstream segue aberto por pendência preexistente do schema completo de Flow JSON no CHECKLIST |
+| task-tracking | .agents/skills/task-tracking, .agents/metrics | in_progress | codex | feat/assistance-final-validation | 2026-10-14 | 2026-10-14 | Criar instrução compartilhada e registros versionados de complexidade, tempo de execução, prompt, SPEC e duração de testes; não altera serviços nem produto |
 | resilience | packages/resilience | done | claude | feat/foundation-protocol-resilience | 2026-10-10 | 2026-10-10 | |
 | svc-cotacao | apps/svc-cotacao | not_started | - | - | - | - | Outro agente; contrato em docs/superpowers/specs/2026-10-10-internal-services-contracts.md |
 | svc-apolice | apps/svc-apolice | not_started | - | - | - | - | Outro agente; mesmo contrato |
