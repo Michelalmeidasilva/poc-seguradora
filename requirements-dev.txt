@@ -1,0 +1,2 @@
+# Tooling used only by repository development/agent validation scripts.
+PyYAML>=6.0.2,<7
