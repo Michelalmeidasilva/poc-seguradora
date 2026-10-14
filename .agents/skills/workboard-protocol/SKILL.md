@@ -1,6 +1,6 @@
 ---
 name: workboard-protocol
-description: Use before starting, continuing or finishing any task in this monorepo (code, docs, tests, config). Enforces the multi-agent WORKBOARD.md protocol, per-service CHECKLIST.md updates and the project spec rules, so several agents (claude, codex, cursor, antigravity, others) and people can work in parallel without colliding.
+description: Use before starting, continuing or finishing any task in this monorepo (code, docs, tests, config). Enforces the multi-agent WORKBOARD.md protocol, proportional validation and the project spec rules, so several agents (claude, codex, cursor, antigravity, others) and people can work in parallel without colliding.
 ---
 
 # Workboard protocol
@@ -34,14 +34,14 @@ This applies to every agent and person who works in this repository, with no exc
   - hexagonal structure `domain` / `application` / `infra` / `main.ts`, with dependencies only `infra → application → domain`;
   - Zod validation at the borders, config from validated env vars, stable error codes, manual dependency injection;
   - Result type for expected errors; domain and application tested without I/O.
-- **Keep `CHECKLIST.md` honest.** Update the service's `CHECKLIST.md` in the same commit that finishes an item. Mark `[x]` only when the code exists, its tests pass and the commit is made.
+- **Keep development history useful.** Record durable deliveries, decisions and pending work in `docs/development-history/<project>.md`; do not turn unrelated backlog into a completion gate.
 - **Commits:** small, conventional (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
 - **Milestones:** update `Atualizado` and `Notas` in the `WORKBOARD.md` row. If you get stuck, set `blocked` and write the reason.
 - **Execution evidence:** append timings for verification runs used as evidence to `.agents/metrics/test-execution-timings.md`; close or hand off the task row with active, blocked and elapsed time. Follow `task-tracking` for the schema and sensitive-data restrictions.
 
 ## Before saying "done"
 
-1. Every item in the service's `CHECKLIST.md` is `[x]`, lint and strict `tsc` are clean, and the tests pass. Run them and read the output; do not assume.
+1. The declared scope is complete and its evidence is proportional: governance uses `git diff --check` plus workboard validation when applicable; one workspace uses its own tests/typecheck; multi-workspace integration, release or deploy uses broader verification. Run and read the output; do not assume.
 2. Set the row to `done` (keep `Dono`), update `Atualizado`, and commit.
 3. Run `node scripts/workboard-check.mjs` again.
 4. Tell the user plainly what was done and what was not.
@@ -53,13 +53,13 @@ This applies to every agent and person who works in this repository, with no exc
 | "It's a tiny change, I'll skip the claim" | Small edits collide too. Claim first. |
 | "The row looks stale, I'll just edit" | Stale means more than 24 h. Record the takeover in `Notas`. |
 | "I only need to touch one file in another workstream" | Ask the owner, or record it in their `Notas`. |
-| "I'll update the checklist at the end" | Same commit as the item, so the file never lies. |
+| "Todo backlog precisa fechar para encerrar esta tarefa" | Conclua o escopo declarado; registre pendências fora dele no histórico ou em outra linha. |
 | "I'll `git init` here to keep my work separate" | One repo, at the root. Use a branch or worktree. |
 
 ## Quick reference
 
 ```
 read WORKBOARD.md → pick row → claim commit → own branch/worktree
-→ work only in your path → CHECKLIST.md with each item → tests pass
+→ work only in your path → proportional evidence → durable history quando relevante
 → row = done → workboard-check passes
 ```

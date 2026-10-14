@@ -1,4 +1,4 @@
-# Checklist: protocol
+# Histórico de desenvolvimento: protocol
 
 Última atualização: 2026-10-13
 

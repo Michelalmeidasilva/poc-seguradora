@@ -1,4 +1,4 @@
-# Checklist: svc-cotacao
+# Histórico de desenvolvimento: svc-sinistro
 
 Última atualização: 2026-10-10
 
@@ -8,9 +8,9 @@
 - [ ] Dockerfile e execução local
 
 ## Funcionalidades
-- [ ] GET /v1/produtos
-- [ ] POST /v1/cotacoes
-- [ ] GET /v1/cotacoes/{cotacaoId}
+- [ ] POST /v1/sinistros
+- [ ] GET /v1/sinistros/{protocolo}
+- [ ] GET /v1/sinistros?apolice=
 - [ ] openapi.yaml fiel ao contrato
 - [ ] Fixtures em data/*.json
 - [ ] Injeção de falha (X-Mock-Latency-Ms, X-Mock-Error)

@@ -16,7 +16,7 @@ Os três serviços deste documento serão desenvolvidos **por outro agente, em p
 - trabalhe dentro do **monorepo único** `seguradora-services` (um só `git init`, na raiz; não crie repositório dentro de `apps/svc-*`). Antes de implementar, a estrutura do monorepo e o `package.json` do seu serviço devem existir e estar commitados;
 - esta regra vale para qualquer chatbot ou agente que execute tarefas neste repositório (seção 15.3 do spec principal), sem exceção;
 - antes de escrever código, reivindique sua frente no `WORKBOARD.md` da raiz (linhas `svc-cotacao`, `svc-apolice`, `svc-sinistro`), seguindo o protocolo da seção 15.3 do spec principal: `Status` `in_progress`, seu `Dono`, `Branch` e datas, em commit próprio, e só altere os arquivos do seu caminho. Ao terminar, marque `done`;
-- mantenha na raiz de cada serviço (`apps/svc-cotacao`, `apps/svc-apolice`, `apps/svc-sinistro`) um `CHECKLIST.md` com o que já foi feito e o que falta (uma linha por rota do contrato, `openapi.yaml`, fixtures, injeção de falha, `/health` + `/ready`, testes). Crie-o com todos os itens em aberto antes de começar e atualize-o no mesmo commit que conclui cada item. Formato na seção 15.2 do spec principal, resumido aqui:
+- mantenha o histórico em `docs/development-history/<serviço>.md` e um único `AGENTS.md` local. O histórico registra rotas, `openapi.yaml`, fixtures, injeção de falha, `/health` + `/ready` e testes; ele não bloqueia a conclusão de escopo não relacionado.
   - seções `Estrutura`, `Funcionalidades`, `Qualidade` e `Pendências e decisões`;
   - itens como `- [ ]` (aberto) ou `- [x]` (concluído, com código, testes passando e commit feito);
   - data de última atualização no topo.

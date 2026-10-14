@@ -1,4 +1,4 @@
-# Checklist — protótipo UX WhatsApp
+# Histórico de desenvolvimento: protótipo UX WhatsApp
 
 - [x] Catálogo de jornadas e estados discutidos, incluindo propostas não validadas identificadas.
 - [x] 34 telas LEG removidas do atlas; 247 telas novas e todos os estados alternativos preservados.

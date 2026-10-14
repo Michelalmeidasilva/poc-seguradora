@@ -270,7 +270,9 @@ O projeto é um **monorepo pnpm com um único repositório git**, na raiz `segur
 4. Criar na raiz o `WORKBOARD.md` (seção 15.3), o `AGENTS.md` com as regras e os apontadores para ele (`CLAUDE.md`, `GEMINI.md`, `.cursor/rules/workboard.mdc`, `.github/copilot-instructions.md`), e o script `scripts/workboard-check.mjs`. **O controle de trabalho nasce antes de qualquer implementação.**
 5. Fazer o commit inicial dessa estrutura. A partir daí, commits convencionais e pequenos.
 
-### 15.2 `CHECKLIST.md` por serviço
+### 15.2 Histórico de desenvolvimento e `AGENTS.md` local
+
+Esta seção foi atualizada pela SPEC `2026-10-14-governance-modernization-design.md`. Onde o texto histórico abaixo menciona `CHECKLIST.md`, leia `docs/development-history/<projeto>.md`: é registro de entregas e pendências, não gate de conclusão. Cada projeto mantém um único `AGENTS.md` local com escopo, referências e validação proporcional.
 
 Cada app e cada pacote (`apps/*` e `packages/*`) mantém na sua raiz um `CHECKLIST.md` com o que já foi feito e o que falta. Ele é criado no passo 2 da seção 15.1, antes de qualquer implementação, com todos os itens em aberto. Quem desenvolve atualiza o arquivo **no mesmo commit** que conclui o item.
 
@@ -308,7 +310,7 @@ Um item só é marcado como concluído quando o código existe, os testes dele p
 
 ### 15.3 `WORKBOARD.md`: controle de trabalho entre agentes
 
-Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem trabalhar ao mesmo tempo neste monorepo. O `WORKBOARD.md`, na raiz, é a **fonte única** de quem está desenvolvendo o quê. O `CHECKLIST.md` (seção 15.2) detalha o progresso dentro de um serviço; o `WORKBOARD.md` diz de quem ele é e em que estado está.
+Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem trabalhar ao mesmo tempo neste monorepo. O `WORKBOARD.md`, na raiz, é a **fonte única** de quem está desenvolvendo o quê. O histórico documenta contexto técnico; o `WORKBOARD.md` diz de quem é o escopo e em que estado está.
 
 **Formato:** uma tabela, uma linha por frente de trabalho (*workstream*).
 
@@ -336,13 +338,13 @@ Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem tra
 3. **Um dono por caminho.** Só edite arquivos do seu caminho. Para mudar um arquivo de outro workstream (em especial `packages/protocol`), peça ao dono, ou registre a mudança em `Notas` da linha dele. A exceção é o contrato dos serviços internos, que só muda com acordo (documento de contratos, seção 1).
 4. **Isolamento:** cada agente trabalha em sua própria branch, de preferência em um `git worktree` separado, para não pisar na árvore de trabalho dos outros.
 5. **Atualize** `Atualizado` e `Notas` ao concluir um marco, e marque `blocked` com o motivo quando travar.
-6. **Ao terminar**, só marque `done` com o `CHECKLIST.md` do serviço 100% marcado e os testes passando. Mantenha `Dono` para a rastreabilidade.
+6. **Ao terminar**, marque `done` quando o escopo declarado estiver concluído e a evidência proporcional indicada pelo `AGENTS.md` raiz tiver passado. Mantenha `Dono` para a rastreabilidade.
 7. **Reivindicação obsoleta:** uma linha `in_progress` sem atualização há mais de 24 h pode ser retomada por outro. Quem retoma registra em `Notas` de quem era e o motivo.
 
 **Regra obrigatória para todo agente.** O protocolo acima vale para **qualquer chatbot, agente de código ou assistente de IA que execute uma tarefa neste repositório**, listado ou não (claude, codex, cursor, antigravity, copilot, gemini e outros), e para pessoas. Nenhum agente edita código, cria arquivos ou faz commits fora do próprio caminho sem antes ter reivindicado uma linha no `WORKBOARD.md`. Um agente que não consiga ler os arquivos de instrução abaixo deve receber essa regra no prompt da tarefa.
 
 **Apontadores para os agentes:**
-- **`AGENTS.md`** na raiz é a **fonte única** das regras: leia o `WORKBOARD.md` antes de tocar no código, reivindique uma linha, respeite o caminho dos outros, trabalhe em branch ou worktree próprio e atualize o `CHECKLIST.md`. É o arquivo padrão lido por codex, cursor e antigravity.
+- **`AGENTS.md`** na raiz é a **fonte única** das regras: leia o `WORKBOARD.md` antes de tocar no código, reivindique uma linha, respeite o caminho dos outros, trabalhe em branch ou worktree próprio e use a validação proporcional. É o arquivo padrão lido por codex, cursor e antigravity.
 - Os demais arquivos só apontam para ele, em uma ou duas linhas, para não divergirem:
   - `CLAUDE.md` (Claude);
   - `GEMINI.md` (Gemini e antigravity);
@@ -351,7 +353,7 @@ Vários agentes (`claude`, `codex`, `cursor`, `antigravity`) e pessoas podem tra
 - Quando uma ferramenta nova passar a trabalhar no repositório, adiciona-se o apontador dela e atualiza-se esta lista, sem copiar as regras.
 - O `scripts/workboard-check.mjs` também verifica que cada apontador existe e menciona `AGENTS.md`.
 
-**Skill do repositório:** `workboard-protocol` empacota esta seção (protocolo do `WORKBOARD.md`, `CHECKLIST.md` e as regras de código da seção 14) como uma skill, invocada antes de iniciar, continuar ou concluir qualquer tarefa no repositório. Em caso de divergência, o spec prevalece e a skill é corrigida.
+**Skill do repositório:** `workboard-protocol` empacota esta seção (protocolo do `WORKBOARD.md`, validação proporcional e as regras de código da seção 14) como uma skill, invocada antes de iniciar, continuar ou concluir qualquer tarefa no repositório. Em caso de divergência, o spec prevalece e a skill é corrigida.
 
 Há **uma única cópia**, em `.agents/skills/workboard-protocol/SKILL.md`, e as demais ferramentas a enxergam por symlink:
 

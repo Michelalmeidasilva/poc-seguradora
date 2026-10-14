@@ -1,4 +1,6 @@
-# Checklist: chatbot
+# Histórico de desenvolvimento: chatbot
+
+Registro histórico de entregas, decisões e pendências; não é gate de conclusão.
 
 Última atualização: 2026-10-13
 
