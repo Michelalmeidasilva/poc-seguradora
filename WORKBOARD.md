@@ -18,7 +18,7 @@ Coordenação documental: Codex atualiza somente a seção 5.3 da SPEC de experi
 |---|---|---|---|---|---|---|---|
 | protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Task 1 concluída: `message.document`, schema estrito e parser sem seq; suíte protocol 92/92. Workstream segue aberto por pendência preexistente do schema completo de Flow JSON no CHECKLIST |
 | task-tracking | .agents/skills/task-tracking, .agents/metrics, requirements-dev.txt, .gitignore | done | codex | feat/assistance-final-validation | 2026-10-14 | 2026-10-14 | PyYAML 6.0.3 declarado em requirements-dev.txt e instalado em .venv local; quick_validate, workboard-check e diff-check passaram. |
-| integration | WORKBOARD.md, .agents/metrics | in_progress | codex | feat/assistance-final-validation | 2026-10-14 | 2026-10-14 | Integrar localmente os commits da branch em develop e master, com verificação em cada resultado; não fazer push nem alterar artefatos não rastreados. |
+| integration | WORKBOARD.md, .agents/metrics | done | codex | feat/assistance-final-validation | 2026-10-14 | 2026-10-14 | Integrada localmente em develop (71bbc91) e master (04d93b5); suíte completa passou nos dois resultados. Sem push; artefatos não rastreados preservados. |
 | resilience | packages/resilience | done | claude | feat/foundation-protocol-resilience | 2026-10-10 | 2026-10-10 | |
 | svc-cotacao | apps/svc-cotacao | not_started | - | - | - | - | Outro agente; contrato em docs/superpowers/specs/2026-10-10-internal-services-contracts.md |
 | svc-apolice | apps/svc-apolice | not_started | - | - | - | - | Outro agente; mesmo contrato |
