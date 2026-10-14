@@ -1138,10 +1138,9 @@
         'DEP-03',
         'Consultar vagas e condições',
         'Serviços de Assistência Familiar',
-        'Você tem 2 vagas disponíveis. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
+        'Seu plano tem 2 vagas disponíveis para inclusão de dependentes. No formulário, informe os dados da pessoa que deseja incluir:\n\n• Nome completo\n• CPF\n• Data de nascimento\n• Parentesco com o titular\n• Celular do dependente\n• Sexo biológico informado pela pessoa, com a opção “Prefiro não informar”\n\nVocê poderá revisar os dados e as condições antes de confirmar a inclusão.',
         {
           actions: [
-            action('Informar na conversa', 'DEP-33'),
             action('Preencher formulário', 'DEP-05'),
           ],
         },

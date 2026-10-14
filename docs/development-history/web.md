@@ -264,3 +264,10 @@ A abertura é exclusiva da resposta atual: não reabre histórico restaurado, me
 Validação: suíte raiz aprovada (958 testes web/671 chatbot e demais workspaces/verificadores); após correção da revisão, 21 testes de App passaram, tipos web e lint aprovados. Seis E2E reais/offline passaram, incluindo os três produtos, os dois planos, reentrada na descoberta e CPF preservado. TASK-20261014-014 registra execuções e a correção de um seletor de teste apontada pelo typecheck. Integração local em develop e atualização dos containers fazem parte da continuação da entrega autorizada pelo usuário.
 
 Entrega local concluída: implementação ea26ea7 integrada em develop pelo merge 001568f, sem conflitos e com código idêntico ao validado. Quatro imagens reconstruídas e containers healthy em http://localhost:8080: web 11f1bcb89118, chatbot 997d65fd161e, gateway 37b485c01a63, fake-services 1ef09f245ff7. Smoke 7/7 e cinco E2E contra essa stack aprovaram a abertura automática dos três produtos e o retorno à descoberta nos dois planos. Sem push/master/GCP; artefatos não rastreados preservados.
+
+
+## 2026-10-14 — orientação da inclusão de dependentes pelo formulário
+
+DEP-03 oferece somente “Preencher formulário”, com destino DEP-05. O texto explica as duas vagas disponíveis e os dados necessários: nome completo, CPF, data de nascimento, parentesco com o titular, celular do dependente e sexo biológico informado pela pessoa, incluindo a opção “Prefiro não informar”. Também informa que os dados e condições poderão ser revisados antes da confirmação. Fonte canônica, catálogo gerado e atlas offline sincronizados.
+
+Tipos e teste E2E real da etapa aprovados: mensagem exibe os seis dados, CTA conversacional ausente e formulário acessível com os campos correspondentes. Revisão independente confirmou texto/campos/destino. A atualização local continua a entrega em andamento já autorizada; TASK-20261014-015 contém as evidências.
