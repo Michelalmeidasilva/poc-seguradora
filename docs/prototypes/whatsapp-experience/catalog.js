@@ -2981,7 +2981,7 @@
     note: '',
     outcomes: [
       { id: 'finish', label: 'Concluir descoberta', target: 'DES-11' },
-      { id: 'contract', label: 'Iniciar contratação', target: 'ADE-01' },
+      { id: 'contract', label: 'Iniciar contratação', target: 'ADE-03' },
     ],
   };
   window.EXPERIENCE = {

@@ -253,3 +253,12 @@ Merge `96253d3` integra `/reset` (8211772) e contratação em Flow único (36e22
 Validação no merge: suíte raiz aprovada (955 web/671 chatbot e demais workspaces; 116 verificadores e 52 cenários herméticos), typecheck, build Compose, smoke 7/7 e quatro E2E reais contra os containers atualizados. Três cenários de contratação cobrem os três produtos, os planos e meios de pagamento; reset comprova sessão nova, descarte do histórico e ausência do histórico antigo após reload. Duração do E2E reset inclui recuperação automática do limite de criação de sessões. TASK-20261014-013 registra tempos.
 
 A CLI de nuvem retornou código 3 por falta de ADC e acesso ao Docker no sandbox. O acesso ao socket foi confirmado com permissão elevada; atualização feita pela receita local Compose do runbook, sem usar ADC/GCP. Artefatos não rastreados preservados. Sem push remoto ou alteração de master. Os containers permanecem disponíveis para teste local.
+
+
+## 2026-10-14 — entrada direta em dados e pagamento
+
+A escolha de um plano na descoberta segue diretamente para ADE-03, preservando produto/modalidade e o gate de CPF. O diálogo “Você escolheu…”, seus botões Continuar/Rever planos e o envio intermediário de Continuar saem desse caminho. A resposta nova do chatbot sinaliza abertura automática do Flow Dados e pagamento no web; após informar CPF pendente, o mesmo caminho é retomado. Entradas antigas ADE-01/ADE-02 também seguem à etapa unificada.
+
+A abertura é exclusiva da resposta atual: não reabre histórico restaurado, mensagens superadas por outro pedido, formulários fechados ou respostas recebidas em aba passiva. Espera o envio e o diálogo de descoberta terminarem. A revisão independente apontou e foi corrigido o descarte de respostas superadas.
+
+Validação: suíte raiz aprovada (958 testes web/671 chatbot e demais workspaces/verificadores); após correção da revisão, 21 testes de App passaram, tipos web e lint aprovados. Seis E2E reais/offline passaram, incluindo os três produtos, os dois planos, reentrada na descoberta e CPF preservado. TASK-20261014-014 registra execuções e a correção de um seletor de teste apontada pelo typecheck. Integração local em develop e atualização dos containers fazem parte da continuação da entrega autorizada pelo usuário.

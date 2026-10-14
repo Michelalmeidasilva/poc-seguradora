@@ -102,6 +102,96 @@ afterEach(() => {
 });
 
 describe('App', () => {
+  it('opens a new direct contracting response once, but does not reopen it after closing', async () => {
+    const { rerender } = render(<App />);
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          payload: {
+            ...flowItem.event.payload,
+            flowId: 'ADE-03',
+            flowJson: { ...flowJson, autoOpen: true },
+          },
+        },
+      },
+    ];
+    rerender(<App />);
+    expect(screen.getByRole('dialog', { name: 'Cotação' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Fechar$/ }));
+    rerender(<App />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('does not open a new contracting response in a passive tab or later on takeover', () => {
+    mock.tab = 'other-tab';
+    const { rerender } = render(<App />);
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          payload: {
+            ...flowItem.event.payload,
+            flowId: 'ADE-03',
+            flowJson: { ...flowJson, autoOpen: true },
+          },
+        },
+      },
+    ];
+    rerender(<App />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    mock.tab = 'active';
+    rerender(<App />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('does not open a contracting response superseded by another journey', () => {
+    const { rerender } = render(<App />);
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          payload: {
+            ...flowItem.event.payload,
+            flowId: 'ADE-03',
+            flowJson: { ...flowJson, autoOpen: true },
+          },
+        },
+      },
+      {
+        ...flowItem,
+        id: 'b2',
+        seq: 2,
+        event: {
+          ...flowItem.event,
+          id: 'new-response',
+          seq: 2,
+          payload: { ...flowItem.event.payload, flowId: 'DES-01' },
+        },
+      },
+    ];
+    rerender(<App />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('does not automatically open a contracting Flow restored from history', () => {
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          payload: {
+            ...flowItem.event.payload,
+            flowId: 'ADE-03',
+            flowJson: { ...flowJson, autoOpen: true },
+          },
+        },
+      },
+    ];
+    render(<App />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('switches previews without clearing the conversation or composer draft', async () => {
     mock.items = [flowItem];
     const user = userEvent.setup();
