@@ -152,6 +152,16 @@ describe('chatbot end to end (fake internal services)', () => {
           state: { journeyId: '', screenId: '', gateApproved: true },
         },
       );
+      if (step.id === 'DEP-01') {
+        expect(result.ok && result.value.state.screenId).toBe('DEP-02');
+        expect(
+          result.ok &&
+            result.value.replies.some(
+              (reply) => reply.type === 'message.flow' && reply.payload.flowId === 'DEP-02',
+            ),
+        ).toBe(true);
+        continue;
+      }
       if (
         ['ADE-01', 'ADE-02', 'ADE-05', 'PAG-01', 'PAG-02', 'PAG-03', 'PAG-04'].includes(step.id)
       ) {
@@ -317,16 +327,15 @@ describe('chatbot end to end (fake internal services)', () => {
     const acceptedCpf = await turn(bot.url, textReq(cpfCanary, { session }));
     expect(textsOf(acceptedCpf.events)).not.toContain(cpfCanary);
 
-    const captured = await turn(bot.url, textReq(oneSentence, { session }));
+    expect(findEvent(acceptedCpf.events, 'message.flow').payload.flowId).toBe('DEP-02');
+    const captured = await turn(
+      bot.url,
+      flowSubmitReq({ choice: '0' }, { session, flowId: 'DEP-02' }),
+    );
     expect(textsOf(captured.events)).toContain('João');
-    const supplement = await turn(bot.url, choiceReq('DEP-34', { session }));
-    expect(findEvent(supplement.events, 'message.flow').payload.flowId).toBe('DEP-34');
     const review = await turn(
       bot.url,
-      flowSubmitReq(
-        { phone: '11987654321', biologicalSex: 'Masculino' },
-        { session, flowId: 'DEP-34' },
-      ),
+      textReq('Celular: 11987654321; Sexo biológico: Masculino', { session }),
     );
     expect(findEvent(review.events, 'message.flow').payload.flowId).toBe('DEP-06');
     const correction = await turn(
@@ -358,7 +367,6 @@ describe('chatbot end to end (fake internal services)', () => {
         gated.events,
         acceptedCpf.events,
         captured.events,
-        supplement.events,
         review.events,
         correction.events,
         revised.events,

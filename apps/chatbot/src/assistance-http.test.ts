@@ -175,17 +175,17 @@ it.each([
     expect(textsOf(gated.events)).not.toContain(name);
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const resumed = await turn(bot.url, textReq('11111111111', { session }));
-    expect(textsOf(resumed.events)).toContain(name);
-    const supplement = await turn(bot.url, choiceReq('DEP-34', { session }));
-    const supplementFlow = findEvent(supplement.events, 'message.flow').payload;
-    expect(supplementFlow.body).toContain(name.split(' ')[0]);
-    expect(JSON.stringify(supplementFlow.flowJson)).toContain(name.split(' ')[0]);
+    expect(findEvent(resumed.events, 'message.flow').payload.flowId).toBe('DEP-02');
+    const selected = await turn(
+      bot.url,
+      flowSubmitReq({ choice: '0' }, { session, flowId: 'DEP-02' }),
+    );
+    expect(textsOf(selected.events)).toContain(name);
+    expect(textsOf(selected.events)).toContain('Celular');
+    expect(textsOf(selected.events)).toContain('Sexo biológico');
     await turn(
       bot.url,
-      flowSubmitReq(
-        { phone: '11987654321', biologicalSex: 'Prefiro não informar' },
-        { session, flowId: 'DEP-34' },
-      ),
+      textReq('Celular: 11987654321; Sexo biológico: Prefiro não informar', { session }),
     );
     await turn(bot.url, flowSubmitReq({}, { session, flowId: 'DEP-06' }));
     const snapshot = await mock.getSessionSnapshot(session, readContext);
@@ -224,13 +224,10 @@ it('excludes the selected session dependent only after its actual review is conf
       { session },
     ),
   );
-  await turn(bot.url, choiceReq('DEP-34', { session }));
+  await turn(bot.url, flowSubmitReq({ choice: '0' }, { session, flowId: 'DEP-02' }));
   await turn(
     bot.url,
-    flowSubmitReq(
-      { phone: '11987654321', biologicalSex: 'Prefiro não informar' },
-      { session, flowId: 'DEP-34' },
-    ),
+    textReq('Celular: 11987654321; Sexo biológico: Prefiro não informar', { session }),
   );
   await turn(bot.url, flowSubmitReq({}, { session, flowId: 'DEP-06' }));
   const list = await turn(bot.url, textReq('Quero excluir a Maria.', { session }));

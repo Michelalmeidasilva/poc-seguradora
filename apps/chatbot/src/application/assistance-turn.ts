@@ -9,6 +9,7 @@ import {
 import { assistanceFlows } from '../domain/flows';
 import { parseAssistanceCpf } from '../domain/assistance-cpf';
 import { parseDependentStatement } from '../domain/dependent-statement';
+import { clearDependentDraft, dependentIntake, dependentLabels } from './dependent-intake';
 import type { AssistanceDocumentScreen } from './assistance-service';
 import type { ReplyBody } from '../domain/reply';
 import type { AssistancePort, CallContext, AssistanceFailure } from './ports';
@@ -174,6 +175,29 @@ const flowInitialData = (
   state: AssistanceState | undefined,
   intent: 'review' | 'correction' | undefined,
 ) => {
+  if (['DEP-05', 'DEP-06'].includes(step.id) && state?.temporaryData?.dependentIntake === 'true') {
+    const { values } = dependentIntake(state.temporaryData);
+    const cpf = values.cpf;
+    delete values.cpf;
+    if (step.id === 'DEP-05' && cpf) values.document = cpf;
+    if (step.id === 'DEP-05' && values.relationship) {
+      const choices: Record<string, string> = {
+        filha: 'Filha',
+        filho: 'Filho',
+        cônjuge: 'Cônjuge',
+        conjuge: 'Cônjuge',
+        esposa: 'Cônjuge',
+        esposo: 'Cônjuge',
+        outro: 'Outro',
+        outra: 'Outro',
+      };
+      values.relationship = choices[values.relationship.toLocaleLowerCase('pt-BR')] ?? 'Outro';
+    }
+    if (step.id === 'DEP-06' && state.temporaryData.remainingSlots)
+      values.remainingSlots = state.temporaryData.remainingSlots;
+    if (step.id === 'DEP-06' && cpf) values.maskedDocument = `•••.•••.•••-${cpf.slice(-2)}`;
+    return { intent: step.id === 'DEP-06' ? ('review' as const) : ('correction' as const), values };
+  }
   if (step.id === 'ADE-03' && state?.temporaryData) {
     return {
       intent: 'correction' as const,
@@ -268,6 +292,7 @@ const textReply = (
       : personalized;
   };
   body = personalize(body);
+  if (draft?.name) body = body.replaceAll('{{name}}', () => draft.name!);
   const discovery = recordOf(assistanceCatalog.byId['DES-01']?.flow)?.discovery as
     { services: Array<{ id: string; title: string }> } | undefined;
   const selectedService = discovery?.services.find((service) => service.id === draft?.service);
@@ -398,6 +423,11 @@ async function confirmedMutation(
   switch (step.id) {
     case 'DEP-06':
     case 'DEP-17': {
+      const checked = dependentIntake({
+        ...stringFields(data),
+        birth: field('birthDate', 'birth', 'nascimento'),
+      });
+      if (checked.missing.length) return err('invalid');
       const cpf = field('cpf', 'document').replace(/\D/g, '');
       const name = field('name', 'nome');
       const birthDate = field('birthDate', 'birth', 'nascimento');
@@ -551,6 +581,11 @@ function targetForText(text: string, state?: AssistanceState): AssistanceStep | 
   if (['oi', 'ola', 'bom dia', 'boa tarde', 'boa noite'].includes(greeting)) {
     return assistanceCatalog.byId['ENT-02'];
   }
+  if (/^(?:quero\s+)?(?:incluir|adicionar)\s+(?:um(?:a)?\s+)?dependente[.!?]*$/i.test(normalized))
+    return assistanceCatalog.byId['DEP-01'];
+  if (/^(?:menu|opções|opcoes)[.!?]*$/i.test(normalized)) return assistanceCatalog.byId['NAV-01'];
+  if (normalized === assistanceCatalog.byId['DEP-32']!.user.toLocaleLowerCase('pt-BR'))
+    return assistanceCatalog.byId['DEP-32'];
   const statement = parseDependentStatement(text);
   if (
     /\b(incluir|adicionar)\b/i.test(text) &&
@@ -561,6 +596,11 @@ function targetForText(text: string, state?: AssistanceState): AssistanceStep | 
   ) {
     return assistanceCatalog.byId['DEP-33'];
   }
+  if (
+    /\b(incluir|adicionar)\b/i.test(text) &&
+    (statement.name || statement.relationship || /\bdependente\b/i.test(text))
+  )
+    return assistanceCatalog.byId['DEP-01'];
   const matches = assistanceCatalog.steps.filter(
     (candidate) =>
       candidate.user.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ') === normalized,
@@ -581,12 +621,37 @@ export async function runAssistanceTurn(
   deps: AssistanceTurnDeps,
 ): Promise<Result<AssistanceTurnResult, AssistanceFailure>> {
   const { state, port, sessionId, context } = deps;
+  const requestedEntry =
+    input.type === 'text'
+      ? targetForText(input.text, state)?.id
+      : input.type === 'open' || input.type === 'quick_reply'
+        ? input.target
+        : undefined;
+  const collectingDependent =
+    state.temporaryData?.dependentIntake === 'true' &&
+    ['DEP-03', 'DEP-04', 'DEP-33', 'DEP-05'].includes(state.screenId);
+  const genericDependentCommand =
+    input.type === 'text' &&
+    /^(?:quero\s+)?(?:incluir|adicionar)\s+(?:um(?:a)?\s+)?dependente[.!?]*$/i.test(
+      input.text.trim(),
+    );
+  const entryIsOffered =
+    input.type !== 'quick_reply' ||
+    assistanceCatalog.byId[state.screenId]?.destinations.includes(requestedEntry ?? '');
+  const enteringDependent =
+    entryIsOffered &&
+    (!collectingDependent || genericDependentCommand) &&
+    (requestedEntry === 'DEP-01' || (input.type === 'text' && requestedEntry === 'DEP-33'));
   const statement =
     input.type === 'text' &&
-    !isAssistanceCpfPrompt(state.screenId) &&
-    targetForText(input.text)?.id === 'DEP-33'
+    enteringDependent &&
+    !genericDependentCommand &&
+    !isAssistanceCpfPrompt(state.screenId)
       ? parseDependentStatement(input.text)
       : undefined;
+  const intakeDraft = enteringDependent
+    ? { ...clearDependentDraft(state.temporaryData), ...statement, dependentIntake: 'true' }
+    : state.temporaryData;
   if (input.type === 'flow_data_exchange') return ok({ state, replies: [] });
   const currentStep = assistanceCatalog.byId[state.screenId];
   if (input.type === 'quick_reply' && currentStep) {
@@ -606,9 +671,10 @@ export async function runAssistanceTurn(
     return ok({
       state: {
         ...gate.state,
-        pendingStep: state.screenId,
+        pendingStep: enteringDependent ? 'DEP-02' : state.screenId,
+        ...(enteringDependent ? { temporaryData: intakeDraft } : {}),
         ...(statement
-          ? { temporaryData: { ...state.temporaryData, ...statement } as Record<string, string> }
+          ? { temporaryData: { ...intakeDraft, ...statement } as Record<string, string> }
           : {}),
       },
       replies: textReply(gate.step),
@@ -655,6 +721,62 @@ export async function runAssistanceTurn(
     if (!undone.ok) return ok(preserveReply(state, failureText[undone.error]));
   }
 
+  if (
+    input.type === 'text' &&
+    state.gateApproved &&
+    state.temporaryData?.dependentIntake === 'true' &&
+    ['DEP-03', 'DEP-04', 'DEP-33', 'DEP-05'].includes(state.screenId) &&
+    !enteringDependent &&
+    (!requestedEntry || ['DEP-01', 'DEP-04', 'DEP-33'].includes(requestedEntry))
+  ) {
+    const earlier = dependentIntake(state.temporaryData);
+    const parsed = parseDependentStatement(input.text);
+    const focused =
+      earlier.missing.length === 1 && Object.keys(parsed).length === 0
+        ? parseDependentStatement(input.text, {}, earlier.missing[0])
+        : parsed;
+    const draft = { ...state.temporaryData, ...focused };
+    const checked = dependentIntake(draft);
+    const base =
+      state.screenId === 'DEP-05'
+        ? nextAssistanceState(state, { type: 'open', target: 'DEP-03' }).state
+        : state;
+    const next = { ...base, temporaryData: { ...draft, ...checked.values } };
+    if (checked.missing.length) {
+      return ok({
+        state: next,
+        replies: [
+          {
+            type: 'message.text',
+            payload: {
+              text: `Para completar o cadastro, informe apenas os dados que faltam ou precisam de correção:\n\n${checked.missing.map((field) => `• ${dependentLabels[field]}`).join('\n')}\n\nOs dados já recebidos foram preservados. Você também pode preencher o formulário.`,
+            },
+          } as ReplyBody,
+          {
+            type: 'message.quick_replies',
+            payload: {
+              text: 'Se preferir, continue pelo formulário.',
+              options: [{ id: 'DEP-05', title: 'Preencher formulário' }],
+            },
+          } as ReplyBody,
+        ],
+      });
+    }
+    const review = nextAssistanceState(next, { type: 'open', target: 'DEP-06' });
+    return ok({
+      state: review.state,
+      replies: [
+        {
+          type: 'message.text',
+          payload: {
+            text: 'Recebi todos os dados necessários. Confira os dados e as condições antes de confirmar a inclusão.',
+          },
+        } as ReplyBody,
+        ...textReply(review.step, review.state, 'review', undefined, true),
+      ],
+    });
+  }
+
   switch (input.type) {
     case 'open':
       transitionInput = { type: 'open', target: input.target };
@@ -666,7 +788,9 @@ export async function runAssistanceTurn(
       transitionInput = { type: 'cpf_submit', cpf: input.cpf };
       break;
     case 'text': {
-      if (isAssistanceCpfPrompt(state.screenId)) {
+      if (enteringDependent && !isAssistanceCpfPrompt(state.screenId)) {
+        transitionInput = { type: 'open', target: 'DEP-02' };
+      } else if (isAssistanceCpfPrompt(state.screenId)) {
         transitionInput = { type: 'cpf_submit', cpf: input.text };
       } else if (state.screenId === 'DEP-33' || state.screenId === 'DEP-04') {
         transitionInput = { type: 'open', target: state.screenId };
@@ -740,6 +864,16 @@ export async function runAssistanceTurn(
         validated = { target: 'EXC-02', dependentId: dependent.id, dependentName: dependent.name };
       } else {
         validated = validateFlowData(currentStep, submitted);
+      }
+      if (validated && ['DEP-05', 'DEP-34'].includes(currentStep.id)) {
+        const fields = stringFields(validated);
+        const checked = dependentIntake({
+          ...state.temporaryData,
+          ...fields,
+          ...(fields?.document ? { cpf: fields.document } : {}),
+        });
+        if (checked.missing.length) validated = undefined;
+        else validated = { ...validated, ...checked.values };
       }
       if (!validated)
         return ok(
@@ -818,6 +952,7 @@ export async function runAssistanceTurn(
     transitionInput,
   );
   let nextState = transition.state;
+  if (enteringDependent) nextState = { ...nextState, temporaryData: intakeDraft };
   let step = transition.step;
   if (step.id === 'IDE-06' && state.journeyId !== 'IDE' && currentStep?.mode === 'review') {
     nextState = { ...nextState, pendingStep: state.screenId };
@@ -838,7 +973,7 @@ export async function runAssistanceTurn(
   if (statement)
     nextState = {
       ...nextState,
-      temporaryData: { ...state.temporaryData, ...statement } as Record<string, string>,
+      temporaryData: { ...nextState.temporaryData, ...statement } as Record<string, string>,
     };
   const requestedTarget =
     transitionInput.type === 'open' || transitionInput.type === 'quick_reply'
@@ -869,6 +1004,65 @@ export async function runAssistanceTurn(
     nextState = { ...pending.state };
     delete nextState.pendingStep;
     step = pending.step;
+  }
+  if (step.id === 'DEP-01' && nextState.gateApproved) {
+    const contracts = nextAssistanceState(nextState, { type: 'open', target: 'DEP-02' });
+    nextState = {
+      ...contracts.state,
+      temporaryData: {
+        ...clearDependentDraft(nextState.temporaryData),
+        ...statement,
+        dependentIntake: 'true',
+      },
+    };
+    step = contracts.step;
+  }
+  if (step.id === 'DEP-03' && state.screenId === 'DEP-12') {
+    nextState = {
+      ...nextState,
+      temporaryData: { ...clearDependentDraft(nextState.temporaryData), dependentIntake: 'true' },
+    };
+  }
+  if (step.id === 'DEP-03' && nextState.temporaryData?.dependentIntake === 'true') {
+    const dependents = await port.listDependents(sessionId, context);
+    if (!dependents.ok) return ok(preserveReply(state, failureText[dependents.error]));
+    const slots = Math.max(0, 3 - dependents.value.length);
+    nextState = {
+      ...nextState,
+      temporaryData: {
+        ...nextState.temporaryData,
+        remainingSlots: `${Math.max(0, slots - 1)} ${slots === 2 ? 'vaga' : 'vagas'}`,
+      },
+    };
+    if (slots === 0) {
+      const unavailable = nextAssistanceState(nextState, { type: 'open', target: 'DEP-25' });
+      return ok({
+        state: unavailable.state,
+        replies: textReply(unavailable.step, unavailable.state),
+      });
+    }
+    step = {
+      ...step,
+      bot: step.bot.replace(
+        '2 vagas disponíveis',
+        `${slots} ${slots === 1 ? 'vaga disponível' : 'vagas disponíveis'}`,
+      ),
+    };
+    const checked = dependentIntake(nextState.temporaryData);
+    nextState = { ...nextState, temporaryData: { ...nextState.temporaryData, ...checked.values } };
+    if (Object.keys(checked.values).length > 0) {
+      if (checked.missing.length === 0) {
+        const review = nextAssistanceState(nextState, { type: 'open', target: 'DEP-06' });
+        nextState = review.state;
+        step = review.step;
+      } else {
+        const name = checked.values.name ? ` de ${checked.values.name}` : '';
+        step = {
+          ...step,
+          bot: `Preservei os dados${name} já informados. Para completar a inclusão, envie apenas os dados que faltam:\n\n${checked.missing.map((field) => `• ${dependentLabels[field]}`).join('\n')}\n\nVocê também pode preencher o formulário. Os dados e as condições serão revisados antes da confirmação.`,
+        };
+      }
+    }
   }
   // Legacy payment entry points reopen the same contracting Flow with the saved draft.
   if (
@@ -949,23 +1143,25 @@ export async function runAssistanceTurn(
     ];
   } else {
     const hydrationIntent =
-      step.mode === 'review' &&
-      nextState.temporaryData &&
-      step.journeyId === state.journeyId &&
-      ((input.type === 'flow_submit' && currentStep?.mode === 'form') ||
-        (state.screenId === 'DEP-16' && step.id === 'DEP-17'))
+      step.id === 'DEP-06' && nextState.temporaryData?.dependentIntake === 'true'
         ? 'review'
-        : input.type === 'flow_submit' &&
-            currentStep?.mode === 'review' &&
-            submitted?.correction === true
-          ? 'correction'
-          : undefined;
+        : step.mode === 'review' &&
+            nextState.temporaryData &&
+            step.journeyId === state.journeyId &&
+            ((input.type === 'flow_submit' && currentStep?.mode === 'form') ||
+              (state.screenId === 'DEP-16' && step.id === 'DEP-17'))
+          ? 'review'
+          : input.type === 'flow_submit' &&
+              currentStep?.mode === 'review' &&
+              submitted?.correction === true
+            ? 'correction'
+            : undefined;
     replies = textReply(
       step,
       nextState,
       hydrationIntent,
       listChoices,
-      step.id === 'ADE-03' && state.screenId !== 'ADE-03',
+      ['ADE-03', 'DEP-02', 'DEP-05', 'DEP-06'].includes(step.id) && state.screenId !== step.id,
     );
   }
   if (step.id === 'DEP-10') {

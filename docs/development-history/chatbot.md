@@ -175,3 +175,12 @@ DEP-03 oferece somente “Preencher formulário”, com destino DEP-05. O texto 
 Tipos e teste E2E real da etapa aprovados: mensagem exibe os seis dados, CTA conversacional ausente e formulário acessível com os campos correspondentes. Revisão independente confirmou texto/campos/destino. A atualização local continua a entrega em andamento já autorizada; TASK-20261014-015 contém as evidências.
 
 Concluído: implementação 9f04d85 integrada em develop pelo merge d48898e, sem conflitos. Suíte raiz passou (959 web/671 chatbot e demais pacotes/verificadores), tipos aprovados, imagens construídas e quatro containers healthy: web e691c1c2e95d, chatbot b281a31bc71f, gateway a7156bd933ba, fake-services efbbd5ff48e1. Smoke 7/7 e E2E da etapa contra http://localhost:8080 aprovados. O navegador confirmou os seis dados descritos, ausência da opção conversacional e acesso ao formulário. Sem push/master/GCP; artefatos não rastreados preservados.
+
+
+## 2026-10-14 — inclusão direta de dependentes
+
+“Incluir dependente” pede CPF do titular somente quando falta na sessão e abre diretamente a lista de contratos. Ao continuar no contrato Familiar, a orientação informa as vagas e os seis dados necessários, permitindo formulário ou mensagens no chat. “Preencher formulário” abre o Flow de cadastro em um clique. Foram removidos os passos intermediários de Continuar inclusão e Abrir formulário.
+
+A coleta conversacional preserva dados válidos, pede apenas campos faltantes/invalidos e abre a revisão após os seis campos, sem inferir sexo biológico. O formulário valida CPF, data real, celular e demais campos; a validação também cobre entradas legadas e a confirmação da revisão. A inclusão só muda o contrato após confirmação explícita. CPF fica mascarado na revisão e no histórico. Outra inclusão limpa os dados anteriores; contratos sem vagas seguem ao resultado apropriado, e a revisão informa as vagas restantes. O atlas offline compartilha o parser do chatbot e valida dados acumulados mesmo ao trocar de formulário para chat.
+
+Evidências: suíte raiz aprovada; correções posteriores revisadas e workspace chatbot 711 testes aprovado, cinco E2E reais/offline aprovados (CPF reutilizado, formulário, chat completo/parcial e troca de canal com celular inválido). Typecheck/lint, validação do atlas e diff verificados; resultados e correções registradas em TASK-20261014-016. Revisão independente aprovada após reforço da validação legada e correção das vagas. Integração em develop e atualização local seguem a entrega autorizada.

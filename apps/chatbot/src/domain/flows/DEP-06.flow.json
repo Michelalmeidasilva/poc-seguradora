@@ -50,6 +50,12 @@
             "visible": false
           },
           {
+            "type": "TextInput",
+            "name": "remainingSlots",
+            "label": "remainingSlots",
+            "visible": false
+          },
+          {
             "type": "TextSubheading",
             "text": "Pessoa que será incluída"
           },
@@ -99,7 +105,7 @@
           },
           {
             "type": "TextBody",
-            "text": "Vagas após inclusão: 1 vaga"
+            "text": "Vagas após inclusão: ${form.remainingSlots}"
           },
           {
             "type": "EmbeddedLink",

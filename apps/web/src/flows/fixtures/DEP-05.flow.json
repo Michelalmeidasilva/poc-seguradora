@@ -22,15 +22,13 @@
             "name": "name",
             "label": "Nome completo",
             "required": true,
-            "init-value": "Maria Silva",
             "input-type": "text"
           },
           {
             "type": "DatePicker",
             "name": "birth",
             "label": "Data de nascimento",
-            "required": true,
-            "init-value": "2014-03-12"
+            "required": true
           },
           {
             "type": "TextInput",
@@ -39,7 +37,7 @@
             "required": true,
             "sensitive": true,
             "helper-text": "Informe o CPF",
-            "input-type": "text"
+            "input-type": "cpf"
           },
           {
             "type": "Dropdown",
@@ -71,6 +69,8 @@
             "label": "Celular do dependente",
             "required": true,
             "helper-text": "(00) 00000-0000",
+            "min-digits": 10,
+            "max-digits": 11,
             "input-type": "phone"
           },
           {

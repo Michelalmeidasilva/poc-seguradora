@@ -10,11 +10,12 @@ const html = source
     () => `<style>\n${read('styles.css')}\n</style>`,
   )
   .replace('    <script src="catalog.js" defer></script>\n', '')
+  .replace('    <script src="dependent-parser.generated.js" defer></script>\n', '')
   .replace('    <script src="app.js" defer></script>\n', '')
   .replace(
     '</body>',
     () =>
-      `<script>\n${read('catalog.js')}\n</script>\n<script>\n${read('app.js')}\n</script>\n</body>`,
+      `<script>\n${read('catalog.js')}\n</script>\n<script>\n${read('dependent-parser.generated.js')}\n</script>\n<script>\n${read('app.js')}\n</script>\n</body>`,
   );
 writeFileSync(new URL('atlas-whatsapp.html', root), html);
 console.log('Exported atlas-whatsapp.html: standalone, offline, no external assets.');

@@ -91,7 +91,9 @@ function checkText(c: FlowComponent, value: unknown): string | undefined {
   if (rule && !rule.test.test(text.trim())) return rule.message;
   if (type === 'phone') {
     const digits = text.replace(/\D/g, '').length;
-    if (digits < 8 || digits > 15) return FORMAT_RULES.phone!.message;
+    const minimum = count(prop(c, 'min-digits')) ?? 8;
+    const maximum = count(prop(c, 'max-digits')) ?? 15;
+    if (digits < minimum || digits > maximum) return FORMAT_RULES.phone!.message;
   }
   return undefined;
 }

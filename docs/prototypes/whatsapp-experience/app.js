@@ -14,6 +14,7 @@
     relationship: 'Filha',
     phone: '',
     biologicalSex: '',
+    remainingSlots: '1 vaga',
     cancelReason: '',
     postal: '01000-000',
     address: 'Rua das Flores, 100',
@@ -23,6 +24,7 @@
     eventDate: '09/10/2026',
     eventPlace: 'São Paulo / SP',
   };
+  let dependentIntakeActive = false;
   let current = index[location.hash.slice(1)] ? location.hash.slice(1) : 'DEP-01';
   let stateFilter = 'all';
   let query = '';
@@ -84,6 +86,11 @@
       clearTimeout(sessionTimer);
       $('gallery').innerHTML = '';
       $('document-dialog').close();
+    }
+    if (id === 'DEP-01' || (id === 'DEP-03' && current === 'DEP-12')) {
+      dependentIntakeActive = true;
+      for (const key of ['name', 'birth', 'cpf', 'document', 'maskedDocument', 'relationship', 'phone', 'biologicalSex']) delete memory[key];
+      if (id === 'DEP-01') id = 'DEP-02';
     }
     if ((index[id].requiresAuth || id === 'IDE-03') && !isAuthenticated()) {
       if (id !== 'IDE-03') identityReturn = id;
@@ -253,6 +260,14 @@
       const field = flow.fields.find((item) => item.name === event.target.name);
       if (!field || field.type === 'file') return;
       memory[field.name] = field.type === 'checkbox' ? event.target.checked : event.target.value;
+      if (field.type === 'cpf' || field.minDigits) {
+        const value = event.target.value;
+        const digits = value.replace(/\D/g, '');
+        const min = field.type === 'cpf' ? 11 : field.minDigits;
+        const max = field.type === 'cpf' ? 11 : field.maxDigits;
+        const valid = /^[\d\s().-]+$/.test(value) && digits.length >= min && digits.length <= max;
+        event.target.setCustomValidity(valid ? '' : field.type === 'cpf' ? 'Informe um CPF com 11 dígitos.' : 'Informe um celular com 10 ou 11 dígitos.');
+      }
     });
     $('flow-form').addEventListener('submit', (event) => {
       event.preventDefault();
@@ -287,6 +302,7 @@
           else memory[field.name] = String(raw ?? '').trim();
         }
       }
+      if (step.id === 'DEP-05') memory.maskedDocument = `•••.•••.•••-${String(memory.document || '').replace(/\D/g, '').slice(-2)}`;
       if (target) go(target);
     });
   }
@@ -573,6 +589,28 @@
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
     const step = index[current];
+    if (dependentIntakeActive && ['DEP-03', 'DEP-04', 'DEP-05'].includes(current) && !/^(?:menu|opcoes|falar com)/.test(clean)) {
+      const labels = { name: 'Nome completo', cpf: 'CPF do dependente', birth: 'Data de nascimento', relationship: 'Parentesco', phone: 'Celular do dependente', biologicalSex: 'Sexo biológico informado pela pessoa (ou Prefiro não informar)' };
+      const validMemory = () => Object.fromEntries(Object.keys(labels).map((key) => [key, window.DEPENDENT_PARSER(String(memory[key] ?? (key === 'cpf' ? memory.document : '') ?? ''), {}, key)[key]]));
+      const before = validMemory();
+      const missingBefore = Object.keys(labels).filter((key) => !before[key]);
+      const parsed = window.DEPENDENT_PARSER(text);
+      const focused = Object.keys(parsed).length === 0 && missingBefore.length === 1
+        ? window.DEPENDENT_PARSER(text, {}, missingBefore[0]) : parsed;
+      Object.assign(memory, focused);
+      const checked = validMemory();
+      const missing = Object.keys(labels).filter((key) => !checked[key]);
+      for (const key of Object.keys(labels)) if (checked[key]) memory[key] = checked[key];
+      if (missing.length === 0) {
+        memory.document = memory.cpf;
+        memory.maskedDocument = `•••.•••.•••-${memory.cpf.slice(-2)}`;
+        go('DEP-06');
+      } else {
+        additions.push({ user: true, text }, { user: false, text: `Para completar o cadastro, informe apenas:\n${missing.map((key) => `• ${labels[key]}`).join('\n')}\nOs dados já recebidos foram preservados.` });
+        renderChat(step);
+      }
+      return;
+    }
     if (/\b(menu|opcoes)\b/.test(clean)) {
       go('NAV-01');
       return;
@@ -655,7 +693,7 @@
     } else if (/voltar/.test(clean)) {
       move(-1);
       return;
-    } else if (step.journey === 'DEP' && ['DEP-03', 'DEP-04'].includes(current)) {
+    } else if (step.journey === 'DEP' && ['DEP-03', 'DEP-04', 'DEP-05'].includes(current)) {
       const date = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
       if (date) memory.birth = date[1];
       const name = text.match(/(?:nome (?:e|é)|chama(?:-se)?)\s+([^,.\n]+)/i);

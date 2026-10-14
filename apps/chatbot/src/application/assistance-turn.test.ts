@@ -1288,3 +1288,196 @@ describe('runAssistanceTurn', () => {
     expect(result.ok && result.value.state.pendingStep).toBe('DEP-06');
   });
 });
+
+describe('direct dependent intake', () => {
+  const run = (
+    input: Parameters<typeof runAssistanceTurn>[0],
+    state: Parameters<typeof runAssistanceTurn>[1]['state'],
+    assistance = port(),
+  ) =>
+    runAssistanceTurn(input, { state, port: assistance, sessionId: 'direct-intake', context: ctx });
+  it.each([false, true])(
+    'asks for holder CPF only when absent: identified=%s',
+    async (gateApproved) => {
+      const result = await run(
+        { type: 'text', text: 'Incluir dependente' },
+        { journeyId: 'ENT', screenId: 'ENT-02', gateApproved },
+      );
+      expect(result.ok && result.value.state.screenId).toBe(gateApproved ? 'DEP-02' : 'IDE-01');
+      if (!result.ok) return;
+      if (!gateApproved) {
+        expect(result.value.state.pendingStep).toBe('DEP-02');
+        const resumed = await run({ type: 'text', text: '12345678900' }, result.value.state);
+        expect(resumed.ok && resumed.value.state.screenId).toBe('DEP-02');
+        expect(resumed.ok && resumed.value.state.temporaryData?.dependentIntake).toBe('true');
+        expect(resumed.ok && JSON.stringify(resumed.value.replies)).not.toContain(
+          'Continuar inclusão',
+        );
+      }
+    },
+  );
+  it('selects a contract and lets the user complete partial chat data without sample values', async () => {
+    const assistance = port();
+    const selected = await run(
+      { type: 'flow_submit', flowId: 'DEP-02', data: { choice: '0' } },
+      {
+        journeyId: 'DEP',
+        screenId: 'DEP-02',
+        gateApproved: true,
+        temporaryData: { dependentIntake: 'true' },
+      },
+      assistance,
+    );
+    expect(selected.ok && selected.value.state.screenId).toBe('DEP-03');
+    if (!selected.ok) return;
+    const partial = await run(
+      {
+        type: 'text',
+        text: 'Nome completo: Beatriz Costa; CPF: 98765432100; Data de nascimento: 12/03/2014; Parentesco: Filha',
+      },
+      selected.value.state,
+      assistance,
+    );
+    expect(partial.ok && partial.value.state.screenId).toBe('DEP-03');
+    expect(partial.ok && partial.value.state.temporaryData).toMatchObject({
+      name: 'Beatriz Costa',
+      cpf: '98765432100',
+      birth: '2014-03-12',
+    });
+    expect(partial.ok && JSON.stringify(partial.value.replies)).toContain('Celular do dependente');
+    expect(partial.ok && JSON.stringify(partial.value.replies)).toContain('Sexo biológico');
+    expect(partial.ok && JSON.stringify(partial.value.replies)).not.toContain('João');
+    expect(assistance.addDependent).not.toHaveBeenCalled();
+    if (!partial.ok) return;
+    const complete = await run(
+      { type: 'text', text: 'Celular: (11) 98888-7777; Sexo biológico: Prefiro não informar' },
+      partial.value.state,
+      assistance,
+    );
+    expect(complete.ok && complete.value.state.screenId).toBe('DEP-06');
+    expect(complete.ok && complete.value.state.temporaryData).toMatchObject({
+      name: 'Beatriz Costa',
+      phone: '11988887777',
+      biologicalSex: 'Prefiro não informar',
+    });
+    expect(complete.ok && JSON.stringify(complete.value.replies)).toContain(
+      'Recebi todos os dados',
+    );
+    expect(complete.ok && JSON.stringify(complete.value.replies)).not.toContain('98765432100');
+    expect(assistance.addDependent).not.toHaveBeenCalled();
+    if (!complete.ok) return;
+    await run(
+      { type: 'flow_submit', flowId: 'DEP-06', data: {} },
+      complete.value.state,
+      assistance,
+    );
+    expect(assistance.addDependent).toHaveBeenCalledTimes(1);
+  });
+  it('opens the form directly with partial chat fields and never supplies sample data', async () => {
+    const result = await run(
+      { type: 'quick_reply', target: 'DEP-05' },
+      {
+        journeyId: 'DEP',
+        screenId: 'DEP-03',
+        gateApproved: true,
+        temporaryData: { dependentIntake: 'true', name: 'Beatriz Costa', relationship: 'filha' },
+      },
+    );
+    const flow = result.ok && result.value.replies.find((reply) => reply.type === 'message.flow');
+    expect(flow && flow.type === 'message.flow' && flow.payload.flowJson.autoOpen).toBe(true);
+    expect(flow && flow.type === 'message.flow' && flow.payload.initialData).toMatchObject({
+      values: { name: 'Beatriz Costa', relationship: 'Filha' },
+    });
+  });
+  it('does not move incomplete or malformed dependent forms to review', async () => {
+    const result = await run(
+      {
+        type: 'flow_submit',
+        flowId: 'DEP-05',
+        data: {
+          name: 'Beatriz',
+          document: '123',
+          birth: '2014-02-31',
+          relationship: 'Filha',
+          phone: '123',
+          biologicalSex: 'Feminino',
+        },
+      },
+      {
+        journeyId: 'DEP',
+        screenId: 'DEP-05',
+        gateApproved: true,
+        temporaryData: { dependentIntake: 'true' },
+      },
+    );
+    expect(result.ok && result.value.state.screenId).toBe('DEP-05');
+  });
+  it('rejects invalid fields from legacy form and review states without the intake marker', async () => {
+    const assistance = port();
+    const fields = {
+      name: 'Beatriz',
+      document: '98765432100',
+      birth: '2014-02-31',
+      relationship: 'Filha',
+      phone: '123',
+      biologicalSex: 'Feminino',
+    };
+    for (const screenId of ['DEP-05', 'DEP-06']) {
+      const result = await run(
+        { type: 'flow_submit', flowId: screenId, data: screenId === 'DEP-05' ? fields : {} },
+        { journeyId: 'DEP', screenId, gateApproved: true, temporaryData: fields },
+        assistance,
+      );
+      expect(result.ok && result.value.state.screenId).toBe(screenId);
+      expect(assistance.addDependent).not.toHaveBeenCalled();
+    }
+  });
+  it('clears the previous person before the next inclusion', async () => {
+    const result = await run(
+      { type: 'quick_reply', target: 'DEP-03' },
+      {
+        journeyId: 'DEP',
+        screenId: 'DEP-12',
+        gateApproved: true,
+        temporaryData: {
+          dependentIntake: 'true',
+          name: 'Beatriz',
+          cpf: '98765432100',
+          birth: '2014-03-12',
+          relationship: 'Filha',
+          phone: '11988887777',
+          biologicalSex: 'Feminino',
+        },
+      },
+    );
+    expect(result.ok && result.value.state.screenId).toBe('DEP-03');
+    expect(result.ok && result.value.state.temporaryData?.name).toBeUndefined();
+  });
+  it('shows the no-vacancy outcome instead of offering an impossible inclusion', async () => {
+    const assistance = port();
+    vi.mocked(assistance.listDependents).mockResolvedValue(
+      ok(
+        Array.from({ length: 3 }, (_, index) => ({
+          id: String(index),
+          name: 'Pessoa',
+          cpf: '12345678900',
+          birthDate: '2010-01-01',
+          relationship: 'Filho',
+          phone: '11999999999',
+          biologicalSex: 'male' as const,
+        })),
+      ),
+    );
+    const result = await run(
+      { type: 'flow_submit', flowId: 'DEP-02', data: { choice: '0' } },
+      {
+        journeyId: 'DEP',
+        screenId: 'DEP-02',
+        gateApproved: true,
+        temporaryData: { dependentIntake: 'true' },
+      },
+      assistance,
+    );
+    expect(result.ok && result.value.state.screenId).toBe('DEP-25');
+  });
+});

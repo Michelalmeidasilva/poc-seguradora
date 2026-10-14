@@ -51,6 +51,8 @@ function build(step) {
       const common = { name: field.name, label: field.label, required: field.required === true };
       if (isSensitiveField(field)) common.sensitive = true;
       if (field.placeholder) common['helper-text'] = field.placeholder;
+      if (field.minDigits) common['min-digits'] = field.minDigits;
+      if (field.maxDigits) common['max-digits'] = field.maxDigits;
       if (field.value) common['init-value'] = field.value;
       if (field.type === 'checkbox') {
         children.push({ type: 'OptIn', ...common, 'init-value': field.checked === true });
