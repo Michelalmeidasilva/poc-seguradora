@@ -1,4 +1,6 @@
-# Checklist: web
+# Histórico de desenvolvimento: web
+
+Registro histórico de entregas, decisões e pendências; não é gate de conclusão.
 
 Última atualização: 2026-10-13
 

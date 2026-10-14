@@ -1,4 +1,4 @@
-# Checklist: resilience
+# Histórico de desenvolvimento: resilience
 
 Última atualização: 2026-10-10
 
