@@ -29,7 +29,7 @@
           "id": "ENT-02",
           "title": "Boas-vindas",
           "user": "Oi",
-          "bot": "Olá! Sou o assistente virtual da Digio para assistências. Como posso ajudar você hoje?",
+          "bot": "Olá! Sou o assistente virtual da DIGIO Care. Como posso ajudar você hoje?",
           "mode": "chat",
           "actions": [
             {
@@ -49,7 +49,7 @@
           "requiresAuth": false,
           "rule": "Público de clientes e interessados ainda é hipótese. Catálogo e permissões dependem do produto.",
           "intent": "Oi",
-          "behavior": "Olá! Sou o assistente virtual da Digio para assistências. Como posso ajudar você hoje?",
+          "behavior": "Olá! Sou o assistente virtual da DIGIO Care. Como posso ajudar você hoje?",
           "next": "ENT-04",
           "journeyId": "ENT"
         },
@@ -81,7 +81,7 @@
           "id": "ENT-04",
           "title": "Informação sem identificação",
           "user": "O que são os serviços de assistência?",
-          "bot": "É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.",
+          "bot": "É um pacote de serviços e benefícios, conforme o plano.",
           "mode": "chat",
           "actions": [
             {
@@ -101,7 +101,7 @@
           "requiresAuth": false,
           "rule": "Público de clientes e interessados ainda é hipótese. Catálogo e permissões dependem do produto.",
           "intent": "O que são os serviços de assistência?",
-          "behavior": "É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.",
+          "behavior": "É um pacote de serviços e benefícios, conforme o plano.",
           "next": "ENT-05",
           "journeyId": "ENT"
         },
@@ -109,7 +109,7 @@
           "id": "ENT-05",
           "title": "Pedido com dados pessoais",
           "user": "Quem está no meu plano?",
-          "bot": "Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.",
+          "bot": "Para consultar as pessoas vinculadas, informe um CPF. Depois continuamos seu pedido.",
           "mode": "chat",
           "actions": [
             {
@@ -121,7 +121,7 @@
           "requiresAuth": false,
           "rule": "Público de clientes e interessados ainda é hipótese. Catálogo e permissões dependem do produto.",
           "intent": "Quem está no meu plano?",
-          "behavior": "Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.",
+          "behavior": "Para consultar as pessoas vinculadas, informe um CPF. Depois continuamos seu pedido.",
           "next": "ENT-06",
           "journeyId": "ENT"
         },
@@ -165,7 +165,7 @@
           "id": "ENT-07",
           "title": "Nenhum contrato localizado",
           "user": "Quero ver minha assistência.",
-          "bot": "Não localizei uma assistência vinculada nesta demonstração. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.",
+          "bot": "Não localizei uma assistência vinculada. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.",
           "mode": "chat",
           "actions": [
             {
@@ -289,7 +289,7 @@
           "id": "FAQ-02",
           "title": "Informações gerais",
           "user": "O que é a assistência?",
-          "bot": "Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.",
+          "bot": "Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas.",
           "mode": "chat",
           "actions": [
             {
@@ -301,7 +301,7 @@
           "requiresAuth": false,
           "rule": "Conteúdo público. Valores, elegibilidade, rede, limites e carências devem vir das condições vigentes do plano.",
           "intent": "O que é a assistência?",
-          "behavior": "Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.",
+          "behavior": "Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas.",
           "next": "FAQ-03",
           "journeyId": "FAQ"
         },
@@ -333,7 +333,7 @@
           "id": "FAQ-04",
           "title": "Coberturas",
           "user": "Quais são as coberturas?",
-          "bot": "Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.",
+          "bot": "Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. Consulte os benefícios incluídos no seu plano.",
           "mode": "chat",
           "actions": [
             {
@@ -345,7 +345,7 @@
           "requiresAuth": false,
           "rule": "Conteúdo público. Valores, elegibilidade, rede, limites e carências devem vir das condições vigentes do plano.",
           "intent": "Quais são as coberturas?",
-          "behavior": "Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.",
+          "behavior": "Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. Consulte os benefícios incluídos no seu plano.",
           "next": "FAQ-05",
           "journeyId": "FAQ"
         },
@@ -544,7 +544,7 @@
           "id": "IDE-01",
           "title": "Informe o CPF",
           "user": "",
-          "bot": "Para abrir esta demonstração, digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX. Este formato não confirma identidade.",
+          "bot": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
           "mode": "chat",
           "actions": [
             {
@@ -556,7 +556,7 @@
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero consultar meu contrato.",
-          "behavior": "Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.",
+          "behavior": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
           "next": "IDE-02",
           "journeyId": "IDE"
         },
@@ -564,14 +564,14 @@
           "id": "IDE-02",
           "title": "Validando formato",
           "user": "",
-          "bot": "Recebi o CPF para validar o formato da demonstração.",
+          "bot": "Recebi seu CPF. Vamos continuar.",
           "mode": "chat",
           "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Como posso continuar?",
-          "behavior": "Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.",
+          "behavior": "Informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
           "next": "IDE-03",
           "journeyId": "IDE"
         },
@@ -579,7 +579,7 @@
           "id": "IDE-03",
           "title": "Formato aceito",
           "user": "",
-          "bot": "O formato do CPF foi aceito. Os dados seguintes pertencem a um cenário fictício.",
+          "bot": "Tudo pronto. Vamos continuar seu pedido.",
           "mode": "chat",
           "actions": [
             {
@@ -595,7 +595,7 @@
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "CPF informado.",
-          "behavior": "Formato do CPF aceito. O acesso demonstrativo está liberado. Vamos continuar sua solicitação.",
+          "behavior": "Tudo pronto. Vamos continuar seu pedido.",
           "next": "IDE-06",
           "journeyId": "IDE"
         },
@@ -627,7 +627,7 @@
           "id": "IDE-05",
           "title": "Sessão expirada",
           "user": "",
-          "bot": "A sessão demonstrativa expirou. Informe novamente o CPF para continuar.",
+          "bot": "Sua sessão expirou. Informe seu CPF para continuar.",
           "mode": "chat",
           "actions": [
             {
@@ -647,7 +647,7 @@
           "id": "IDE-06",
           "title": "Renovar acesso",
           "user": "",
-          "bot": "Digite o CPF aqui no chat para renovar o acesso demonstrativo e retomar a revisão da ação.",
+          "bot": "Informe seu CPF para retomar a revisão do seu pedido.",
           "mode": "chat",
           "actions": [
             {
@@ -667,7 +667,7 @@
           "id": "IDE-07",
           "title": "Dado indisponível",
           "user": "",
-          "bot": "Não há esse dado no cenário demonstrativo. Posso oferecer ajuda.",
+          "bot": "Não encontrei essa informação. Posso ajudar você a continuar.",
           "mode": "chat",
           "actions": [
             {
@@ -687,7 +687,7 @@
           "id": "IDE-08",
           "title": "Informar CPF",
           "user": "",
-          "bot": "Digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX, para abrir a demonstração.",
+          "bot": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
           "mode": "chat",
           "actions": [
             {
@@ -699,7 +699,7 @@
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Vou informar meu CPF.",
-          "behavior": "Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.",
+          "behavior": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
           "next": null,
           "journeyId": "IDE"
         }
@@ -896,7 +896,7 @@
                   "note": "Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador."
                 }
               ],
-              "comparison": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
+              "comparison": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
               "plans": [
                 {
                   "id": "individual",
@@ -909,12 +909,12 @@
                   "id": "familiar",
                   "title": "Familiar",
                   "price": "R$ 39,90/mês",
-                  "composition": "Titular e até 3 dependentes elegíveis neste exemplo.",
+                  "composition": "Titular e até 3 dependentes elegíveis.",
                   "description": "R$ 39,90/mês · titular e dependentes elegíveis"
                 }
               ],
-              "conditions": "Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.",
-              "note": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.",
+              "conditions": "Confira os benefícios e as condições de uso do plano escolhido.",
+              "note": "",
               "outcomes": [
                 {
                   "id": "finish",
@@ -930,7 +930,7 @@
             }
           },
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "O que vocês oferecem?",
           "behavior": "Posso apresentar os produtos disponíveis. Qual assunto você quer conhecer?",
           "next": "DES-12",
@@ -1026,7 +1026,7 @@
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Quero algo para minha família.",
           "behavior": "Você quer conhecer Telemedicina, Assistência Funeral para titular e dependentes ou Assistência Farmácia com descontos em redes credenciadas?",
           "next": "DES-03",
@@ -1036,7 +1036,7 @@
           "id": "DES-03",
           "title": "Apresentação do produto",
           "user": "Quero conhecer os serviços de assistência.",
-          "bot": "Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.",
+          "bot": "Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas.",
           "mode": "chat",
           "actions": [
             {
@@ -1050,9 +1050,9 @@
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Quero conhecer os serviços de assistência.",
-          "behavior": "Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.",
+          "behavior": "Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas.",
           "next": "DES-04",
           "journeyId": "DES"
         },
@@ -1074,7 +1074,7 @@
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Como funciona a telemedicina?",
           "behavior": "O acesso acontece no ambiente do prestador, conforme disponibilidade, limites e carências do plano. Posso mostrar as condições das opções disponíveis.",
           "next": "DES-05",
@@ -1084,7 +1084,7 @@
           "id": "DES-05",
           "title": "Opções elegíveis",
           "user": "Quero ver os planos.",
-          "bot": "Neste exemplo, há duas opções. Escolha uma para ver detalhes ou compare as diferenças.",
+          "bot": "Conheça os planos Individual e Familiar e escolha o que combina com você.",
           "mode": "list",
           "actions": [],
           "alternative": false,
@@ -1105,9 +1105,9 @@
             "submit": "Ver condições"
           },
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Quero ver os planos.",
-          "behavior": "Neste exemplo, há duas opções. Escolha uma para ver detalhes ou compare as diferenças.",
+          "behavior": "Conheça os planos Individual e Familiar e escolha o que combina com você.",
           "next": "DES-06",
           "journeyId": "DES"
         },
@@ -1115,7 +1115,7 @@
           "id": "DES-06",
           "title": "Comparação neutra",
           "user": "Qual é a diferença entre os planos?",
-          "bot": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
+          "bot": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
           "mode": "chat",
           "actions": [
             {
@@ -1123,28 +1123,28 @@
               "target": "DES-05"
             },
             {
-              "label": "Simular para mim",
+              "label": "Escolher meu plano",
               "target": "DES-07"
             }
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Qual é a diferença entre os planos?",
-          "behavior": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
+          "behavior": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
           "next": "DES-07",
           "journeyId": "DES"
         },
         {
           "id": "DES-07",
-          "title": "Dados para simulação",
-          "user": "Quero simular.",
+          "title": "Dados para contratação",
+          "user": "Quero escolher um plano.",
           "bot": "Vamos coletar somente os dados necessários para consultar uma opção disponível.",
           "mode": "form",
           "actions": [],
           "alternative": false,
           "flow": {
-            "title": "Simular assistência",
+            "title": "Escolher plano",
             "fields": [
               {
                 "name": "composition",
@@ -1162,8 +1162,8 @@
             "target": "DES-08"
           },
           "requiresAuth": true,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
-          "intent": "Quero simular.",
+          "rule": "Condições do serviço escolhido.",
+          "intent": "Quero escolher um plano.",
           "behavior": "Vamos coletar somente os dados necessários para consultar uma opção disponível.",
           "next": "DES-08",
           "journeyId": "DES"
@@ -1172,7 +1172,7 @@
           "id": "DES-08",
           "title": "Oferta consultada",
           "user": "Quero o Familiar.",
-          "bot": "**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.",
+          "bot": "**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.",
           "mode": "chat",
           "actions": [
             {
@@ -1186,9 +1186,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Quero o Familiar.",
-          "behavior": "**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.",
+          "behavior": "**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.",
           "next": "DES-10",
           "journeyId": "DES"
         },
@@ -1210,7 +1210,7 @@
           ],
           "alternative": true,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Isso cobre uma internação?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "DES-10",
@@ -1230,7 +1230,7 @@
           ],
           "alternative": false,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Quero contratar.",
           "behavior": "Vamos revisar sua identificação, participantes, pagamento e condições antes da confirmação.",
           "next": null,
@@ -1250,7 +1250,7 @@
           ],
           "alternative": true,
           "requiresAuth": false,
-          "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
+          "rule": "Condições do serviço escolhido.",
           "intent": "Vou pensar.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -1280,7 +1280,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Quero contratar o Familiar.",
           "behavior": "Você escolheu Serviços de Assistência Familiar. Vamos conferir os dados e condições antes de confirmar.",
           "next": "ADE-02",
@@ -1290,7 +1290,7 @@
           "id": "ADE-02",
           "title": "Identificação na adesão",
           "user": "Vamos continuar.",
-          "bot": "Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.",
+          "bot": "Informe seu CPF para continuar a contratação.",
           "mode": "chat",
           "actions": [
             {
@@ -1304,9 +1304,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Vamos continuar.",
-          "behavior": "Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.",
+          "behavior": "Informe seu CPF para continuar a contratação.",
           "next": "ADE-03",
           "journeyId": "ADE"
         },
@@ -1339,7 +1339,7 @@
             "target": "ADE-04"
           },
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Identidade verificada.",
           "behavior": "Confira os dados do titular necessários à contratação.",
           "next": "ADE-04",
@@ -1349,7 +1349,7 @@
           "id": "ADE-04",
           "title": "Dependentes agora ou depois",
           "user": "Dados conferidos.",
-          "bot": "Você pode incluir dependentes agora ou depois. Neste exemplo, o plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.",
+          "bot": "Você pode incluir dependentes agora ou depois. O plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.",
           "mode": "chat",
           "actions": [
             {
@@ -1363,9 +1363,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Dados conferidos.",
-          "behavior": "Você pode incluir dependentes agora ou depois. Neste exemplo, o plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.",
+          "behavior": "Você pode incluir dependentes agora ou depois. O plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.",
           "next": "ADE-05",
           "journeyId": "ADE"
         },
@@ -1383,7 +1383,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Vou incluir depois.",
           "behavior": "Os dados do titular foram validados. Vamos consultar os meios de pagamento disponíveis.",
           "next": "ADE-06",
@@ -1463,10 +1463,10 @@
             "submit": "Ver documentos e aceite",
             "target": "ADE-07",
             "correction": "ADE-03",
-            "note": "Assistência não é plano de saúde. Condições ilustrativas, sujeitas à validação."
+            "note": ""
           },
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Escolhi o pagamento.",
           "behavior": "Revise todos os dados e condições. Se precisar corrigir alguma informação, podemos voltar à conversa.",
           "next": "ADE-07",
@@ -1511,7 +1511,7 @@
             "correction": "ADE-06"
           },
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Quero revisar os documentos.",
           "behavior": "Os documentos completos estão disponíveis. O aceite é explícito e não vem pré-marcado.",
           "next": "ADE-08",
@@ -1535,7 +1535,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Confirmar contratação",
           "behavior": "Recebi sua confirmação. Estou verificando o pagamento e a emissão. Você pode acompanhar a solicitação por aqui.",
           "next": "ADE-09",
@@ -1563,7 +1563,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Qual é o resultado?",
           "behavior": "**Contratação concluída**\nServiços de Assistência Familiar · ativa.\nVigência: 10/10/2026.\nProtocolo: ADE-2026-2048.\nConsulte as condições de cada benefício antes de utilizar.",
           "next": "ADE-10",
@@ -1587,7 +1587,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "O que faço agora?",
           "behavior": "Você pode consultar seus benefícios, incluir dependentes ou acessar os documentos. A disponibilidade de cada benefício aparece na consulta de utilização.",
           "next": null,
@@ -1597,7 +1597,7 @@
           "id": "ADE-11",
           "title": "Pessoa inelegível",
           "user": "Posso continuar?",
-          "bot": "Uma condição de elegibilidade não foi atendida neste exemplo. Vou mostrar o critério informado pelo sistema antes de prosseguir.",
+          "bot": "Uma condição de elegibilidade não foi atendida. Vou mostrar o critério informado pelo sistema antes de prosseguir.",
           "mode": "chat",
           "actions": [
             {
@@ -1611,7 +1611,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Posso continuar?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -1635,7 +1635,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "Quero confirmar.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -1659,7 +1659,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.",
+          "rule": "Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.",
           "intent": "O pagamento foi confirmado?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -1709,7 +1709,7 @@
               },
               {
                 "label": "Outro meio disponível",
-                "detail": "Exemplo de integração segura com a instituição",
+                "detail": "Pagamento seguro pela instituição",
                 "target": "PAG-03"
               }
             ],
@@ -1730,7 +1730,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Abrir demonstração",
+              "label": "Continuar pagamento",
               "target": "PAG-04"
             },
             {
@@ -1739,7 +1739,7 @@
             }
           ],
           "alternative": false,
-          "behavior": "Ação simula o retorno da etapa segura; não abre processadora ou coleta dados de cartão.",
+          "behavior": "Continue na etapa de pagamento para consultar as opções disponíveis.",
           "requiresAuth": true,
           "rule": "Meios ilustrativos: não pressupõem suporte real. Dados completos de cartão não são solicitados no chat.",
           "intent": "Quero usar outro meio.",
@@ -2043,7 +2043,7 @@
           "id": "CON-05",
           "title": "Cancelamento agendado",
           "user": "Quero ver minha assistência.",
-          "bot": "Seu cancelamento está agendado para 10/11/2026 neste exemplo. Os benefícios permanecem conforme as condições informadas até a data efetiva.",
+          "bot": "Seu cancelamento está agendado para 10/11/2026. Os benefícios permanecem conforme as condições informadas até a data efetiva.",
           "mode": "chat",
           "actions": [
             {
@@ -2059,7 +2059,7 @@
           "requiresAuth": true,
           "rule": "Situações, vigência, documentos e retenção de histórico dependem do produto.",
           "intent": "Quero ver minha assistência.",
-          "behavior": "Seu cancelamento está agendado para 10/11/2026 neste exemplo. Os benefícios permanecem conforme as condições informadas até a data efetiva.",
+          "behavior": "Seu cancelamento está agendado para 10/11/2026. Os benefícios permanecem conforme as condições informadas até a data efetiva.",
           "next": "CON-07",
           "journeyId": "CON"
         },
@@ -2144,7 +2144,7 @@
           "id": "CON-09",
           "title": "Nenhum contrato",
           "user": "Meus contratos",
-          "bot": "Não há contratos disponíveis nesta demonstração. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.",
+          "bot": "Não há contratos disponíveis. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.",
           "mode": "chat",
           "actions": [
             {
@@ -2192,7 +2192,7 @@
           "id": "CON-11",
           "title": "Troca de plano visível",
           "user": "Quero ver meu plano.",
-          "bot": "**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026 neste exemplo. Até lá, permanece válido o plano atual.",
+          "bot": "**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026. Até lá, permanece válido o plano atual.",
           "mode": "chat",
           "actions": [
             {
@@ -2208,7 +2208,7 @@
           "requiresAuth": true,
           "rule": "Situações, vigência, documentos e retenção de histórico dependem do produto.",
           "intent": "Quero ver meu plano.",
-          "behavior": "**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026 neste exemplo. Até lá, permanece válido o plano atual.",
+          "behavior": "**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026. Até lá, permanece válido o plano atual.",
           "next": null,
           "journeyId": "CON"
         }
@@ -2222,7 +2222,7 @@
           "id": "DEP-01",
           "title": "Pedido de inclusão",
           "user": "Quero incluir minha filha.",
-          "bot": "Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.",
+          "bot": "Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.",
           "mode": "chat",
           "actions": [
             {
@@ -2232,9 +2232,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero incluir minha filha.",
-          "behavior": "Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.",
+          "behavior": "Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.",
           "next": "DEP-02",
           "journeyId": "DEP"
         },
@@ -2258,7 +2258,7 @@
             "submit": "Continuar"
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Minha sessão está válida.",
           "behavior": "Para qual contrato deseja incluir sua filha?",
           "next": "DEP-03",
@@ -2268,7 +2268,7 @@
           "id": "DEP-03",
           "title": "Consultar vagas e condições",
           "user": "Serviços de Assistência Familiar",
-          "bot": "Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.",
+          "bot": "Você tem 2 vagas disponíveis. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.",
           "mode": "chat",
           "actions": [
             {
@@ -2282,9 +2282,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Serviços de Assistência Familiar",
-          "behavior": "Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.",
+          "behavior": "Você tem 2 vagas disponíveis. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.",
           "next": "DEP-33",
           "journeyId": "DEP"
         },
@@ -2322,7 +2322,7 @@
           "id": "DEP-34",
           "title": "Completar dados do dependente",
           "user": "Quero concluir o cadastro.",
-          "bot": "Qual é o celular do João e qual sexo biológico ele informa? Esses dados não são inferidos. Use apenas dados fictícios nesta demonstração.",
+          "bot": "Qual é o celular do João e qual sexo biológico ele informa?",
           "mode": "form",
           "actions": [],
           "alternative": false,
@@ -2351,13 +2351,13 @@
             ],
             "submit": "Revisar inclusão",
             "target": "DEP-06",
-            "note": "O legado solicita estes dados. Obrigatoriedade e opções precisam ser validadas pelo produto.",
+            "note": "",
             "rule": "Sexo biológico e celular são perguntados explicitamente e não são inferidos. A necessidade e a obrigatoriedade destes campos ainda dependem de validação do produto."
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero concluir o cadastro.",
-          "behavior": "Qual é o celular do João e qual sexo biológico ele informa? Esses dados não são inferidos. Use apenas dados fictícios nesta demonstração.",
+          "behavior": "Qual é o celular do João e qual sexo biológico ele informa?",
           "next": "DEP-04",
           "journeyId": "DEP"
         },
@@ -2365,11 +2365,11 @@
           "id": "DEP-04",
           "title": "Coleta pela conversa",
           "user": "Minha filha é Maria Silva, nasceu em 12/03/2014.",
-          "bot": "Recebi o nome, a data de nascimento e o parentesco. Falta o CPF exigido neste exemplo. Você pode informar por aqui.",
+          "bot": "Recebi o nome, a data de nascimento e o parentesco. Falta o CPF do dependente. Você pode informar por aqui.",
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular dado",
+              "label": "Informar dado",
               "target": "DEP-06"
             },
             {
@@ -2379,9 +2379,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Minha filha é Maria Silva, nasceu em 12/03/2014.",
-          "behavior": "Recebi o nome, a data de nascimento e o parentesco. Falta o CPF exigido neste exemplo. Você pode informar por aqui.",
+          "behavior": "Recebi o nome, a data de nascimento e o parentesco. Falta o CPF do dependente. Você pode informar por aqui.",
           "next": "DEP-05",
           "journeyId": "DEP"
         },
@@ -2451,10 +2451,10 @@
             ],
             "submit": "Revisar inclusão",
             "target": "DEP-06",
-            "note": "Use dados fictícios. Campos ilustrativos, sujeitos à validação do produto."
+            "note": ""
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Prefiro o formulário.",
           "behavior": "Preencha os dados da pessoa que será incluída. Você poderá revisar tudo antes de confirmar.",
           "next": "DEP-06",
@@ -2505,7 +2505,7 @@
                 "rows": [
                   [
                     "Valor adicional",
-                    "Sem adicional neste exemplo"
+                    "Sem adicional "
                   ],
                   [
                     "Mensalidade total",
@@ -2529,10 +2529,10 @@
             "submit": "Confirmar inclusão",
             "target": "DEP-08",
             "correction": "DEP-14",
-            "note": "Confira a disponibilidade de cada benefício nas condições do produto."
+            "note": ""
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Já informei os dados.",
           "behavior": "Confira os dados e os efeitos da inclusão. Correções são feitas pela conversa.",
           "next": "DEP-07",
@@ -2556,7 +2556,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Os dados estão corretos.",
           "behavior": "A inclusão só será enviada após sua confirmação do resumo apresentado.",
           "next": "DEP-08",
@@ -2580,7 +2580,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Confirmar inclusão",
           "behavior": "Recebi sua confirmação. Estou verificando o resultado da inclusão. Não é necessário enviar o pedido novamente.",
           "next": "DEP-09",
@@ -2608,7 +2608,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Consultar resultado",
           "behavior": "**Inclusão concluída**\n{{name}} está vinculada aos Serviços de Assistência Familiar.\nData efetiva: 10/10/2026.\nProtocolo: DEP-2026-0318.\nA utilização segue as condições de cada benefício.",
           "next": "DEP-10",
@@ -2618,7 +2618,7 @@
           "id": "DEP-10",
           "title": "Lista de participantes",
           "user": "Quem está no meu plano?",
-          "bot": "**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis neste exemplo: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.",
+          "bot": "**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.",
           "mode": "chat",
           "actions": [
             {
@@ -2636,9 +2636,9 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quem está no meu plano?",
-          "behavior": "**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis neste exemplo: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.",
+          "behavior": "**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.",
           "next": "DEP-11",
           "journeyId": "DEP"
         },
@@ -2660,7 +2660,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero incluir João e Maria.",
           "behavior": "Vamos incluir uma pessoa por vez para conferir os dados e condições. Preservei as informações recebidas. Por quem começamos?",
           "next": "DEP-12",
@@ -2684,7 +2684,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero continuar com outra pessoa.",
           "behavior": "Vamos consultar novamente as vagas e condições após o resultado da inclusão anterior.",
           "next": "DEP-14",
@@ -2704,7 +2704,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Vou continuar depois.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "DEP-14",
@@ -2718,13 +2718,13 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular nova data",
+              "label": "Corrigir data",
               "target": "DEP-16"
             }
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Corrigir dados",
           "behavior": "Qual informação você quer corrigir? Podemos alterar apenas esse dado e preservar o restante.",
           "next": "DEP-16",
@@ -2748,7 +2748,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Troque para minha outra filha.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": "DEP-16",
@@ -2768,7 +2768,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "A data correta é 12/03/2014.",
           "behavior": "Atualizei a data informada. Vou verificar novamente a elegibilidade e as condições da inclusão.",
           "next": "DEP-17",
@@ -2819,7 +2819,7 @@
                 "rows": [
                   [
                     "Valor adicional",
-                    "Sem adicional neste exemplo"
+                    "Sem adicional "
                   ],
                   [
                     "Mensalidade total",
@@ -2845,7 +2845,7 @@
             "correction": "DEP-14"
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Revisar novamente",
           "behavior": "O resumo abaixo contém os dados atualizados. Sua confirmação valerá para esta revisão.",
           "next": "DEP-18",
@@ -2871,7 +2871,7 @@
             "submit": "Continuar"
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Cadastrei a data errada.",
           "behavior": "Para qual dependente deseja solicitar a correção?",
           "next": "DEP-19",
@@ -2885,13 +2885,13 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular correção",
+              "label": "Corrigir informação",
               "target": "DEP-20"
             }
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Maria Silva",
           "behavior": "Qual informação precisa mudar e qual é o dado correto?",
           "next": "DEP-20",
@@ -2915,7 +2915,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "O nascimento correto é 12/03/2014.",
           "behavior": "Vou consultar se esse dado pode ser alterado e quais efeitos a correção terá.",
           "next": "DEP-21",
@@ -2952,7 +2952,7 @@
                     "12/03/2014"
                   ],
                   [
-                    "Efeito neste exemplo",
+                    "Efeito ",
                     "Sem alteração de preço"
                   ]
                 ]
@@ -2963,7 +2963,7 @@
             "correction": "DEP-19"
           },
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero revisar.",
           "behavior": "Confira a alteração e seus efeitos antes de confirmar.",
           "next": "DEP-22",
@@ -2983,7 +2983,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Confirmo o dado correto.",
           "behavior": "Sua decisão precisa corresponder à revisão atualizada. Podemos conferir novamente antes de enviar.",
           "next": "DEP-23",
@@ -3007,7 +3007,7 @@
           ],
           "alternative": false,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Confirmar correção",
           "behavior": "Correção concluída. A data de nascimento foi atualizada no cadastro de Maria.\nProtocolo: COR-2026-0181.",
           "next": null,
@@ -3031,7 +3031,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Preciso alterar o CPF.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3055,7 +3055,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero incluir mais uma pessoa.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3079,7 +3079,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero incluir Maria.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3099,7 +3099,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Informei um CPF.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3109,7 +3109,7 @@
           "id": "DEP-28",
           "title": "Pessoa inelegível",
           "user": "Posso confirmar a inclusão?",
-          "bot": "A pessoa não atende ao critério de elegibilidade retornado pelo produto neste exemplo. Podemos revisar os dados ou pedir esclarecimento.",
+          "bot": "A pessoa não atende ao critério de elegibilidade retornado pelo produto. Podemos revisar os dados ou pedir esclarecimento.",
           "mode": "chat",
           "actions": [
             {
@@ -3123,7 +3123,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Posso confirmar a inclusão?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3147,7 +3147,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Quero preencher a vaga que liberei.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3167,7 +3167,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Foi incluída?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3191,7 +3191,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Deu certo?",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3215,7 +3215,7 @@
           ],
           "alternative": true,
           "requiresAuth": true,
-          "rule": "Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.",
+          "rule": "Consulte os participantes, benefícios e condições do plano.",
           "intent": "Sou dependente e quero incluir minha irmã.",
           "behavior": "Explicar a situação e oferecer o próximo passo sem perder o contexto.",
           "next": null,
@@ -3298,7 +3298,7 @@
                   ],
                   [
                     "Exclusão efetiva",
-                    "10/11/2026 neste exemplo"
+                    "10/11/2026 "
                   ],
                   [
                     "Acesso aos benefícios",
@@ -3306,7 +3306,7 @@
                   ],
                   [
                     "Mensalidade",
-                    "Sem redução neste exemplo"
+                    "Sem redução "
                   ],
                   [
                     "Nova inclusão",
@@ -3375,7 +3375,7 @@
           "id": "EXC-06",
           "title": "Resultado da exclusão",
           "user": "Consultar resultado",
-          "bot": "A exclusão de Maria está agendada para 10/11/2026 neste exemplo.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.",
+          "bot": "A exclusão de Maria está agendada para 10/11/2026.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.",
           "mode": "chat",
           "actions": [
             {
@@ -3391,7 +3391,7 @@
           "requiresAuth": true,
           "rule": "Data efetiva, redução de preço e restrição de substituição dependem do produto; regra legada de 180 dias não foi generalizada.",
           "intent": "Consultar resultado",
-          "behavior": "A exclusão de Maria está agendada para 10/11/2026 neste exemplo.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.",
+          "behavior": "A exclusão de Maria está agendada para 10/11/2026.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.",
           "next": "EXC-07",
           "journeyId": "EXC"
         },
@@ -3447,7 +3447,7 @@
           "id": "EXC-09",
           "title": "Revisar desistência",
           "user": "Quero desfazer.",
-          "bot": "Vou verificar o agendamento. Neste exemplo, Maria permanece vinculada e não há ajuste de preço para desfazer.",
+          "bot": "Vou verificar o agendamento. Maria permanece vinculada e não há ajuste de preço para desfazer.",
           "mode": "chat",
           "actions": [
             {
@@ -3463,7 +3463,7 @@
           "requiresAuth": true,
           "rule": "Data efetiva, redução de preço e restrição de substituição dependem do produto; regra legada de 180 dias não foi generalizada.",
           "intent": "Quero desfazer.",
-          "behavior": "Vou verificar o agendamento. Neste exemplo, Maria permanece vinculada e não há ajuste de preço para desfazer.",
+          "behavior": "Vou verificar o agendamento. Maria permanece vinculada e não há ajuste de preço para desfazer.",
           "next": "EXC-10",
           "journeyId": "EXC"
         },
@@ -3728,7 +3728,7 @@
                   ],
                   [
                     "Participantes",
-                    "Somente titular neste cenário"
+                    "Somente titular "
                   ]
                 ]
               },
@@ -4152,11 +4152,11 @@
           "id": "UTI-04",
           "title": "Acesso disponível",
           "user": "Posso acessar?",
-          "bot": "O acesso à telemedicina está disponível para Maria neste cenário. O atendimento acontece no ambiente do prestador.",
+          "bot": "O acesso à telemedicina está disponível para Maria. O atendimento acontece no ambiente do prestador.",
           "mode": "chat",
           "actions": [
             {
-              "label": "Acessar demonstração",
+              "label": "Acessar telemedicina",
               "target": "UTI-05"
             },
             {
@@ -4168,7 +4168,7 @@
           "requiresAuth": true,
           "rule": "Acessos, limites, carências e integrações ainda precisam de confirmação por prestador.",
           "intent": "Posso acessar?",
-          "behavior": "O acesso à telemedicina está disponível para Maria neste cenário. O atendimento acontece no ambiente do prestador.",
+          "behavior": "O acesso à telemedicina está disponível para Maria. O atendimento acontece no ambiente do prestador.",
           "next": "UTI-05",
           "journeyId": "UTI"
         },
@@ -4200,7 +4200,7 @@
           "id": "UTI-06",
           "title": "Situação do encaminhamento",
           "user": "A consulta foi realizada?",
-          "bot": "O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada neste exemplo.",
+          "bot": "O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada.",
           "mode": "chat",
           "actions": [
             {
@@ -4216,7 +4216,7 @@
           "requiresAuth": true,
           "rule": "Acessos, limites, carências e integrações ainda precisam de confirmação por prestador.",
           "intent": "A consulta foi realizada?",
-          "behavior": "O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada neste exemplo.",
+          "behavior": "O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada.",
           "next": "UTI-08",
           "journeyId": "UTI"
         },
@@ -4272,7 +4272,7 @@
           "id": "UTI-09",
           "title": "Identificação para benefício",
           "user": "Ver identificação",
-          "bot": "Seu acesso demonstrativo ao benefício está disponível. A identificação real e a rede serão definidas com o parceiro.",
+          "bot": "Seu acesso ao benefício está disponível. Consulte as orientações para utilizar o serviço.",
           "mode": "document",
           "actions": [
             {
@@ -4287,7 +4287,7 @@
           "requiresAuth": true,
           "rule": "Acessos, limites, carências e integrações ainda precisam de confirmação por prestador.",
           "intent": "Ver identificação",
-          "behavior": "Seu acesso demonstrativo ao benefício está disponível. A identificação real e a rede serão definidas com o parceiro.",
+          "behavior": "Seu acesso ao benefício está disponível. Consulte as orientações para utilizar o serviço.",
           "next": null,
           "journeyId": "UTI"
         },
@@ -4295,7 +4295,7 @@
           "id": "UTI-10",
           "title": "Prestador indisponível",
           "user": "O acesso não abriu.",
-          "bot": "O prestador está indisponível neste cenário. Você pode tentar novamente ou solicitar suporte.",
+          "bot": "O prestador está indisponível. Você pode tentar novamente ou solicitar suporte.",
           "mode": "chat",
           "actions": [
             {
@@ -4527,7 +4527,7 @@
           "id": "FUN-08",
           "title": "Recebimento confirmado",
           "user": "Consultar resultado",
-          "bot": "O prestador confirmou o recebimento neste cenário.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.",
+          "bot": "O prestador confirmou o recebimento.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.",
           "mode": "chat",
           "actions": [
             {
@@ -4543,7 +4543,7 @@
           "requiresAuth": true,
           "rule": "Dados mínimos, cobertura, localidade e disponibilidade do prestador dependem do contrato.",
           "intent": "Consultar resultado",
-          "behavior": "O prestador confirmou o recebimento neste cenário.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.",
+          "behavior": "O prestador confirmou o recebimento.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.",
           "next": "FUN-09",
           "journeyId": "FUN"
         },
@@ -4601,7 +4601,7 @@
           "id": "COB-01",
           "title": "Resumo financeiro",
           "user": "Quero ver meus pagamentos.",
-          "bot": "**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.",
+          "bot": "**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nHá 1 parcela pendente. Você pode consultar o detalhe antes de pagar.",
           "mode": "chat",
           "actions": [
             {
@@ -4621,7 +4621,7 @@
           "requiresAuth": true,
           "rule": "Não generalizar regra de 90 dias nem cobrança retroativa das notas da reunião. Meios e valores são demonstrativos.",
           "intent": "Quero ver meus pagamentos.",
-          "behavior": "**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.",
+          "behavior": "**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nHá 1 parcela pendente. Você pode consultar o detalhe antes de pagar.",
           "next": "COB-02",
           "journeyId": "COB"
         },
@@ -4629,7 +4629,7 @@
           "id": "COB-02",
           "title": "Composição da cobrança",
           "user": "Por que veio esse valor?",
-          "bot": "Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00 neste exemplo.\nSituação: em aberto.\nVencimento: 10/09/2026.",
+          "bot": "Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00.\nSituação: em aberto.\nVencimento: 10/09/2026.",
           "mode": "chat",
           "actions": [
             {
@@ -4645,7 +4645,7 @@
           "requiresAuth": true,
           "rule": "Não generalizar regra de 90 dias nem cobrança retroativa das notas da reunião. Meios e valores são demonstrativos.",
           "intent": "Por que veio esse valor?",
-          "behavior": "Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00 neste exemplo.\nSituação: em aberto.\nVencimento: 10/09/2026.",
+          "behavior": "Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00.\nSituação: em aberto.\nVencimento: 10/09/2026.",
           "next": "COB-03",
           "journeyId": "COB"
         },
@@ -4662,7 +4662,7 @@
             "choices": [
               {
                 "label": "Setembro de 2026",
-                "detail": "Vencimento 10/09 · R$ 39,90 neste exemplo",
+                "detail": "Vencimento 10/09 · R$ 39,90 ",
                 "target": "COB-04"
               }
             ],
@@ -4679,7 +4679,7 @@
           "id": "COB-04",
           "title": "Meios disponíveis",
           "user": "Setembro de 2026",
-          "bot": "Neste cenário há um meio de regularização disponível. A disponibilidade real depende do produto e da processadora.",
+          "bot": "Escolha o meio de pagamento para regularizar sua parcela.",
           "mode": "list",
           "actions": [],
           "alternative": false,
@@ -4697,7 +4697,7 @@
           "requiresAuth": true,
           "rule": "Não generalizar regra de 90 dias nem cobrança retroativa das notas da reunião. Meios e valores são demonstrativos.",
           "intent": "Setembro de 2026",
-          "behavior": "Neste cenário há um meio de regularização disponível. A disponibilidade real depende do produto e da processadora.",
+          "behavior": "Escolha o meio de pagamento para regularizar sua parcela.",
           "next": "COB-05",
           "journeyId": "COB"
         },
@@ -4724,7 +4724,7 @@
                     "R$ 39,90"
                   ],
                   [
-                    "Encargos neste exemplo",
+                    "Encargos ",
                     "R$ 0,00"
                   ],
                   [
@@ -5002,7 +5002,7 @@
           "id": "CAN-03",
           "title": "Uma oferta opcional",
           "user": "Quero cancelar porque está caro.",
-          "bot": "Há uma opção de menor valor elegível neste cenário: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.",
+          "bot": "Há uma opção de menor valor elegível: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.",
           "mode": "chat",
           "actions": [
             {
@@ -5018,7 +5018,7 @@
           "requiresAuth": true,
           "rule": "Data, vigência, restituição e cobrança precisam ser validadas por produto. Não adotar automaticamente os 20 dias do legado.",
           "intent": "Quero cancelar porque está caro.",
-          "behavior": "Há uma opção de menor valor elegível neste cenário: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.",
+          "behavior": "Há uma opção de menor valor elegível: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.",
           "next": "CAN-04",
           "journeyId": "CAN"
         },
@@ -5061,7 +5061,7 @@
                     "Serviços de Assistência Familiar"
                   ],
                   [
-                    "Data efetiva neste cenário",
+                    "Data efetiva ",
                     "10/10/2026"
                   ],
                   [
@@ -5082,7 +5082,7 @@
                     "Conforme cálculo do sistema"
                   ],
                   [
-                    "Restituição neste cenário",
+                    "Restituição ",
                     "Sem saldo a restituir"
                   ],
                   [
@@ -5152,7 +5152,7 @@
           "id": "CAN-08",
           "title": "Cancelamento concluído",
           "user": "Consultar resultado",
-          "bot": "**Contrato encerrado**\nData efetiva neste cenário: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.",
+          "bot": "**Contrato encerrado**\nData efetiva: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.",
           "mode": "document",
           "actions": [
             {
@@ -5167,7 +5167,7 @@
           "requiresAuth": true,
           "rule": "Data, vigência, restituição e cobrança precisam ser validadas por produto. Não adotar automaticamente os 20 dias do legado.",
           "intent": "Consultar resultado",
-          "behavior": "**Contrato encerrado**\nData efetiva neste cenário: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.",
+          "behavior": "**Contrato encerrado**\nData efetiva: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.",
           "next": "CAN-13",
           "journeyId": "CAN"
         },
@@ -5175,7 +5175,7 @@
           "id": "CAN-09",
           "title": "Cancelamento agendado",
           "user": "Meu cancelamento aconteceu?",
-          "bot": "O cancelamento está agendado para a primeira data permitida neste cenário. Até lá, consulte as condições de utilização e cobrança apresentadas na revisão.",
+          "bot": "O cancelamento está agendado para a primeira data permitida. Até lá, consulte as condições de utilização e cobrança apresentadas na revisão.",
           "mode": "chat",
           "actions": [
             {
@@ -5199,7 +5199,7 @@
           "id": "CAN-10",
           "title": "Restituição em acompanhamento",
           "user": "Tenho valor para receber?",
-          "bot": "Há uma restituição em acompanhamento neste cenário. O valor, destino e prazo serão os retornados pelo sistema financeiro, sem estimativas do assistente.",
+          "bot": "Há uma restituição em acompanhamento. O valor, destino e prazo serão os retornados pelo sistema financeiro, sem estimativas do assistente.",
           "mode": "chat",
           "actions": [
             {
@@ -5385,7 +5385,7 @@
           "id": "REN-01",
           "title": "Aviso de fim de vigência",
           "user": "Recebi um aviso de renovação.",
-          "bot": "Seu contrato termina em 10/11/2026 neste cenário. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.",
+          "bot": "Seu contrato termina em 10/11/2026. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.",
           "mode": "chat",
           "actions": [
             {
@@ -5401,7 +5401,7 @@
           "requiresAuth": true,
           "rule": "Aplicável a produtos com prazo determinado; recorrência contínua não é necessariamente renovação.",
           "intent": "Recebi um aviso de renovação.",
-          "behavior": "Seu contrato termina em 10/11/2026 neste cenário. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.",
+          "behavior": "Seu contrato termina em 10/11/2026. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.",
           "next": "REN-02",
           "journeyId": "REN"
         },
@@ -5424,12 +5424,12 @@
                     "R$ 39,90/mês"
                   ],
                   [
-                    "Novo valor neste exemplo",
+                    "Novo valor ",
                     "R$ 42,90/mês"
                   ],
                   [
                     "Participantes",
-                    "Mantidos, sujeitos à validação"
+                    "Mantidos"
                   ],
                   [
                     "Benefícios",
@@ -5735,7 +5735,7 @@
           "id": "SOL-04",
           "title": "Em processamento",
           "user": "Quero acompanhar o pedido.",
-          "bot": "**Solicitação em processamento**\nProtocolo: CAD-2026-0041 neste cenário.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.",
+          "bot": "**Solicitação em processamento**\nProtocolo: CAD-2026-0041.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.",
           "mode": "chat",
           "actions": [
             {
@@ -5755,7 +5755,7 @@
           "requiresAuth": true,
           "rule": "Histórico e disponibilidade de documentos dependem da política operacional.",
           "intent": "Quero acompanhar o pedido.",
-          "behavior": "**Solicitação em processamento**\nProtocolo: CAD-2026-0041 neste cenário.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.",
+          "behavior": "**Solicitação em processamento**\nProtocolo: CAD-2026-0041.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.",
           "next": "SOL-05",
           "journeyId": "SOL"
         },
@@ -5787,7 +5787,7 @@
           "id": "SOL-06",
           "title": "Pedido concluído",
           "user": "Quero ver o resultado.",
-          "bot": "**Solicitação concluída neste cenário**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.",
+          "bot": "**Solicitação concluída**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.",
           "mode": "chat",
           "actions": [
             {
@@ -5803,7 +5803,7 @@
           "requiresAuth": true,
           "rule": "Histórico e disponibilidade de documentos dependem da política operacional.",
           "intent": "Quero ver o resultado.",
-          "behavior": "**Solicitação concluída neste cenário**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.",
+          "behavior": "**Solicitação concluída**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.",
           "next": "SOL-09",
           "journeyId": "SOL"
         },
@@ -5890,7 +5890,7 @@
           "id": "SOL-10",
           "title": "Entrada por protocolo",
           "user": "Protocolo DEP-2026-0318",
-          "bot": "Vou consultar o pedido correspondente após informar um CPF fictício.",
+          "bot": "Vou consultar o pedido correspondente após informar um CPF.",
           "mode": "chat",
           "actions": [
             {
@@ -5906,7 +5906,7 @@
           "requiresAuth": true,
           "rule": "Histórico e disponibilidade de documentos dependem da política operacional.",
           "intent": "Protocolo DEP-2026-0318",
-          "behavior": "Vou consultar o pedido correspondente após informar um CPF fictício.",
+          "behavior": "Vou consultar o pedido correspondente após informar um CPF.",
           "next": null,
           "journeyId": "SOL"
         }
@@ -5968,7 +5968,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular início",
+              "label": "Iniciar atendimento",
               "target": "HUM-04"
             },
             {
@@ -5992,7 +5992,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular conclusão",
+              "label": "Concluir atendimento",
               "target": "HUM-07"
             }
           ],
@@ -6053,7 +6053,7 @@
           "id": "HUM-07",
           "title": "Atendimento concluído",
           "user": "Obrigada.",
-          "bot": "Seu atendimento foi concluído neste cenário.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.",
+          "bot": "Seu atendimento foi concluído.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.",
           "mode": "chat",
           "actions": [
             {
@@ -6070,7 +6070,7 @@
           "requiresAuth": true,
           "rule": "Fila, horários, previsão, canal urgente e regras do retorno precisam de validação operacional.",
           "intent": "Obrigada.",
-          "behavior": "Seu atendimento foi concluído neste cenário.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.",
+          "behavior": "Seu atendimento foi concluído.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.",
           "next": "HUM-08",
           "journeyId": "HUM"
         },
@@ -6593,7 +6593,7 @@
           "id": "PRE-02",
           "title": "Escolher avisos opcionais",
           "user": "Quero escolher.",
-          "bot": "Selecione os avisos opcionais que deseja receber neste exemplo.",
+          "bot": "Selecione os avisos opcionais que deseja receber.",
           "mode": "form",
           "actions": [],
           "alternative": false,
@@ -6615,12 +6615,12 @@
             ],
             "submit": "Salvar preferências",
             "target": "PRE-03",
-            "note": "Classificação dos avisos ainda sujeita à validação do negócio."
+            "note": ""
           },
           "requiresAuth": true,
           "rule": "Categorias obrigatórias, canais alternativos e alcance da desativação ainda precisam de validação.",
           "intent": "Quero escolher.",
-          "behavior": "Selecione os avisos opcionais que deseja receber neste exemplo.",
+          "behavior": "Selecione os avisos opcionais que deseja receber.",
           "next": "PRE-03",
           "journeyId": "PRE"
         },
@@ -6628,7 +6628,7 @@
           "id": "PRE-03",
           "title": "Preferências salvas",
           "user": "Salvar preferências",
-          "bot": "Suas escolhas opcionais foram salvas na demonstração. Comunicações necessárias seguem a política e os canais aplicáveis.",
+          "bot": "Suas preferências foram salvas.",
           "mode": "chat",
           "actions": [
             {
@@ -6644,7 +6644,7 @@
           "requiresAuth": true,
           "rule": "Categorias obrigatórias, canais alternativos e alcance da desativação ainda precisam de validação.",
           "intent": "Salvar preferências",
-          "behavior": "Suas escolhas opcionais foram salvas na demonstração. Comunicações necessárias seguem a política e os canais aplicáveis.",
+          "behavior": "Suas preferências foram salvas.",
           "next": null,
           "journeyId": "PRE"
         }

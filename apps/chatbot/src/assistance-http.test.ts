@@ -379,7 +379,7 @@ it('keeps a failed confirmation pending and retries with a new event without dup
   await turn(bot.url, textReq('Não quero ofertas. Quero cancelar.', { session: 'retry' }));
   await turn(bot.url, choiceReq('CAN-05', { session: 'retry' }));
   const failed = await turn(bot.url, flowSubmitReq({}, { session: 'retry', flowId: 'CAN-05' }));
-  expect(textsOf(failed.events)).toContain('indisponível');
+  expect(textsOf(failed.events)).toContain('Não foi possível continuar');
   const before = await mock.getSessionSnapshot('retry', readContext);
   expect(before.ok && before.value.contract.status).toBe('active');
   unavailable = false;
@@ -405,7 +405,7 @@ it.each([60_000, 60_001])(
       flowSubmitReq({}, { session: 'expired', flowId: 'CAN-05' }),
     );
     expect(bot.screenId('expired')).toBe('IDE-05');
-    expect(textsOf(expired.events)).toContain('sessão demonstrativa expirou');
+    expect(textsOf(expired.events)).toContain('sessão expirou');
     expect(expired.events.some((event) => event.type === 'message.flow')).toBe(false);
     expect(JSON.stringify(expired.events)).not.toContain('Informar CPF');
     const snapshot = await mock.getSessionSnapshot('expired', readContext);
@@ -420,7 +420,7 @@ it('prompts for typed CPF without emitting an identification Flow', async () => 
   await turn(bot.url, textReq('Quero ver meu contrato.'));
   const form = await turn(bot.url, choiceReq('IDE-08'));
   expect(form.events.some((event) => event.type === 'message.flow')).toBe(false);
-  expect(textsOf(form.events)).toContain('aqui no chat');
+  expect(textsOf(form.events)).toContain('informe seu CPF');
   const obsolete = await turn(bot.url, flowSubmitReq({ cpf: '11111111111' }, { flowId: 'IDE-08' }));
   expect(bot.screenId('s1')).not.toBe('CON-01');
   expect(obsolete.events.some((event) => event.type === 'message.flow')).toBe(false);
@@ -435,8 +435,8 @@ it('emits CPF receipt and format approval before resuming a protected request', 
     .filter((event) => event.type === 'message.text')
     .map((event) => event.payload.text);
   expect(messages.slice(0, 2)).toEqual([
-    'Recebi o CPF para validar o formato da demonstração.',
-    'O formato do CPF foi aceito. Os dados seguintes pertencem a um cenário fictício.',
+    'Recebi seu CPF. Vamos continuar.',
+    'Tudo pronto. Vamos continuar seu pedido.',
   ]);
   expect(findEvent(result.events, 'message.flow').payload.flowId).toBe('CON-01');
   expect(JSON.stringify(result.events)).not.toContain('98765432100');

@@ -86,7 +86,7 @@ test('offers four local demo audio outcomes without microphone or media requests
     ['AUD-04', 'Não consegui compreender'],
     ['AUD-05', 'Estes são os dados que compreendi'],
   ] as const) {
-    await page.getByRole('button', { name: 'Áudio demonstrativo' }).click();
+    await page.getByRole('button', { name: 'Mensagem de áudio' }).click();
     await page.getByRole('button', { name: new RegExp(id) }).click();
     await expect(page.getByText(response, { exact: false })).toBeVisible();
   }
@@ -371,17 +371,17 @@ test.describe('flows', () => {
 
     const date = await dateTyper(page);
     await say(page, 'demo flow');
-    const opener = page.getByRole('button', { name: 'Abrir demonstração' });
+    const opener = page.getByRole('button', { name: 'Abrir formulário' });
     await opener.focus();
     await page.keyboard.press('Enter');
 
     // ---- INICIO: text, images, carousel, link, navigation list
-    const inicio = page.getByRole('dialog', { name: 'Demonstração' });
-    await expect(inicio.getByRole('heading', { name: 'Demonstração', exact: true })).toBeFocused();
+    const inicio = page.getByRole('dialog', { name: 'Sua solicitação' });
+    await expect(inicio.getByRole('heading', { name: 'Sua solicitação', exact: true })).toBeFocused();
     await expect(inicio.getByRole('heading', { name: 'Todos os componentes' })).toBeVisible();
-    await expect(inicio.getByRole('heading', { name: 'Um Flow de demonstração' })).toBeVisible();
+    await expect(inicio.getByRole('heading', { name: 'Dados do atendimento' })).toBeVisible();
     await expect(inicio.locator('strong', { hasText: 'todos' })).toBeVisible();
-    await expect(inicio.getByText('Dados fictícios, apenas para teste.')).toBeVisible();
+    await expect(inicio.getByText('Confira os dados antes de continuar.')).toBeVisible();
     await expect(inicio.getByRole('heading', { name: 'Como funciona' })).toBeVisible();
     await expect(
       inicio.getByRole('listitem').filter({ hasText: 'Confirme o envio' }),
@@ -605,7 +605,7 @@ test.describe('flows', () => {
     page,
   }) => {
     await say(page, 'demo flow');
-    const opener = page.getByRole('button', { name: 'Abrir demonstração' });
+    const opener = page.getByRole('button', { name: 'Abrir formulário' });
 
     // untouched: Close and Escape close at once
     await opener.click();
@@ -613,7 +613,7 @@ test.describe('flows', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(opener).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('dialog', { name: 'Demonstração' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Sua solicitação' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(opener).toBeFocused();
@@ -634,7 +634,7 @@ test.describe('flows', () => {
     await expect(page.getByRole('checkbox', { name: 'Incêndio' })).toBeChecked();
     await page.getByRole('button', { name: 'Voltar' }).click();
     await page.getByRole('button', { name: 'Voltar' }).click();
-    await expect(page.getByRole('dialog', { name: 'Demonstração' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Sua solicitação' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Voltar' })).toHaveCount(0);
 
     const close = page.getByRole('button', { name: 'Fechar' });
@@ -643,7 +643,7 @@ test.describe('flows', () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: 'Continuar editando' }).click();
     await expect(confirm).toHaveCount(0);
-    await expect(page.getByRole('dialog', { name: 'Demonstração' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Sua solicitação' })).toBeVisible();
     await expect(close).toBeFocused();
 
     await close.click();

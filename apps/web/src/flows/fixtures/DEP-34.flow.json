@@ -15,7 +15,7 @@
         "children": [
           {
             "type": "TextBody",
-            "text": "Qual é o celular do João e qual sexo biológico ele informa? Esses dados não são inferidos. Use apenas dados fictícios nesta demonstração."
+            "text": "Qual é o celular do João e qual sexo biológico ele informa?"
           },
           {
             "type": "TextInput",

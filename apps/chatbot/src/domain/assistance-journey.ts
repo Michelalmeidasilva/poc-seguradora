@@ -46,7 +46,7 @@ function customerFacingStep(step: AssistanceStep): AssistanceStep {
           ...(step.id === 'IDE-02'
             ? {
                 title: 'Validar formato do CPF',
-                note: 'Somente o formato do CPF é verificado nesta demonstração.',
+                note: 'Informe seu CPF para continuar.',
               }
             : {}),
           ...(step.id === 'IDE-08'
@@ -107,5 +107,9 @@ export function nextAssistanceState(
   if (target.requiresAuth && !state.gateApproved && target.journeyId !== 'IDE') {
     return transition(state, personalGate, false);
   }
-  return transition(state, target, ['IDE-05', 'IDE-06'].includes(target.id) ? false : state.gateApproved);
+  return transition(
+    state,
+    target,
+    ['IDE-05', 'IDE-06'].includes(target.id) ? false : state.gateApproved,
+  );
 }

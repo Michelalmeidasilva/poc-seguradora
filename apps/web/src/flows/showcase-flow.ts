@@ -1,6 +1,6 @@
 /** Local component catalog only: deliberately independent of canonical business journeys. */
 export function showcaseFlow(origin: string): Record<string, unknown> {
-  const image = new URL('/catalog/house.svg', origin).href;
+  const image = new URL('/catalog/family.svg', origin).href;
   const imageHealth = new URL('/catalog/health.svg', origin).href;
   return {
     version: '7.1',
@@ -14,16 +14,16 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
           type: 'SingleColumnLayout',
           children: [
             { type: 'TextHeading', text: 'Vamos cuidar do seu pedido' },
-            { type: 'TextSubheading', text: 'Formulário de exemplo' },
+            { type: 'TextSubheading', text: 'Solicitação de atendimento' },
             {
               type: 'TextBody',
-              text: 'Experimente os campos da solicitação. Nenhum dado será enviado ao atendimento.',
+              text: 'Preencha os dados da solicitação e escolha o serviço desejado.',
             },
-            { type: 'TextCaption', text: 'Use somente dados fictícios nesta demonstração.' },
+
             {
               type: 'Image',
               src: image,
-              'alt-text': 'Ilustração de assistência residencial',
+              'alt-text': 'Assistência Funeral',
               height: 130,
             },
             { type: 'TextInput', name: 'nome', label: 'Nome completo', required: true },
@@ -33,23 +33,29 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
               name: 'servico',
               label: 'Tipo de atendimento',
               'data-source': [
-                { id: 'CHAVEIRO', title: 'Chaveiro' },
-                { id: 'ELETRICISTA', title: 'Eletricista' },
-                { id: 'ENCANADOR', title: 'Encanador' },
+                { id: 'FUNERAL', title: 'Assistência Funeral' },
+                { id: 'FARMACIA', title: 'Assistência Farmácia' },
+                { id: 'TELEMEDICINA', title: 'Telemedicina' },
               ],
             },
             {
               type: 'Switch',
               value: '${form.servico}',
               cases: {
-                CHAVEIRO: [
-                  { type: 'TextCaption', text: 'Chaveiro: apoio para abertura de portas.' },
+                FUNERAL: [
+                  {
+                    type: 'TextCaption',
+                    text: 'Assistência Funeral: apoio e acolhimento à família.',
+                  },
                 ],
-                ELETRICISTA: [
-                  { type: 'TextCaption', text: 'Eletricista: apoio em reparos elétricos.' },
+                FARMACIA: [
+                  {
+                    type: 'TextCaption',
+                    text: 'Assistência Farmácia: descontos em redes credenciadas.',
+                  },
                 ],
-                ENCANADOR: [
-                  { type: 'TextCaption', text: 'Encanador: apoio em reparos hidráulicos.' },
+                TELEMEDICINA: [
+                  { type: 'TextCaption', text: 'Telemedicina: atendimento médico a distância.' },
                 ],
               },
             },
@@ -92,16 +98,19 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
             {
               type: 'PhotoPicker',
               name: 'fotos',
-              label: 'Fotos do local',
+              label: 'Fotos e documentos de apoio',
               'photo-source': 'gallery',
               'max-uploaded-photos': 2,
             },
-            { type: 'OptIn', name: 'aceite', label: 'Li as condições do exemplo' },
+            { type: 'OptIn', name: 'aceite', label: 'Li as condições do serviço' },
             {
               type: 'If',
               condition: '${form.aceite}',
               then: [
-                { type: 'TextBody', text: 'Condições aceitas. Você pode concluir o exemplo.' },
+                {
+                  type: 'TextBody',
+                  text: 'Condições aceitas. Você pode concluir sua solicitação.',
+                },
               ],
               else: [{ type: 'TextCaption', text: 'Você pode consultar as condições abaixo.' }],
             },
@@ -125,7 +134,7 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
             },
             {
               type: 'Footer',
-              label: 'Concluir exemplo',
+              label: 'Concluir solicitação',
               'on-click-action': { name: 'complete', payload: {} },
             },
           ],
@@ -133,7 +142,7 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
       },
       {
         id: 'CONDITIONS',
-        title: 'Condições do exemplo',
+        title: 'Condições do serviço',
         terminal: true,
         layout: {
           type: 'SingleColumnLayout',
@@ -143,7 +152,7 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
               text: [
                 '# Sua assistência',
                 'Serviços sujeitos às **coberturas e limites** do plano contratado.',
-                '- Confira o endereço do atendimento.',
+                '- Consulte os benefícios do serviço escolhido.',
                 '- Acompanhe os próximos passos na conversa.',
               ],
             },
@@ -157,13 +166,13 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
             {
               type: 'ImageCarousel',
               images: [
-                { src: image, 'alt-text': 'Assistência residencial' },
-                { src: imageHealth, 'alt-text': 'Assistência saúde' },
+                { src: image, 'alt-text': 'Assistência Funeral' },
+                { src: imageHealth, 'alt-text': 'Telemedicina' },
               ],
             },
             {
               type: 'EmbeddedLink',
-              text: 'Confirmar leitura do exemplo',
+              text: 'Confirmar leitura',
               'on-click-action': { name: 'update_data', payload: { lido: true } },
             },
             {
@@ -174,7 +183,7 @@ export function showcaseFlow(origin: string): Record<string, unknown> {
             },
             {
               type: 'Footer',
-              label: 'Concluir exemplo',
+              label: 'Concluir solicitação',
               'on-click-action': { name: 'complete', payload: {} },
             },
           ],

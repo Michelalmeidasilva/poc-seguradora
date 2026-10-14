@@ -23,6 +23,8 @@ export async function expectTextIdentityGate(page: Page) {
 export async function identifyByChat(page: Page, cpf = '11111111111') {
   await expectTextIdentityGate(page);
   await sendChatText(page, cpf);
-  await expect(page.getByText('O formato do CPF foi aceito.', { exact: false })).toBeVisible();
+  await expect(
+    page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Informar CPF' })).toHaveCount(0);
 }

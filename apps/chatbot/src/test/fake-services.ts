@@ -49,7 +49,7 @@ const POLICIES: Record<string, FakePolicy> = {
   },
   'AP-1002': {
     numero: 'AP-1002',
-    produto: 'RESIDENCIAL',
+    produto: 'VIDA',
     status: 'VENCIDA',
     vigencia: { inicio: '2025-01-01', fim: '2025-12-31' },
     segurado: { nome: 'Maria Souza', cpfMascarado: '***.456.789-**' },

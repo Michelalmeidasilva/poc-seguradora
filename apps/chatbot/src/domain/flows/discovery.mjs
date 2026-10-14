@@ -62,7 +62,6 @@ export function buildDiscoveryFlow(source) {
           ]),
           heading('Condições de uso'),
           text(d.conditions),
-          caption(d.note),
           nav('Escolher plano', 'CONTRACT', { service: '${data.service}' }),
         ],
         { data: serviceData },
@@ -95,7 +94,7 @@ export function buildDiscoveryFlow(source) {
             'error-message': 'Informe um CPF com 11 dígitos.',
           },
           caption(
-            'Você continuará no chat com o serviço e o plano escolhidos para conferir os dados e concluir a contratação. Nenhuma cobrança é feita agora.',
+            'Continue no chat com o serviço e o plano escolhidos para concluir sua contratação.',
           ),
           {
             type: 'Footer',

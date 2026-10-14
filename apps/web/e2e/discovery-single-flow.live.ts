@@ -67,8 +67,14 @@ for (const plan of ['Individual', 'Familiar']) {
       page.getByText(`Você escolheu Telemedicina ${plan}.`, { exact: false }),
     ).toBeVisible();
     // Revisit the selected service from the chat, keeping both choices and the valid gate.
+    const discoveryOpeners = page.getByRole('button', {
+      name: 'Selecionar uma opção',
+      exact: true,
+    });
+    const previousOpeners = await discoveryOpeners.count();
     await page.getByRole('button', { name: 'Rever planos', exact: true }).last().click();
-    await page.getByRole('button', { name: 'Selecionar uma opção', exact: true }).last().click();
+    await expect(discoveryOpeners).toHaveCount(previousOpeners + 1);
+    await discoveryOpeners.last().click();
     await expect(modal().getByRole('radio', { name: /Telemedicina/ })).toBeChecked();
     await modal().getByRole('button', { name: 'Ver detalhes', exact: true }).click();
     await modal().getByRole('button', { name: 'Escolher plano', exact: true }).click();

@@ -24,21 +24,6 @@ describe('parseQuoteSubmit', () => {
     });
   });
 
-  it('converts RESIDENCIAL values from reais to centavos', () => {
-    const r = parseQuoteSubmit({
-      ...base,
-      produto: 'RESIDENCIAL',
-      cep: '01310100',
-      tipoImovel: 'APARTAMENTO',
-      valorImovel: '350000',
-    });
-    expect(r.ok && r.value.dados).toEqual({
-      cep: '01310100',
-      tipoImovel: 'APARTAMENTO',
-      valorImovelCentavos: 35000000,
-    });
-  });
-
   it('maps VIDA with the insured capital in centavos', () => {
     const r = parseQuoteSubmit({ ...base, produto: 'VIDA', capital: 200000 });
     expect(r.ok && r.value.dados).toEqual({ capitalSeguradoCentavos: 20000000 });

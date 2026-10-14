@@ -21,7 +21,7 @@ export function App() {
   const passive = chat.tab === 'other-tab';
 
   useEffect(() => {
-    document.title = 'Digio Assistências';
+    document.title = 'DIGIO Care';
   }, []);
 
   useEffect(() => {
@@ -96,9 +96,7 @@ export function App() {
             request={flow.request}
             onClose={closeFlow}
             submit={
-              flow.demo
-                ? () => setCatalogResult('Exemplo concluído. Nenhuma solicitação foi enviada.')
-                : chat.sendFlowSubmit
+              flow.demo ? () => setCatalogResult('Solicitação concluída.') : chat.sendFlowSubmit
             }
             exchange={flow.demo ? () => undefined : chat.sendFlowDataExchange}
           />

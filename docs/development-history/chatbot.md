@@ -121,3 +121,12 @@ Registro histórico de entregas, decisões e pendências; não é gate de conclu
 - Sessões identificadas recebem o Flow sem campo/referência de CPF. A transição ADE-01 → ADE-02 segue direto a ADE-03, evitando pedir CPF repetido; o acesso isolado a ADE-02 continua disponível. “Rever planos” aponta a DES-01 com seleção preservada.
 - Compatibilidade preservada para submissões antigas de descoberta, conclusão informativa e identificação textual das outras jornadas. Nenhuma compra/cobrança ocorre na conclusão da descoberta.
 - Evidência: 665 testes chatbot; regressões de CPF e seleção, HTTP até a revisão, E2E real Individual/Familiar e tipos/builds. Task TASK-20261014-007; sem deploy.
+
+
+## 2026-10-14 — Redação profissional e retirada residencial
+
+- Mensagens de identificação, descoberta, contratação, dependentes, uso, pagamentos, erros e encerramento usam linguagem do atendimento. Removidos “demonstração”, “fictício”, “neste exemplo/cenário”, avisos editoriais e disclaimers nas superfícies apresentadas ao usuário. As mensagens descrevem a etapa atual sem acrescentar confirmação de identidade, emissão ou pagamento.
+- Revisão feita nas fontes canônicas e nas sobrescritas do gerador de identificação, com regeneração dos Flows e fixtures sincronizadas. O protótipo/atlas também foi atualizado; metadados de projeto permanecem internos e não são exibidos no inspetor/galeria.
+- Retirado o ramo residencial dos modelos, schemas, parser de cotação, Flow antigo e fake. IDs de sessão e regras funcionais das jornadas atuais preservados. Catálogo apresentado pela web contém Funeral, Farmácia e Telemedicina.
+- Evidência: 664 testes chatbot, 177 gateway, 93 protocolo e 63 resiliência passaram em execução sequencial; web 948/948; verificadores raiz 116/116 e deploy hermético 52/52. Rodadas concorrentes falharam em testes temporais preexistentes de heartbeat/timeout do gateway; execução sequencial passou sem alterar gateway.
+- A revisão independente aprovou a redação e os limites de ações. Varredura dos campos de apresentação de todas as etapas e todos os Flows canônicos não encontrou avisos de demonstração remanescentes. Task TASK-20261014-009; sem deploy.

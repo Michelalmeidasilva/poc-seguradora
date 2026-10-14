@@ -187,7 +187,7 @@ export class HandleTurn implements TurnRunner {
           } else {
             emit({
               type: 'message.text',
-              payload: { text: 'Esta demonstração está indisponível no momento.' },
+              payload: { text: 'Não foi possível continuar agora. Tente novamente em instantes.' },
             });
           }
           return;

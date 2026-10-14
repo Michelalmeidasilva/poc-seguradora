@@ -39,33 +39,33 @@ export function ComponentCatalog({
     const media = (name: string) => new URL(`/catalog/${name}.svg`, window.location.href).href;
     return [
       {
-        title: 'Planos e assistências · carrossel',
+        title: 'Seguros · carrossel',
         type: 'message.carousel',
         payload: {
           cards: [
             {
-              mediaUrl: media('house'),
+              mediaUrl: media('family'),
               mediaType: 'image',
-              title: 'Assistência residencial',
-              body: 'Chaveiro, eletricista e encanador. R$ 19,90/mês · valor ilustrativo.',
+              title: 'Assistência Funeral',
+              body: 'Acolhimento e apoio à família. Conheça os planos e benefícios.',
               buttons: [
-                { type: 'quick_reply', id: 'residencial', title: 'Conhecer plano' },
+                { type: 'quick_reply', id: 'funeral', title: 'Conhecer plano' },
                 { type: 'quick_reply', id: 'detalhes', title: 'Ver detalhes' },
               ],
             },
             {
-              mediaUrl: media('health'),
+              mediaUrl: media('pharmacy'),
               mediaType: 'image',
-              title: 'Assistência saúde',
-              body: 'Orientação e cuidado para você e sua família. R$ 24,90/mês · valor ilustrativo.',
-              buttons: [{ type: 'quick_reply', id: 'saude', title: 'Conhecer plano' }],
+              title: 'Assistência Farmácia',
+              body: 'Descontos em medicamentos nas redes credenciadas.',
+              buttons: [{ type: 'quick_reply', id: 'farmacia', title: 'Conhecer plano' }],
             },
             {
-              mediaUrl: media('family'),
+              mediaUrl: media('health'),
               mediaType: 'image',
-              title: 'Assistência funeral',
-              body: 'Acolhimento e apoio à família. R$ 14,90/mês · valor ilustrativo.',
-              buttons: [{ type: 'quick_reply', id: 'funeral', title: 'Conhecer plano' }],
+              title: 'Telemedicina',
+              body: 'Atendimento médico a distância, com praticidade para você.',
+              buttons: [{ type: 'quick_reply', id: 'telemedicina', title: 'Conhecer plano' }],
             },
           ],
         },
@@ -74,18 +74,18 @@ export function ComponentCatalog({
         title: 'Texto e formatação',
         type: 'message.text',
         payload: {
-          text: 'Seu plano está *ativo*. A assistência está disponível _24 horas por dia_.\nVamos cuidar do que importa para você.',
+          text: 'Seu plano está *ativo*. Consulte os serviços disponíveis para _você e sua família_.\nVamos cuidar do que importa para você.',
         },
       },
       {
         title: 'Respostas rápidas',
         type: 'message.quick_replies',
         payload: {
-          text: 'Qual assistência você procura?',
+          text: 'Qual serviço você procura?',
           options: [
-            { id: 'residencial', title: 'Residencial' },
-            { id: 'saude', title: 'Saúde' },
-            { id: 'funeral', title: 'Funeral' },
+            { id: 'funeral', title: 'Assistência Funeral' },
+            { id: 'farmacia', title: 'Assistência Farmácia' },
+            { id: 'telemedicina', title: 'Telemedicina' },
           ],
         },
       },
@@ -94,13 +94,13 @@ export function ComponentCatalog({
         type: 'message.template',
         payload: {
           header: 'Seu pedido está em andamento',
-          body: 'Protocolo de exemplo: AS-2026-001. Consulte os próximos passos do atendimento.',
-          footer: 'Dados fictícios',
+          body: 'Protocolo: AS-2026-001. Consulte os próximos passos do atendimento.',
+          footer: 'DIGIO Care',
           buttons: [{ type: 'quick_reply', id: 'acompanhar', title: 'Acompanhar pedido' }],
         },
       },
       {
-        title: 'Documento demonstrativo',
+        title: 'Documento do plano',
         type: 'message.document',
         payload: {
           documents: [
@@ -120,8 +120,8 @@ export function ComponentCatalog({
         payload: {
           latitude: -23.5505,
           longitude: -46.6333,
-          name: 'Ponto de atendimento de exemplo',
-          address: 'São Paulo, SP · localização ilustrativa',
+          name: 'Ponto de atendimento',
+          address: 'São Paulo, SP',
         },
       },
       {
@@ -144,8 +144,7 @@ export function ComponentCatalog({
       <div className="component-catalog__scroll">
         <h2>Catálogo</h2>
         <p className="component-catalog__intro">
-          Os componentes do atendimento, com exemplos de seguros e assistências. As ações desta área
-          são demonstrativas.
+          Conheça os seguros da DIGIO Care e escolha o serviço que deseja explorar.
         </p>
         <nav className="component-catalog__nav" aria-label="Seções do catálogo">
           <a href="#catalog-plans">Planos</a>
@@ -190,16 +189,11 @@ export function ComponentCatalog({
                 <h3>{sample.title}</h3>
                 {renderBotMessage(item, {
                   interactive: true,
-                  sendChoice: (_id, title) => onResult(`Exemplo selecionado: ${title}`),
+                  sendChoice: (_id, title) => onResult(`Opção selecionada: ${title}`),
                   openFlow,
                 })}
                 {index === 1 ? (
-                  <Bubble
-                    direction="out"
-                    time="9:42"
-                    status="delivered"
-                    label="Mensagem enviada de exemplo"
-                  >
+                  <Bubble direction="out" time="9:42" status="delivered" label="Mensagem enviada">
                     Quero consultar as coberturas.
                   </Bubble>
                 ) : null}
@@ -216,13 +210,13 @@ export function ComponentCatalog({
                 transcript="Sua solicitação foi recebida. Acompanhe os próximos passos por aqui."
               />
             </Bubble>
-            <p className="component-catalog__intro">Áudio ilustrativo gerado localmente.</p>
+            <p className="component-catalog__intro">Ouça a mensagem e acompanhe a transcrição.</p>
           </section>
           <section className="component-catalog__sample">
             <h3>Estados do atendimento</h3>
             <TypingIndicator />
             <Notice tone="info" text="Você pode retomar esta solicitação mais tarde." />
-            <Notice tone="error" text="Exemplo de falha. Tente novamente." />
+            <Notice tone="error" text="Não foi possível continuar. Tente novamente." />
             <div className="component-catalog__states">
               {(['sending', 'sent', 'delivered', 'failed'] as const).map((status) => (
                 <Bubble key={status} direction="out" status={status} time="9:44">
@@ -240,8 +234,8 @@ export function ComponentCatalog({
           </section>
         </div>
       </div>
-      <div className="component-catalog__result" role="status" aria-label="Resultado do exemplo">
-        {result || 'Dados fictícios. Nenhuma solicitação será enviada nesta área.'}
+      <div className="component-catalog__result" role="status" aria-label="Resultado da seleção">
+        {result || 'Escolha um serviço para conhecer as opções.'}
       </div>
     </div>
   );

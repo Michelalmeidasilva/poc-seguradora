@@ -129,11 +129,11 @@ describe('App', () => {
       within(dialog).getByRole('textbox', { name: /Nome completo/ }),
       'Pessoa de exemplo',
     );
-    await user.click(within(dialog).getByRole('button', { name: 'Concluir exemplo' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Concluir solicitação' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(submit).not.toHaveBeenCalled();
-    expect(screen.getByRole('status', { name: 'Resultado do exemplo' })).toHaveTextContent(
-      'Exemplo concluído',
+    expect(screen.getByRole('status', { name: 'Resultado da seleção' })).toHaveTextContent(
+      'Solicitação concluída',
     );
   });
 
@@ -148,9 +148,24 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(screen.getByRole('button', { name: 'Sistema' })).toHaveAttribute('aria-pressed', 'true');
   });
+  it('offers only the three supported DIGIO Care products in the catalog', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }));
+    const catalog = screen.getByRole('tabpanel', { name: 'Catálogo' });
+    for (const title of ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina']) {
+      expect(within(catalog).getByRole('group', { name: title })).toBeInTheDocument();
+    }
+    expect(
+      within(catalog).queryByText(
+        /residencial|chaveiro|eletricista|encanador|demonstrativ|fictício|ilustrativo/i,
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders the chat screen', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /DIGIO Care/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /mensagem/i })).toBeInTheDocument();
   });
 

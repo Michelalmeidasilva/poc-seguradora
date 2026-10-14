@@ -96,7 +96,7 @@ describe('FlowSheet', () => {
   it('explains the list interaction and identifies the structured demonstration like the atlas', () => {
     setup({ flowId: 'DES-01', flowJson: products });
     expect(screen.getByText('Selecione uma opção para continuar')).toBeInTheDocument();
-    expect(screen.getByText('Digio · experiência estruturada no WhatsApp')).toBeInTheDocument();
+    expect(screen.getByText('DIGIO Care')).toBeInTheDocument();
     expect(screen.getAllByRole('radio')).toHaveLength(3);
   });
   it('shows safe cross-step review values and prefills correction without losing other fields', async () => {

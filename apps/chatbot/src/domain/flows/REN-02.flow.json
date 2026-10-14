@@ -23,11 +23,11 @@
           },
           {
             "type": "TextBody",
-            "text": "Novo valor neste exemplo: R$ 42,90/mês"
+            "text": "Novo valor : R$ 42,90/mês"
           },
           {
             "type": "TextBody",
-            "text": "Participantes: Mantidos, sujeitos à validação"
+            "text": "Participantes: Mantidos"
           },
           {
             "type": "TextBody",

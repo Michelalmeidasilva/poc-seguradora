@@ -209,3 +209,12 @@ Pendências (detalhes na seção Pendências do runbook):
 - A conclusão envia uma única submissão ao chatbot. Fechar ou navegar entre telas não inicia contratação. O chat mantém o serviço e o plano selecionados e segue aos dados restantes, sem repetir identificação.
 - Evidência: 947 testes web; E2E real de Individual/Familiar, três serviços, CPF inválido, retorno para rever planos, identificação reaproveitada e armazenamento sem CPF bruto. Layout inspecionado em 320/390/1440 px. Tipos e builds web/chatbot verificados; Task TASK-20261014-007.
 - Validação em processos locais temporários isolados. Containers existentes e GCP não foram atualizados.
+
+
+## 2026-10-14 — DIGIO Care e revisão de linguagem
+
+- Marca apresentada como DIGIO Care no cabeçalho, molduras, título da página e Flows. Catálogo de seguros alinhado a Assistência Funeral, Assistência Farmácia e Telemedicina.
+- Removidos conteúdo e ícone residencial, serviços de chaveiro/eletricista/encanador e referências de demonstração nas mensagens, acessibilidade, formulários, documentos e retornos do catálogo. Formulário de componentes passa a utilizar somente os três serviços suportados, reaproveitando a linguagem visual existente.
+- Nenhuma foto nova ou nova interação de produto foi adicionada. Preferência de elementos visuais solicitada ao usuário em pergunta separada; execução permanece pendente dessa resposta.
+- Evidência: 948 testes web e 22 E2E de chat/catálogo passaram; tipos/builds/lint e varredura de textos visíveis aprovados. Identificação e descoberta/contratação verificadas com backend temporário atual. Histórico de execuções: TASK-20261014-009.
+- Teste E2E de Rever planos passa a aguardar a nova mensagem antes de abri-la, evitando seleção acidental do formulário antigo. Containers existentes não foram atualizados; sem deploy.

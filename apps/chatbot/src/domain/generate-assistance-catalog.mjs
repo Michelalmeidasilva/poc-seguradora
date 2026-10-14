@@ -27,52 +27,50 @@ const groups = canonical.groups
         if (converted.id.startsWith('IDE-')) {
           const ide = {
             'IDE-01': [
-              'Para abrir esta demonstração, digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX. Este formato não confirma identidade.',
+              'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
               'Informe o CPF',
               'chat',
             ],
-            'IDE-02': [
-              'Recebi o CPF para validar o formato da demonstração.',
-              'Validando formato',
-              'chat',
-            ],
-            'IDE-03': [
-              'O formato do CPF foi aceito. Os dados seguintes pertencem a um cenário fictício.',
-              'Formato aceito',
-              'chat',
-            ],
+            'IDE-02': ['Recebi seu CPF. Vamos continuar.', 'Validando formato', 'chat'],
+            'IDE-03': ['Tudo pronto. Vamos continuar seu pedido.', 'Formato aceito', 'chat'],
             'IDE-04': [
               'O CPF precisa ter 11 dígitos. Tente novamente ou peça ajuda.',
               'Formato inválido',
               'chat',
             ],
             'IDE-05': [
-              'A sessão demonstrativa expirou. Informe novamente o CPF para continuar.',
+              'Sua sessão expirou. Informe seu CPF para continuar.',
               'Sessão expirada',
               'chat',
             ],
             'IDE-06': [
-              'Digite o CPF aqui no chat para renovar o acesso demonstrativo e retomar a revisão da ação.',
+              'Informe seu CPF para retomar a revisão do seu pedido.',
               'Renovar acesso',
               'chat',
             ],
             'IDE-07': [
-              'Não há esse dado no cenário demonstrativo. Posso oferecer ajuda.',
+              'Não encontrei essa informação. Posso ajudar você a continuar.',
               'Dado indisponível',
               'chat',
             ],
-            'IDE-08': ['Digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX, para abrir a demonstração.', 'Informar CPF', 'chat'],
+            'IDE-08': [
+              'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
+              'Informar CPF',
+              'chat',
+            ],
           }[converted.id];
           converted.title = ide[1];
           converted.bot = ide[0];
           converted.mode = ide[2];
           converted.user = '';
           converted.requiresAuth = false;
-          converted.actions = converted.actions.filter((action) => action.label !== 'Informar CPF').map((action) => ({
-            ...action,
-            target:
-              action.target === 'IDE-02' || action.target === 'IDE-01' ? 'IDE-08' : action.target,
-          }));
+          converted.actions = converted.actions
+            .filter((action) => action.label !== 'Informar CPF')
+            .map((action) => ({
+              ...action,
+              target:
+                action.target === 'IDE-02' || action.target === 'IDE-01' ? 'IDE-08' : action.target,
+            }));
           // SPEC 5.5: receipt is transient, then format success/error follows automatically.
           if (converted.id === 'IDE-02') converted.actions = [];
           delete converted.flow;

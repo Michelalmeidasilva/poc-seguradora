@@ -247,7 +247,7 @@ describe('screenErrors and footerDisabled', () => {
   it('hidden branch fields are not in screenErrors', () => {
     const s = run(flow, [...toDados, ...autoFields]);
     const errors = screenErrors(flow, s);
-    for (const hidden of ['capital', 'tipoImovel', 'valorImovel']) {
+    for (const hidden of ['capital']) {
       expect(errors).not.toHaveProperty(hidden);
     }
   });

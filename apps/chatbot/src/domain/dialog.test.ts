@@ -714,7 +714,7 @@ describe('demo flow', () => {
         expect(calls).toHaveLength(0);
         expect(final.state).toEqual(state);
         expect(textOf(final.replies)).toBe(
-          'Recebi o formulário de demonstração. Nenhum dado foi guardado.',
+          'Recebi seu formulário. Acompanhe os próximos passos por aqui.',
         );
         expect(quickIds(final.replies)).toEqual(['menu']);
         expect(JSON.stringify(final.replies)).not.toContain(canary);

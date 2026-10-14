@@ -112,9 +112,7 @@ const snapshot = {
   contract: { status: 'active' as const, modality: 'familiar' as const, since: '2026-10-10' },
   dependents: [],
   benefits: [],
-  documents: [
-    { id: 'DOC-ADESAO-DEMO', title: 'Termo demonstrativo de adesão', status: 'available' as const },
-  ],
+  documents: [{ id: 'DOC-ADESAO-DEMO', title: 'Termo de adesão', status: 'available' as const }],
   billing: { status: 'demonstrative' as const, reference: 'REF-DEMO-001', message: 'Demonstração' },
   preferences: {
     contactChannel: 'whatsapp' as const,
@@ -123,7 +121,7 @@ const snapshot = {
     optionalDocs: true,
     optionalBenefits: false,
   },
-  currentAddress: { postal: '01000-000', address: 'Rua Demonstrativa, 100', city: 'São Paulo/SP' },
+  currentAddress: { postal: '01000-000', address: 'Rua das Flores, 100', city: 'São Paulo/SP' },
   requests: [],
 };
 const port = (): AssistancePort => ({
@@ -1104,7 +1102,7 @@ describe('runAssistanceTurn', () => {
       type: 'message.text',
       payload: { text: expect.stringContaining('concluir esta etapa') },
     });
-    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('indisponível');
+    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('Não foi possível continuar');
   });
 
   it('preserves the review state and reports a specific cancellation conflict', async () => {
@@ -1120,7 +1118,7 @@ describe('runAssistanceTurn', () => {
       },
     );
     expect(result.ok && result.value.state.screenId).toBe('CAN-05');
-    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('indisponível');
+    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('Não foi possível continuar');
   });
 
   it.each([
@@ -1149,7 +1147,7 @@ describe('runAssistanceTurn', () => {
         },
       );
       expect(result.ok && result.value.state.screenId).toBe(expectedScreen);
-      expect(result.ok && JSON.stringify(result.value.replies)).toContain('indisponível');
+      expect(result.ok && JSON.stringify(result.value.replies)).toContain('Não foi possível continuar');
     },
   );
 

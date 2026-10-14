@@ -69,8 +69,8 @@ test('catalog actions and forms remain local and render inside the selected devi
   await page.screenshot({ path: testInfo.outputPath('catalog-iphone.png'), fullPage: true });
   await page.getByRole('button', { name: 'Conhecer plano', exact: true }).first().click();
   await expect(
-    page.getByRole('status', { name: 'Resultado do exemplo', exact: true }),
-  ).toContainText('Exemplo selecionado');
+    page.getByRole('status', { name: 'Resultado da seleção', exact: true }),
+  ).toContainText('Opção selecionada');
   await page.getByRole('button', { name: 'Abrir Condições do plano.pdf', exact: true }).click();
   await expect(
     page.getByRole('dialog', { name: 'Condições do plano.pdf', exact: true }),
@@ -96,19 +96,19 @@ test('catalog actions and forms remain local and render inside the selected devi
   });
   expect(withinDevice.inside, JSON.stringify(withinDevice)).toBe(true);
   await dialog.getByRole('textbox', { name: /Nome completo/ }).fill('Pessoa de exemplo');
-  await dialog.getByRole('radio', { name: 'Eletricista', exact: true }).check();
+  await dialog.getByRole('radio', { name: 'Assistência Farmácia', exact: true }).check();
   await expect(
-    dialog.getByText('Eletricista: apoio em reparos elétricos.', { exact: true }),
+    dialog.getByText('Assistência Farmácia: descontos em redes credenciadas.', { exact: true }),
   ).toBeVisible();
-  await dialog.getByRole('checkbox', { name: 'Li as condições do exemplo', exact: true }).check();
+  await dialog.getByRole('checkbox', { name: 'Li as condições do serviço', exact: true }).check();
   await expect(
-    dialog.getByText('Condições aceitas. Você pode concluir o exemplo.', { exact: true }),
+    dialog.getByText('Condições aceitas. Você pode concluir sua solicitação.', { exact: true }),
   ).toBeVisible();
-  await dialog.getByRole('button', { name: 'Concluir exemplo', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Concluir solicitação', exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(
-    page.getByRole('status', { name: 'Resultado do exemplo', exact: true }),
-  ).toContainText('Exemplo concluído');
+    page.getByRole('status', { name: 'Resultado da seleção', exact: true }),
+  ).toContainText('Solicitação concluída');
   expect(await posted(page)).toEqual(before);
   await page.getByRole('tab', { name: 'Conversa', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Fazer cotação', exact: true })).toBeVisible();

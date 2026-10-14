@@ -330,11 +330,10 @@ const textReply = (
 };
 
 const failureText: Record<AssistanceFailure, string> = {
-  not_found: 'Não encontrei esse dado demonstrativo. Confira a opção e tente novamente.',
-  conflict:
-    'Não foi possível concluir esta etapa demonstrativa. Confira os dados e tente novamente.',
+  not_found: 'Não encontrei essa informação. Confira a opção e tente novamente.',
+  conflict: 'Não foi possível concluir esta etapa. Confira os dados e tente novamente.',
   invalid: 'Não consegui validar os dados enviados. Confira o formulário e tente novamente.',
-  unavailable: 'Esta demonstração está indisponível no momento. Tente novamente mais tarde.',
+  unavailable: 'Não foi possível continuar agora. Tente novamente em instantes.',
 };
 
 const documentIds = new Set<AssistanceDocumentScreen>(['CON-07', 'UTI-09', 'CAN-08']);
@@ -603,7 +602,7 @@ export async function runAssistanceTurn(
       {
         confirmed: true,
         kind: 'human_handoff',
-        message: 'Pedido demonstrativo de retorno solicitado pela pessoa',
+        message: 'Pedido de retorno solicitado pela pessoa',
       },
       context,
     );
@@ -663,9 +662,7 @@ export async function runAssistanceTurn(
       {
         const fixture = audioStepsById.get(input.mediaId);
         if (!fixture)
-          return ok(
-            preserveReply(state, 'Use uma das mídias de áudio demonstrativas disponíveis.'),
-          );
+          return ok(preserveReply(state, 'Escolha uma das opções de áudio para continuar.'));
         transitionInput = { type: 'open', target: fixture.id };
       }
       break;
@@ -681,7 +678,12 @@ export async function runAssistanceTurn(
         );
       const currentStep = assistanceCatalog.byId[state.screenId];
       if (!currentStep)
-        return ok(preserveReply(state, 'Esta etapa demonstrativa não está disponível.'));
+        return ok(
+          preserveReply(
+            state,
+            'Esta etapa não está disponível. Escolha outra opção para continuar.',
+          ),
+        );
       let validated: Record<string, unknown> | undefined;
       if (currentStep.id === 'EXC-01') {
         const selection = z
@@ -754,7 +756,7 @@ export async function runAssistanceTurn(
         );
         if (!mutation.ok) return ok(preserveReply(state, failureText[mutation.error]));
         const target = requestTarget(assistanceCatalog.byId[state.screenId]!);
-        if (!target) return ok(preserveReply(state, 'A demonstração foi concluída.'));
+        if (!target) return ok(preserveReply(state, 'Seu pedido foi concluído.'));
         transitionInput = { type: 'open', target };
       } else {
         const fields = stringFields(submitted);
@@ -930,7 +932,7 @@ export async function runAssistanceTurn(
     if (!dependents.ok) return ok(preserveReply(state, failureText[dependents.error]));
     replies.push({
       type: 'message.text',
-      payload: { text: `Dependentes demonstrativos cadastrados: ${dependents.value.length}.` },
+      payload: { text: `Dependentes cadastrados: ${dependents.value.length}.` },
     } as ReplyBody);
   }
   return ok({ state: nextState, replies: [...gateReplies, ...replies] });

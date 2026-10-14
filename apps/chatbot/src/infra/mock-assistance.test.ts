@@ -200,52 +200,101 @@ describe('MockAssistance', () => {
 
   it('records dedicated address and funeral operations without using human handoff or document kinds', async () => {
     const mock = new MockAssistance({ capacity: 2, ttlMs: 1000, now: () => 0 });
-    const address = await mock.updateAddress('s1', {
-      ...confirmed, postal: '01000-000', address: 'Rua de Exemplo, 10', city: 'São Paulo/SP',
-    }, context('address'));
-    const funeral = await mock.requestFuneralAssistance('s1', {
-      ...confirmed, city: 'Campinas', state: 'SP',
-    }, context('funeral'));
+    const address = await mock.updateAddress(
+      's1',
+      {
+        ...confirmed,
+        postal: '01000-000',
+        address: 'Rua de Exemplo, 10',
+        city: 'São Paulo/SP',
+      },
+      context('address'),
+    );
+    const funeral = await mock.requestFuneralAssistance(
+      's1',
+      {
+        ...confirmed,
+        city: 'Campinas',
+        state: 'SP',
+      },
+      context('funeral'),
+    );
     const requests = await mock.listRequests('s1', context('requests'));
     const snapshot = await mock.getSessionSnapshot('s1', context('snapshot-after-write'));
     expect(address.ok && address.value.kind).toBe('address_update');
     expect(funeral.ok && funeral.value.kind).toBe('funeral_assistance');
-    expect(requests.ok && requests.value.map(({ kind }) => kind)).toEqual(['address_update', 'funeral_assistance']);
+    expect(requests.ok && requests.value.map(({ kind }) => kind)).toEqual([
+      'address_update',
+      'funeral_assistance',
+    ]);
     expect(JSON.stringify(requests)).not.toContain('Rua de Exemplo');
     expect(snapshot.ok && snapshot.value.currentAddress).toEqual({
-      postal: '01000-000', address: 'Rua Demonstrativa, 100', city: 'São Paulo/SP',
+      postal: '01000-000',
+      address: 'Rua das Flores, 100',
+      city: 'São Paulo/SP',
     });
     expect(snapshot.ok && snapshot.value.pendingAddressUpdate).toEqual({
-      postal: '01000-000', address: 'Rua de Exemplo, 10', city: 'São Paulo/SP',
+      postal: '01000-000',
+      address: 'Rua de Exemplo, 10',
+      city: 'São Paulo/SP',
     });
   });
 
   it('persists optional communication preferences as booleans and preserves existing settings', async () => {
     const mock = new MockAssistance({ capacity: 2, ttlMs: 1000, now: () => 0 });
     const initial = await mock.getPreferences('s1', context('preferences-before'));
-    expect(initial.ok && initial.value).toMatchObject({ optionalDocs: true, optionalBenefits: false });
-    const updated = await mock.updatePreferences('s1', {
-      ...confirmed,
-      preferences: {
-        contactChannel: 'whatsapp', email: 'cliente@example.test', paperless: true,
-        optionalDocs: false, optionalBenefits: true,
+    expect(initial.ok && initial.value).toMatchObject({
+      optionalDocs: true,
+      optionalBenefits: false,
+    });
+    const updated = await mock.updatePreferences(
+      's1',
+      {
+        ...confirmed,
+        preferences: {
+          contactChannel: 'whatsapp',
+          email: 'cliente@example.test',
+          paperless: true,
+          optionalDocs: false,
+          optionalBenefits: true,
+        },
       },
-    }, context('preferences-update'));
+      context('preferences-update'),
+    );
     const later = await mock.getPreferences('s1', context('preferences-after'));
-    expect(updated.ok && updated.value).toMatchObject({ optionalDocs: false, optionalBenefits: true });
+    expect(updated.ok && updated.value).toMatchObject({
+      optionalDocs: false,
+      optionalBenefits: true,
+    });
     expect(later).toEqual(updated);
   });
 
   it('returns operation-specific adapter failures without creating requests', async () => {
     const mock = new MockAssistance({
-      capacity: 2, ttlMs: 1000, now: () => 0, unavailable: ['updateAddress', 'requestFuneralAssistance'],
+      capacity: 2,
+      ttlMs: 1000,
+      now: () => 0,
+      unavailable: ['updateAddress', 'requestFuneralAssistance'],
     });
-    const address = await mock.updateAddress('s1', {
-      ...confirmed, postal: '01000-000', address: 'Rua de Exemplo, 10', city: 'São Paulo/SP',
-    }, context('address-unavailable'));
-    const funeral = await mock.requestFuneralAssistance('s1', {
-      ...confirmed, city: 'Campinas', state: 'SP',
-    }, context('funeral-unavailable'));
+    const address = await mock.updateAddress(
+      's1',
+      {
+        ...confirmed,
+        postal: '01000-000',
+        address: 'Rua de Exemplo, 10',
+        city: 'São Paulo/SP',
+      },
+      context('address-unavailable'),
+    );
+    const funeral = await mock.requestFuneralAssistance(
+      's1',
+      {
+        ...confirmed,
+        city: 'Campinas',
+        state: 'SP',
+      },
+      context('funeral-unavailable'),
+    );
     const requests = await mock.listRequests('s1', context('requests-after-failure'));
     expect(address).toEqual({ ok: false, error: 'unavailable' });
     expect(funeral).toEqual({ ok: false, error: 'unavailable' });

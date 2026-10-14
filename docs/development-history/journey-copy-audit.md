@@ -1,5 +1,7 @@
 # Mapeamento de referências a demonstração na experiência
 
+Aplicação do inventário: revisão entregue pela TASK-20261014-009; ver histórico de web.md e chatbot.md. As frases abaixo preservam o levantamento original.
+
 Data: 2026-10-14. Base: implementação após cd4b05a. Pedido: mapear toda a jornada e orientar uma redação profissional e convidativa, sem disclaimers sobre a apresentação. **Este inventário não altera textos ou comportamento do produto.**
 
 ## Resultado e critério

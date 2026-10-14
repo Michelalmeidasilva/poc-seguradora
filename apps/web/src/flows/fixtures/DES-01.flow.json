@@ -134,7 +134,7 @@
           },
           {
             "type": "TextCaption",
-            "text": "Titular e até 3 dependentes elegíveis neste exemplo."
+            "text": "Titular e até 3 dependentes elegíveis."
           },
           {
             "type": "TextSubheading",
@@ -142,11 +142,7 @@
           },
           {
             "type": "TextBody",
-            "text": "Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa."
-          },
-          {
-            "type": "TextCaption",
-            "text": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde."
+            "text": "Confira os benefícios e as condições de uso do plano escolhido."
           },
           {
             "type": "Footer",
@@ -234,7 +230,7 @@
           },
           {
             "type": "TextCaption",
-            "text": "Você continuará no chat com o serviço e o plano escolhidos para conferir os dados e concluir a contratação. Nenhuma cobrança é feita agora."
+            "text": "Continue no chat com o serviço e o plano escolhidos para concluir sua contratação."
           },
           {
             "type": "Footer",

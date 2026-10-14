@@ -29,7 +29,9 @@ test('typed identity rejects invalid whole messages and resumes the pending cont
       responses + 1,
     );
     await expectTextIdentityGate(page);
-    await expect(page.getByText('O formato do CPF foi aceito.', { exact: false })).toHaveCount(0);
+    await expect(
+      page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: false }),
+    ).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toHaveCount(0);
   }
   await identifyByChat(page, '00000000000');

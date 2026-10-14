@@ -11,7 +11,7 @@
         "children": [
           {
             "type": "TextBody",
-            "text": "Neste cenário há um meio de regularização disponível. A disponibilidade real depende do produto e da processadora."
+            "text": "Escolha o meio de pagamento para regularizar sua parcela."
           },
           {
             "type": "RadioButtonsGroup",

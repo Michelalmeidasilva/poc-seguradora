@@ -130,7 +130,7 @@ export function ExperienceShell({
         <div className="experience__topline">
           <div className="experience__brand">
             <span aria-hidden="true">d</span>
-            <strong>Digio Assistências</strong>
+            <strong>DIGIO Care</strong>
           </div>
           <small>Atendimento digital</small>
         </div>
@@ -143,7 +143,7 @@ export function ExperienceShell({
             <div className="experience__statusbar" aria-hidden="true">
               <span className="experience__clock">
                 {presentation.device === 'desktop'
-                  ? 'Digio Assistências · WhatsApp'
+                  ? 'DIGIO Care · WhatsApp'
                   : presentation.device === 'android'
                     ? '12:30'
                     : '9:41'}

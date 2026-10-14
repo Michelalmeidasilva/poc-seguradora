@@ -1,4 +1,4 @@
-export type Product = 'AUTO' | 'RESIDENCIAL' | 'VIDA';
+export type Product = 'AUTO' | 'VIDA';
 
 export interface Money {
   valorCentavos: number;
@@ -66,7 +66,6 @@ export interface Claim {
 
 export type QuoteData =
   | { veiculo: { marca: string; modelo: string; ano: number }; cep: string }
-  | { cep: string; tipoImovel: 'CASA' | 'APARTAMENTO'; valorImovelCentavos: number }
   | { capitalSeguradoCentavos: number };
 
 export interface QuoteRequest {
