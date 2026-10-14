@@ -37,7 +37,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
   it.each(['Individual', 'Familiar'])(
-    'keeps service details, comparison and %s conditions inside one Flow until completion',
+    'connects service details and %s selection to contracting in just one more screen',
     async (plan) => {
       const { user, submit, exchange, onClose } = setup({ flowId: 'DES-01', flowJson: products });
       const original = dialog();
@@ -50,50 +50,49 @@ describe('FlowSheet', () => {
         await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
         expect(dialog()).toBe(original);
         expect(within(dialog()).getByText(detail)).toBeInTheDocument();
+        expect(screen.getByText('R$ 29,90/mês')).toBeInTheDocument();
+        expect(screen.getByText('R$ 39,90/mês')).toBeInTheDocument();
+        expect(screen.queryByLabelText('CPF')).not.toBeInTheDocument();
         expect(submit).not.toHaveBeenCalled();
         await user.click(screen.getByRole('button', { name: 'Voltar' }));
       }
-      await user.click(screen.getByRole('radio', { name: /Telemedicina/ }));
       await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
-      await user.click(screen.getByRole('button', { name: 'Ver planos' }));
-      expect(
-        within(dialog()).getByRole('heading', { name: 'Comparação de planos' }),
-      ).toBeInTheDocument();
-      expect(
-        within(dialog()).getByText('R$ 29,90/mês · somente titular', { exact: true }),
-      ).toBeInTheDocument();
-      expect(
-        within(dialog()).getByText('R$ 39,90/mês · titular e dependentes elegíveis', {
-          exact: true,
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked),
-      ).toBe(true);
+      await user.click(screen.getByRole('button', { name: 'Escolher plano' }));
+      expect(screen.getByText('Telemedicina', { exact: true })).toBeInTheDocument();
       await user.click(screen.getByRole('radio', { name: new RegExp(`^${plan}`) }));
-      await user.click(screen.getByRole('button', { name: 'Ver condições' }));
-      expect(dialog()).toBe(original);
-      expect(
-        within(dialog()).getByText(
-          plan === 'Individual'
-            ? 'Somente titular.'
-            : 'Titular e até 3 dependentes elegíveis neste exemplo.',
-        ),
-      ).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Continuar contratação' }));
       expect(submit).not.toHaveBeenCalled();
-      await user.click(screen.getByRole('button', { name: 'Continuar' }));
-      await user.click(screen.getByRole('radio', { name: 'Concluir descoberta' }));
-      await user.click(screen.getByRole('button', { name: 'Concluir' }));
+      await user.type(screen.getByLabelText('CPF'), '12345678900');
+      await user.click(screen.getByRole('button', { name: 'Voltar' }));
+      await user.click(screen.getByRole('button', { name: 'Escolher plano' }));
+      expect(screen.getByRole('radio', { name: new RegExp(`^${plan}`) })).toBeChecked();
+      await user.click(screen.getByRole('button', { name: 'Continuar contratação' }));
       expect(submit).toHaveBeenCalledTimes(1);
       expect(submit).toHaveBeenCalledWith(
         'DES-01',
-        { intent: 'finish', service: '2', modality: plan.toLowerCase() },
+        { intent: 'contract', service: '2', modality: plan.toLowerCase(), cpf: '12345678900' },
         expect.any(String),
       );
       expect(exchange).not.toHaveBeenCalled();
       expect(onClose).toHaveBeenCalledTimes(1);
     },
   );
+  it('keeps an invalid CPF in the final screen without sending it to chat', async () => {
+    const { user, submit } = setup({ flowId: 'DES-01', flowJson: products });
+    await user.click(screen.getByRole('radio', { name: /Telemedicina/ }));
+    await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+    await user.click(screen.getByRole('button', { name: 'Escolher plano' }));
+    await user.click(screen.getByRole('radio', { name: /^Individual/ }));
+    expect(screen.getByLabelText('CPF')).toHaveAttribute('inputmode', 'numeric');
+    await user.type(screen.getByLabelText('CPF'), 'abcdefghijk');
+    await user.click(screen.getByRole('button', { name: 'Continuar contratação' }));
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByText('Informe um CPF com 11 dígitos.')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('CPF'));
+    await user.type(screen.getByLabelText('CPF'), '123.456.789-00');
+    await user.click(screen.getByRole('button', { name: 'Continuar contratação' }));
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
   it('explains the list interaction and identifies the structured demonstration like the atlas', () => {
     setup({ flowId: 'DES-01', flowJson: products });
     expect(screen.getByText('Selecione uma opção para continuar')).toBeInTheDocument();

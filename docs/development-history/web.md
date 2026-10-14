@@ -200,3 +200,12 @@ Pendências (detalhes na seção Pendências do runbook):
   - Erros de `data_exchange` não são visíveis ao servidor (o evento é enviado sem resposta).
 - [x] nginx resolvido uma vez (feito no Plano 7): o host do gateway é resolvido a cada requisição (`resolver` com o primeiro `nameserver` do `/etc/resolv.conf`, `valid=10s`, e variável no `proxy_pass` com `$request_uri`), então uma troca de IP do upstream não exige reiniciar o nginx (testado recriando o gateway com outro IP). `GATEWAY_URL` precisa ser `http(s)://host[:port]`: a barra final é removida e path, query ou credenciais fazem o contêiner falhar na inicialização com mensagem clara. `Host` e SNI enviados são os do gateway (porta só se não for a padrão), o `Origin` do navegador passa intacto, `X-Forwarded-Proto` vem do salto anterior (ou `$scheme`). `/health` responde `ok` sem log de acesso. Script de entrada: `/docker-entrypoint.d/15-resolver.envsh`, embutido no Dockerfile.
 - Caminho de liveness do nginx é `/health` (não `/healthz`): o front end do Cloud Run pode interceptar caminhos terminados em `z`.
+
+
+## 2026-10-14 — Descoberta ligada à contratação
+
+- Desenho aprovado em conversa: seleção do serviço → detalhes com benefícios, planos, preços e condições → uma única tela de seleção do plano e CPF → contratação no chat. Substitui, nesta jornada, a sequência anterior de cinco telas e a exigência de CPF exclusivamente textual.
+- CPF aparece somente na etapa de contratação e para sessão ainda não identificada; aceita formato com ou sem pontuação, com teclado numérico. A seleção do serviço/plano sobrevive ao retorno; “Rever planos” abre a descoberta com as escolhas preenchidas.
+- A conclusão envia uma única submissão ao chatbot. Fechar ou navegar entre telas não inicia contratação. O chat mantém o serviço e o plano selecionados e segue aos dados restantes, sem repetir identificação.
+- Evidência: 947 testes web; E2E real de Individual/Familiar, três serviços, CPF inválido, retorno para rever planos, identificação reaproveitada e armazenamento sem CPF bruto. Layout inspecionado em 320/390/1440 px. Tipos e builds web/chatbot verificados; Task TASK-20261014-007.
+- Validação em processos locais temporários isolados. Containers existentes e GCP não foram atualizados.

@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { identifyByChat } from './identity-text.helpers';
 
-for (const intent of ['finish', 'contract']) {
-  test(`single discovery Flow keeps all details and plans local until ${intent}`, async ({
+for (const plan of ['Individual', 'Familiar']) {
+  test(`discovery continues the selected ${plan} contract and reuses identification`, async ({
     page,
   }) => {
     const submissions: Array<Record<string, unknown>> = [];
@@ -25,75 +24,67 @@ for (const intent of ['finish', 'contract']) {
         .check();
       await modal().getByRole('button', { name: 'Ver detalhes', exact: true }).click();
       await expect(modal().getByText(detail)).toBeVisible();
-      await expect(modal().getByRole('button', { name: 'Ver planos', exact: true })).toBeVisible();
+      await expect(modal().getByText('R$ 29,90/mês', { exact: true })).toBeVisible();
+      await expect(modal().getByText('R$ 39,90/mês', { exact: true })).toBeVisible();
+      await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
       expect(submissions).toHaveLength(0);
       await modal().getByRole('button', { name: 'Voltar', exact: true }).click();
     }
-    await modal()
-      .getByRole('radio', { name: /Telemedicina/ })
-      .check();
     await modal().getByRole('button', { name: 'Ver detalhes', exact: true }).click();
-    await modal().getByRole('button', { name: 'Ver planos', exact: true }).click();
-    await expect(modal().getByRole('heading', { name: 'Comparação de planos' })).toBeVisible();
-    for (const plan of ['Individual', 'Familiar']) {
-      await modal()
-        .getByRole('radio', { name: new RegExp(`^${plan}`) })
-        .check();
-      await modal().getByRole('button', { name: 'Ver condições', exact: true }).click();
-      await expect(modal().getByRole('heading', { name: plan, exact: true })).toBeVisible();
-      await expect(
-        modal().getByText(
-          plan === 'Individual'
-            ? 'Somente titular.'
-            : 'Titular e até 3 dependentes elegíveis neste exemplo.',
-          { exact: true },
-        ),
-      ).toBeVisible();
-      for (const width of [320, 390, 1440]) {
-        await page.setViewportSize({ width, height: 844 });
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-          true,
-        );
-        await expect(
-          modal().getByRole('button', { name: 'Continuar', exact: true }),
-        ).toBeInViewport();
-        await page.screenshot({
-          path: test.info().outputPath(`discovery-${intent}-${plan}-${width}.png`),
-        });
-      }
-      await page.setViewportSize({ width: 390, height: 844 });
-      await modal().getByRole('button', { name: 'Voltar', exact: true }).click();
-      expect(submissions).toHaveLength(0);
-    }
+    await page.screenshot({ path: test.info().outputPath(`details-${plan}.png`) });
+    await modal().getByRole('button', { name: 'Escolher plano', exact: true }).click();
     await modal()
-      .getByRole('radio', { name: /^Individual/ })
+      .getByRole('radio', { name: new RegExp(`^${plan}`) })
       .check();
-    await modal().getByRole('button', { name: 'Ver condições', exact: true }).click();
-    await modal().getByRole('button', { name: 'Continuar', exact: true }).click();
-    await modal()
-      .getByRole('radio', {
-        name: intent === 'contract' ? 'Iniciar contratação' : 'Concluir descoberta',
-        exact: true,
-      })
-      .check();
+    await modal().getByLabel('CPF', { exact: true }).fill('12345');
+    await modal().getByLabel('CPF', { exact: true }).press('Tab');
+    await expect(
+      modal().getByRole('button', { name: 'Continuar contratação', exact: true }),
+    ).toBeDisabled();
+    await expect(
+      modal().getByText('Informe um CPF com 11 dígitos.', { exact: true }),
+    ).toBeVisible();
     expect(submissions).toHaveLength(0);
-    await expect(page.getByRole('button', { name: 'Informar CPF', exact: true })).toHaveCount(0);
-    await modal().getByRole('button', { name: 'Concluir', exact: true }).click();
+    await modal().getByLabel('CPF', { exact: true }).fill('123.456.789-00');
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await expect(
+        modal().getByRole('button', { name: 'Continuar contratação', exact: true }),
+      ).toBeInViewport();
+      await page.screenshot({ path: test.info().outputPath(`contract-${plan}-${width}.png`) });
+    }
+    await modal().getByRole('button', { name: 'Continuar contratação', exact: true }).click();
     await expect.poll(() => submissions.length).toBe(1);
     expect(submissions[0]).toMatchObject({
       flowId: 'DES-01',
-      data: { intent, service: '2', modality: 'individual' },
+      data: { intent: 'contract', service: '2', modality: plan.toLowerCase() },
     });
     await expect(modal()).toHaveCount(0);
-    if (intent === 'contract') {
-      await identifyByChat(page);
-      await expect(
-        page.getByText('Você escolheu Serviços de Assistência Individual.', { exact: false }),
-      ).toBeVisible();
-      expect(submissions).toHaveLength(1);
-    } else
-      await expect(
-        page.getByText('Tudo bem. Você pode retomar por aqui.', { exact: false }),
-      ).toBeVisible();
+    await expect(
+      page.getByText(`Você escolheu Telemedicina ${plan}.`, { exact: false }),
+    ).toBeVisible();
+    // Revisit the selected service from the chat, keeping both choices and the valid gate.
+    await page.getByRole('button', { name: 'Rever planos', exact: true }).last().click();
+    await page.getByRole('button', { name: 'Selecionar uma opção', exact: true }).last().click();
+    await expect(modal().getByRole('radio', { name: /Telemedicina/ })).toBeChecked();
+    await modal().getByRole('button', { name: 'Ver detalhes', exact: true }).click();
+    await modal().getByRole('button', { name: 'Escolher plano', exact: true }).click();
+    await expect(modal().getByRole('radio', { name: new RegExp(`^${plan}`) })).toBeChecked();
+    await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
+    await modal().getByRole('button', { name: 'Continuar contratação', exact: true }).click();
+    await expect.poll(() => submissions.length).toBe(2);
+    expect((submissions[1]!.data as Record<string, unknown>).cpf).toBeUndefined();
+    await page.getByRole('button', { name: 'Continuar', exact: true }).last().click();
+    await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
+    await expect(modal().getByLabel('Nome completo', { exact: true })).toBeVisible();
+    await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
+    await modal().getByRole('button', { name: 'Fechar', exact: true }).click();
+
+    expect(
+      await page.evaluate(() => JSON.stringify({ ...sessionStorage, ...localStorage })),
+    ).not.toContain('123.456.789-00');
   });
 }

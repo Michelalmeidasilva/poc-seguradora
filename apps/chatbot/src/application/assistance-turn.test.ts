@@ -8,33 +8,63 @@ import { runAssistanceTurn } from './assistance-turn';
 const ctx = { correlationId: 'corr-demo', idempotencyKey: 'idem-demo' };
 it('renews access at IDE-06 and returns to the pending review without confirming a mutation', async () => {
   const assistance = port();
-  const entered = await runAssistanceTurn({ type: 'open', target: 'IDE-06' }, {
-    port: assistance, sessionId: 'renew-review', context: ctx,
-    state: { journeyId: 'CAN', screenId: 'CAN-05', gateApproved: true, temporaryData: { reason: 'Mudança' } },
-  });
+  const entered = await runAssistanceTurn(
+    { type: 'open', target: 'IDE-06' },
+    {
+      port: assistance,
+      sessionId: 'renew-review',
+      context: ctx,
+      state: {
+        journeyId: 'CAN',
+        screenId: 'CAN-05',
+        gateApproved: true,
+        temporaryData: { reason: 'Mudança' },
+      },
+    },
+  );
   expect(entered.ok).toBe(true);
   if (!entered.ok) return;
   expect(entered.value.state.screenId).toBe('IDE-06');
   expect(entered.value.state.gateApproved).toBe(false);
   expect(entered.value.state.pendingStep).toBe('CAN-05');
-  const resumed = await runAssistanceTurn({ type: 'text', text: '11111111111' }, {
-    port: assistance, sessionId: 'renew-review', context: ctx, state: entered.value.state,
-  });
+  const resumed = await runAssistanceTurn(
+    { type: 'text', text: '11111111111' },
+    {
+      port: assistance,
+      sessionId: 'renew-review',
+      context: ctx,
+      state: entered.value.state,
+    },
+  );
   expect(resumed.ok && resumed.value.state.screenId).toBe('CAN-05');
   expect(assistance.cancelAssistance).not.toHaveBeenCalled();
 });
-it.each(['IDE-01', 'IDE-08', 'IDE-04', 'IDE-05', 'IDE-02', 'IDE-06'])('accepts whole trimmed CPF chat at %s and preserves the pending draft', async (screenId) => {
-  const result = await runAssistanceTurn({ type: 'text', text: ' 000.000.000-00 ' }, {
-    port: port(), sessionId: 'typed-cpf', context: ctx,
-    state: { journeyId: 'IDE', screenId, gateApproved: false, pendingStep: 'ADE-04', temporaryData: { modality: 'individual', name: 'Ana' } },
-  });
-  expect(result.ok).toBe(true);
-  if (!result.ok) return;
-  expect(result.value.state.screenId).toBe('ADE-05');
-  expect(result.value.state.gateApproved).toBe(true);
-  expect(result.value.state.temporaryData).toEqual({ modality: 'individual', name: 'Ana' });
-  expect(JSON.stringify(result.value)).not.toContain('000.000.000-00');
-});
+it.each(['IDE-01', 'IDE-08', 'IDE-04', 'IDE-05', 'IDE-02', 'IDE-06'])(
+  'accepts whole trimmed CPF chat at %s and preserves the pending draft',
+  async (screenId) => {
+    const result = await runAssistanceTurn(
+      { type: 'text', text: ' 000.000.000-00 ' },
+      {
+        port: port(),
+        sessionId: 'typed-cpf',
+        context: ctx,
+        state: {
+          journeyId: 'IDE',
+          screenId,
+          gateApproved: false,
+          pendingStep: 'ADE-04',
+          temporaryData: { modality: 'individual', name: 'Ana' },
+        },
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.state.screenId).toBe('ADE-05');
+    expect(result.value.state.gateApproved).toBe(true);
+    expect(result.value.state.temporaryData).toEqual({ modality: 'individual', name: 'Ana' });
+    expect(JSON.stringify(result.value)).not.toContain('000.000.000-00');
+  },
+);
 const state = { journeyId: 'DEP', screenId: 'DEP-06', gateApproved: true };
 it.each([
   ['PLA', 'PLA-05', 'PLA-07'],
@@ -273,6 +303,76 @@ describe('runAssistanceTurn', () => {
     expect(chosen.ok && chosen.value.state.pendingStep).toBe('ADE-01');
     expect(chosen.ok && chosen.value.state.temporaryData?.modality).toBe('individual');
     expect(assistance.createRequest).not.toHaveBeenCalled();
+  });
+  it.each(['individual', 'familiar'])(
+    'continues discovery into the selected %s contract without another CPF gate',
+    async (modality) => {
+      const assistance = port();
+      const result = await runAssistanceTurn(
+        {
+          type: 'flow_submit',
+          flowId: 'DES-01',
+          data: { intent: 'contract', service: '2', modality, cpf: '123.456.789-00' },
+        },
+        {
+          port: assistance,
+          state: { journeyId: 'DES', screenId: 'DES-01', gateApproved: false },
+          sessionId: 'discovery',
+          context: ctx,
+        },
+      );
+      expect(result.ok && result.value.state).toMatchObject({
+        screenId: 'ADE-01',
+        gateApproved: true,
+        temporaryData: { service: '2', modality },
+      });
+      expect(JSON.stringify(result.ok && result.value.state)).not.toContain('123.456.789-00');
+      expect(JSON.stringify(result.ok && result.value.state)).not.toContain('12345678900');
+      expect(JSON.stringify(result.ok && result.value.replies)).toContain('Telemedicina');
+      expect(JSON.stringify(result.ok && result.value.replies)).toContain(
+        modality === 'individual' ? 'Individual' : 'Familiar',
+      );
+      if (!result.ok) return;
+      const next = await runAssistanceTurn(
+        { type: 'quick_reply', target: 'ADE-02' },
+        { port: assistance, state: result.value.state, sessionId: 'discovery', context: ctx },
+      );
+      expect(next.ok && next.value.state.screenId).toBe('ADE-03');
+      expect(assistance.createRequest).not.toHaveBeenCalled();
+    },
+  );
+  it('rejects invalid discovery CPF without approving the gate or losing the current journey', async () => {
+    const result = await runAssistanceTurn(
+      {
+        type: 'flow_submit',
+        flowId: 'DES-01',
+        data: { intent: 'contract', service: '1', modality: 'familiar', cpf: '12345' },
+      },
+      {
+        port: port(),
+        state: { journeyId: 'DES', screenId: 'DES-01', gateApproved: false },
+        sessionId: 'discovery',
+        context: ctx,
+      },
+    );
+    expect(result.ok && result.value.state).toMatchObject({
+      screenId: 'DES-01',
+      gateApproved: false,
+    });
+    expect(JSON.stringify(result.ok && result.value.replies)).toContain('11 dígitos');
+  });
+  it('does not ask identified customers for CPF again when opening discovery', async () => {
+    const result = await runAssistanceTurn(
+      { type: 'open', target: 'DES-01' },
+      {
+        port: port(),
+        state: { journeyId: 'NAV', screenId: 'NAV-01', gateApproved: true },
+        sessionId: 'identified',
+        context: ctx,
+      },
+    );
+    const reply = result.ok && result.value.replies.find((reply) => reply.type === 'message.flow');
+    expect(reply && JSON.stringify(reply)).not.toContain('"name":"cpf"');
   });
   it('rejects an unselected catalog form option at the chatbot boundary', async () => {
     const result = await runAssistanceTurn(

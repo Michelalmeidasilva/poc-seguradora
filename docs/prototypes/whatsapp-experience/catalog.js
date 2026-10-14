@@ -667,7 +667,7 @@
         'Plano escolhido',
         'Quero contratar o Familiar.',
         'Você escolheu Serviços de Assistência Familiar. Vamos conferir os dados e condições antes de confirmar.',
-        { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-05')] },
+        { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-01')] },
       ),
       screen(
         'ADE-02',
@@ -2960,7 +2960,7 @@
       index[step.id] = step;
     });
   }
-  // One informational experience: its internal screens never submit to chat.
+  // Discovery carries the selected service and plan into contracting.
   // Existing catalog states remain references for their approved copy.
   index['DES-01'].flow.discovery = {
     services: ['DES-12', 'DES-13', 'DES-14'].map((id, position) => ({

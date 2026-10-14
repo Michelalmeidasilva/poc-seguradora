@@ -7,6 +7,7 @@ type C = Record<string, unknown>;
 
 const HTML_TYPES: Record<string, { type: string; inputMode?: 'decimal' | 'numeric' }> = {
   text: { type: 'text' },
+  cpf: { type: 'text', inputMode: 'numeric' },
   email: { type: 'email' },
   password: { type: 'password' },
   passcode: { type: 'password', inputMode: 'numeric' },

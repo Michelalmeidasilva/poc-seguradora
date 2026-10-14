@@ -32,14 +32,11 @@ it.each(['individual', 'familiar'])(
       flowSubmitReq({ intent: 'contract', service: '0', modality }, { session, flowId: 'DES-01' }),
     );
     await turn(bot.url, choiceReq('IDE-08', { session }));
-    const resumed = await turn(
-      bot.url,
-      textReq('11111111111', { session }),
-    );
+    const resumed = await turn(bot.url, textReq('11111111111', { session }));
     const title = modality === 'individual' ? 'Individual' : 'Familiar';
-    expect(textsOf(resumed.events)).toContain(`Assistência ${title}`);
+    expect(textsOf(resumed.events)).toContain(`Assistência Funeral ${title}`);
     await turn(bot.url, choiceReq('ADE-02', { session }));
-    await turn(bot.url, choiceReq('ADE-03', { session }));
+    expect(bot.screenId(session)).toBe('ADE-03');
     await turn(
       bot.url,
       flowSubmitReq(
@@ -50,6 +47,7 @@ it.each(['individual', 'familiar'])(
     expect(bot.screenId(session)).toBe(modality === 'individual' ? 'ADE-05' : 'ADE-04');
     const review = await turn(bot.url, textReq('Escolhi o pagamento.', { session }));
     const json = JSON.stringify(findEvent(review.events, 'message.flow').payload.flowJson);
+    expect(json).toContain('Produto: Assistência Funeral');
     expect(json).toContain(`Plano: ${title}`);
     expect(json).toContain(modality === 'individual' ? 'R$ 29,90' : 'R$ 39,90');
     const state = await mock.getSessionSnapshot(session, readContext);
@@ -170,10 +168,7 @@ it.each([
     expect(textsOf(gated.events)).toContain('11 dígitos');
     expect(textsOf(gated.events)).not.toContain(name);
     await turn(bot.url, choiceReq('IDE-08', { session }));
-    const resumed = await turn(
-      bot.url,
-      textReq('11111111111', { session }),
-    );
+    const resumed = await turn(bot.url, textReq('11111111111', { session }));
     expect(textsOf(resumed.events)).toContain(name);
     const supplement = await turn(bot.url, choiceReq('DEP-34', { session }));
     const supplementFlow = findEvent(supplement.events, 'message.flow').payload;
@@ -207,10 +202,7 @@ async function identify(session: string) {
   expect(textsOf(initial.events)).toContain('11 dígitos');
   expect(initial.events.some((event) => event.type === 'message.flow')).toBe(false);
   await turn(bot.url, choiceReq('IDE-08', { session }));
-  const accepted = await turn(
-    bot.url,
-    textReq('11111111111', { session }),
-  );
+  const accepted = await turn(bot.url, textReq('11111111111', { session }));
   expect(findEvent(accepted.events, 'message.flow').payload.flowId).toBe('CON-01');
 }
 
@@ -298,10 +290,7 @@ it('hydrates the actual exclusion list when the personal request resumes after C
   const gate = await turn(bot.url, textReq('Quero excluir a Maria.', { session }));
   expect(JSON.stringify(gate.events)).not.toContain('Ana Lima');
   await turn(bot.url, choiceReq('IDE-08', { session }));
-  const resumed = await turn(
-    bot.url,
-    textReq('11111111111', { session }),
-  );
+  const resumed = await turn(bot.url, textReq('11111111111', { session }));
   expect(JSON.stringify(findEvent(resumed.events, 'message.flow').payload.flowJson)).toContain(
     'Ana Lima',
   );
