@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatClientOptions, Draft } from '../transport/chat-client';
 import { botText, delivered, errorEvent, uuid } from '../test/fixtures';
 import { useChat } from './useChat';
+import { demoAudio } from './demo-audio';
 
 const originalCreateObjectURL = URL.createObjectURL;
 beforeEach(() => sessionStorage.clear());
@@ -60,6 +61,48 @@ const activeGuard = () => ({
 });
 
 describe('useChat', () => {
+  it('keeps the raw CPF in the active bubble while debounce persists only a mask', async () => {
+    const f = fakeClient();
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
+    await act(async () => {});
+    const text = 'Meu CPF é 98765432100';
+    act(() => result.current.sendText(text));
+    expect(result.current.state.items[0]).toMatchObject({ content: { text } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(result.current.state.items[0]).toMatchObject({ content: { text } });
+    const stored = sessionStorage.getItem('seguradora-chat:v1') ?? '';
+    expect(stored).not.toContain('98765432100');
+    expect(JSON.parse(stored).items[0].content.text).toBe('Meu CPF é *********00');
+  });
+
+  it.each([
+    ['AUD-01', 'complete'],
+    ['AUD-03', 'partial'],
+    ['AUD-04', 'failure'],
+    ['AUD-05', 'complete'],
+  ] as const)(
+    'sends local fixture %s with predictable %s outcome and no media or network API',
+    async (id, outcome) => {
+      const f = fakeClient();
+      const create = vi.fn(() => `blob:http://localhost/${id}`);
+      URL.createObjectURL = create;
+      const media = vi.fn();
+      vi.stubGlobal('MediaRecorder', media);
+      vi.stubGlobal('fetch', vi.fn());
+      const { result } = renderHook(() =>
+        useChat({ createClient: f.create, guard: activeGuard() }),
+      );
+      await act(async () => {});
+      act(() => result.current.sendDemoVoice(id));
+      expect(f.sent).toEqual([{ type: 'user.voice', payload: { mediaId: id, durationMs: 1800 } }]);
+      expect(demoAudio.find((scenario) => scenario.id === id)?.outcome).toBe(outcome);
+      expect(create).toHaveBeenCalledWith(expect.objectContaining({ type: 'audio/wav' }));
+      expect(media).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
   it('starts a fresh client and shows the messages that arrive', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
@@ -222,6 +265,31 @@ describe('useChat', () => {
     expect(guard.takeOver).toHaveBeenCalled();
   });
 
+  it('does not keep accepted messages pending when their client has been replaced', async () => {
+    let change: (status: 'active' | 'other-tab') => void = () => undefined;
+    const guard = {
+      status: () => 'active' as const,
+      subscribe: (fn: typeof change) => {
+        change = fn;
+        fn('active');
+        return () => undefined;
+      },
+      takeOver: vi.fn(),
+      dispose: vi.fn(),
+    };
+    const f = fakeClient();
+    const { result } = renderHook(() => useChat({ createClient: f.create, guard }));
+    await act(async () => {});
+    act(() => result.current.sendText('Oi'));
+    const id = result.current.state.items[0]!.id;
+    act(() => f.options().onOutgoing(id, 'sent'));
+    expect(result.current.hasPendingSend).toBe(true);
+    act(() => change('other-tab'));
+    await act(async () => change('active'));
+    act(() => f.options().onSessionReset());
+    expect(result.current.hasPendingSend).toBe(false);
+  });
+
   it('maps the client connection state', async () => {
     const f = fakeClient();
     const { result } = renderHook(() => useChat({ createClient: f.create, guard: activeGuard() }));
@@ -252,16 +320,38 @@ describe('useChat', () => {
 
   describe('resend after a reload', () => {
     const KEY = 'seguradora-chat:v1';
-    const stored = (content: object, id = uuid(50)) =>
+    const stored = (content: object, id = uuid(50), status = 'failed') =>
       sessionStorage.setItem(
         KEY,
         JSON.stringify({
           v: 1,
           sessionId: 'sess-old',
           lastSeq: 0,
-          items: [{ kind: 'user', id, ts: '2026-10-10T12:00:00.000Z', status: 'failed', content }],
+          items: [{ kind: 'user', id, ts: '2026-10-10T12:00:00.000Z', status, content }],
         }),
       );
+
+    it.each(['failed', 'sent'])(
+      'reports only active sends and retries as pending, not restored %s history',
+      async (status) => {
+        stored({ type: 'text', text: 'Oi' }, uuid(50), status);
+        const f = fakeClient();
+        const { result } = renderHook(() =>
+          useChat({ createClient: f.create, guard: activeGuard() }),
+        );
+        await act(async () => {});
+        expect(result.current.hasPendingSend).toBe(false);
+        act(() => {
+          result.current.resend(uuid(50));
+          f.options().onOutgoing(uuid(50), 'sending');
+        });
+        expect(result.current.hasPendingSend).toBe(true);
+        act(() => f.options().onOutgoing(uuid(50), 'sent'));
+        expect(result.current.hasPendingSend).toBe(true);
+        act(() => f.emit(delivered(1, uuid(50))));
+        expect(result.current.hasPendingSend).toBe(false);
+      },
+    );
 
     it('rebuilds the draft of a restored text message and resends the same id', async () => {
       stored({ type: 'text', text: 'oi' });

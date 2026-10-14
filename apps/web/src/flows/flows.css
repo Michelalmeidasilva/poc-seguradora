@@ -19,6 +19,34 @@
   font-size: 1.25rem;
   font-weight: 700;
 }
+.flow-review-section {
+  padding-bottom: 12px;
+  margin-bottom: 13px;
+  border-bottom: 1px solid #e6ecef;
+}
+.flow-review-section .flow-subheading {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.flow-review-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 7px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.flow-review-line span {
+  color: #667781;
+  min-width: 0;
+}
+.flow-review-line strong {
+  text-align: right;
+  font-weight: 500;
+  max-width: 60%;
+  min-width: 0;
+}
 .flow-subheading {
   font-size: 1rem;
   font-weight: 600;
@@ -429,6 +457,16 @@
 /* ---- sheet ---------------------------------------------------------------------------- */
 
 .flow-sheet {
+  --wa-text: #111b21;
+  --wa-meta: #52636d;
+  --wa-card-bg: #fff;
+  --wa-input-bg: #fff;
+  --wa-accent: #008767;
+  --wa-link: #007f63;
+  --wa-divider: #e6ecef;
+  --wa-button-text: #fff;
+  --wa-error: #c4002f;
+  --wa-radius: 6px;
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -443,42 +481,33 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100dvh;
+  height: auto;
+  max-height: calc(100dvh - 64px);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
   background: var(--wa-card-bg);
   color: var(--wa-text);
   animation: flow-sheet-in 220ms ease-out;
 }
+.flow-sheet__panel::before {
+  content: '';
+  width: 35px;
+  height: 4px;
+  flex: none;
+  border-radius: 4px;
+  background: #d5dadd;
+  margin: 10px auto 8px;
+}
 @media (min-width: 768px) {
   .flow-sheet {
-    align-items: center;
+    align-items: flex-end;
   }
   .flow-sheet__panel {
     width: 480px;
-    height: min(100dvh, 900px);
-    border-radius: 12px;
+    height: auto;
+    border-radius: 18px 18px 0 0;
     overflow: hidden;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-  }
-}
-/* desktop: painel lateral à direita, altura total */
-@media (min-width: 1024px) {
-  .flow-sheet {
-    justify-content: flex-end;
-    align-items: stretch;
-  }
-  .flow-sheet__panel {
-    width: 520px;
-    height: 100dvh;
-    border-radius: 0;
-    animation-name: flow-sheet-in-side;
-  }
-}
-@keyframes flow-sheet-in-side {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
   }
 }
 @keyframes flow-sheet-in {
@@ -502,17 +531,30 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 8px;
+  padding: 8px 19px 14px;
   padding-top: max(8px, env(safe-area-inset-top));
   border-bottom: 1px solid var(--wa-divider);
 }
 .flow-sheet__title {
   flex: 1;
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 18px;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   overflow-wrap: anywhere;
+}
+.flow-sheet__heading {
+  flex: 1;
+  min-width: 0;
+}
+.flow-sheet__heading p {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--wa-meta);
+}
+.flow-sheet__icon-spacer:first-child {
+  display: none;
 }
 .flow-sheet__title:focus {
   outline: none;
@@ -543,13 +585,53 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 15px 19px;
 }
 .flow-sheet__footer {
   flex: none;
-  padding: 8px 16px;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  padding: 10px 19px;
+  padding-bottom: max(23px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--wa-divider);
+}
+.flow-sheet__note {
+  margin: 11px 0 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--wa-meta);
+}
+.flow-sheet__panel[data-screen-key$=':LIST'] .flow-field > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.flow-sheet__panel[data-screen-key$=':LIST'] .flow-choice {
+  gap: 10px;
+  min-height: 44px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--wa-divider);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.flow-sheet__panel[data-screen-key$=':LIST'] .flow-choice input {
+  width: 16px;
+  height: 16px;
+}
+.flow-sheet__panel[data-screen-key$=':LIST'] .flow-choice__text {
+  font-weight: 600;
+  gap: 4px;
+}
+.flow-sheet__panel[data-screen-key$=':LIST'] .flow-choice__desc {
+  font-size: 11px;
+  font-weight: 400;
+}
+.flow-sheet .flow-footer__button {
+  min-height: 45px;
+  font-size: 13px;
 }
 .flow-sheet__footer:empty {
   display: none;
@@ -597,7 +679,7 @@
   border: 0;
   border-radius: 20px;
   background: transparent;
-  color: var(--wa-button-text);
+  color: var(--wa-link);
   font-weight: 600;
   cursor: pointer;
 }

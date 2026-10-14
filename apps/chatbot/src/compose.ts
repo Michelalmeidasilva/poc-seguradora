@@ -2,13 +2,22 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import pino from 'pino';
 import { HandleTurn } from './application/handle-turn';
-import type { Clock, IdGenerator, LlmProvider, ServicesPort } from './application/ports';
+import { InMemoryAssistanceStateStore } from './application/assistance-turn';
+import type {
+  AssistancePort,
+  Clock,
+  IdGenerator,
+  LlmProvider,
+  ServicesPort,
+} from './application/ports';
 import type { Config } from './config';
 import { TurnLog } from './domain/turn-log';
 import { buildApp } from './infra/http/app';
 import { GuardedLlmProvider } from './infra/guarded-llm-provider';
 import { InMemoryDialogStore } from './infra/in-memory-dialog-store';
 import { MockLlmProvider } from './infra/mock-llm-provider';
+import { MockAssistance } from './infra/mock-assistance';
+import { canonicalInitialDependents } from './infra/assistance-fixtures';
 import { HttpJsonClient } from './infra/services/http-json';
 import { HttpServices } from './infra/services/http-services';
 import { createServicePolicy } from './infra/services/services-policy';
@@ -20,6 +29,7 @@ export const REQUEST_LOG_SERIALIZERS = {
 
 export interface ChatbotOverrides {
   services?: ServicesPort;
+  assistance?: AssistancePort;
   llm?: LlmProvider;
   logger?: pino.Logger;
   now?: Clock;
@@ -28,6 +38,9 @@ export interface ChatbotOverrides {
 export interface Chatbot {
   app: FastifyInstance;
   dialogs: InMemoryDialogStore;
+  assistanceStates: InMemoryAssistanceStateStore;
+  /** Typed seam consumed by the assistance-turn use case (Task 5). */
+  assistance: AssistancePort;
 }
 
 /** Composition root: wires the adapters to the use case and the HTTP app. */
@@ -45,6 +58,20 @@ export async function createChatbot(
     ttlMs: config.SESSION_TTL_SECONDS * 1000,
     now,
   });
+
+  const assistance =
+    overrides.assistance ??
+    new MockAssistance({
+      capacity: config.SESSION_CAPACITY,
+      ttlMs: config.SESSION_TTL_SECONDS * 1000,
+      now,
+      initialDependents: canonicalInitialDependents,
+    });
+  const assistanceStates = new InMemoryAssistanceStateStore(
+    config.SESSION_CAPACITY,
+    config.SESSION_TTL_SECONDS * 1000,
+    now,
+  );
 
   const policy = () =>
     createServicePolicy({
@@ -84,8 +111,10 @@ export async function createChatbot(
     newId,
     now,
     logger,
+    assistance,
+    assistanceStates,
   });
 
   const app = await buildApp({ turns, logger, shutdownGraceMs: config.SHUTDOWN_GRACE_MS });
-  return { app, dialogs };
+  return { app, dialogs, assistance, assistanceStates };
 }

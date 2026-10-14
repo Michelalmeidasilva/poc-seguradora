@@ -1,0 +1,378 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "LIST": [
+      "DETAILS"
+    ],
+    "DETAILS": [
+      "PLANS"
+    ],
+    "PLANS": [
+      "CONDITIONS"
+    ],
+    "CONDITIONS": [
+      "FINISH"
+    ],
+    "FINISH": []
+  },
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Conhecer produtos",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Explore os três serviços, veja os detalhes e compare os planos sem sair deste Flow."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "service",
+            "label": "Conhecer produtos",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Assistência Funeral",
+                "description": "Suporte ao titular e aos dependentes, conforme as condições do serviço."
+              },
+              {
+                "id": "1",
+                "title": "Assistência Farmácia",
+                "description": "Descontos em redes credenciadas, conforme as condições do serviço."
+              },
+              {
+                "id": "2",
+                "title": "Telemedicina",
+                "description": "Atendimento remoto no ambiente do prestador, conforme disponibilidade."
+              }
+            ]
+          },
+          {
+            "type": "TextCaption",
+            "text": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde."
+          },
+          {
+            "type": "Footer",
+            "label": "Ver detalhes",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "DETAILS"
+              },
+              "payload": {
+                "service": "${form.service}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "DETAILS",
+      "title": "Detalhes do serviço",
+      "data": {
+        "service": {
+          "type": "string",
+          "__example__": "0"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Switch",
+            "value": "${data.service}",
+            "cases": {
+              "0": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Assistência Funeral"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "A Assistência Funeral oferece suporte ao titular e aos dependentes. A utilização depende das condições, limites e elegibilidade previstos no serviço contratado."
+                },
+                {
+                  "type": "TextCaption",
+                  "text": "Não prometer cobertura, valores, carência ou procedimentos sem confirmação das condições vigentes."
+                }
+              ],
+              "1": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Assistência Farmácia"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "A Assistência Farmácia oferece descontos em redes credenciadas. As redes participantes e as condições de uso devem ser confirmadas antes da utilização."
+                },
+                {
+                  "type": "TextCaption",
+                  "text": "Não informar percentual, preço ou rede específica sem confirmação das condições vigentes."
+                }
+              ],
+              "2": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Telemedicina"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "A Telemedicina acontece no ambiente do prestador, conforme disponibilidade, limites e condições do serviço contratado."
+                },
+                {
+                  "type": "TextCaption",
+                  "text": "Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador."
+                }
+              ]
+            }
+          },
+          {
+            "type": "TextCaption",
+            "text": "Use Voltar para conhecer outro serviço. Todas as etapas continuam neste mesmo Flow."
+          },
+          {
+            "type": "Footer",
+            "label": "Ver planos",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "PLANS"
+              },
+              "payload": {
+                "service": "${data.service}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "PLANS",
+      "title": "Planos e comparação",
+      "data": {
+        "service": {
+          "type": "string",
+          "__example__": "0"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextSubheading",
+            "text": "Comparação de planos"
+          },
+          {
+            "type": "TextBody",
+            "text": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "modality",
+            "label": "Qual plano deseja conhecer?",
+            "required": true,
+            "data-source": [
+              {
+                "id": "individual",
+                "title": "Individual",
+                "description": "R$ 29,90/mês · somente titular"
+              },
+              {
+                "id": "familiar",
+                "title": "Familiar",
+                "description": "R$ 39,90/mês · titular e dependentes elegíveis"
+              }
+            ]
+          },
+          {
+            "type": "TextCaption",
+            "text": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde."
+          },
+          {
+            "type": "Footer",
+            "label": "Ver condições",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "CONDITIONS"
+              },
+              "payload": {
+                "service": "${data.service}",
+                "modality": "${form.modality}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONDITIONS",
+      "title": "Condições do plano",
+      "data": {
+        "service": {
+          "type": "string",
+          "__example__": "0"
+        },
+        "modality": {
+          "type": "string",
+          "__example__": "familiar"
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Switch",
+            "value": "${data.modality}",
+            "cases": {
+              "individual": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Individual"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "R$ 29,90/mês"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "Somente titular."
+                }
+              ],
+              "familiar": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Familiar"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "R$ 39,90/mês"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "Titular e até 3 dependentes elegíveis neste exemplo."
+                }
+              ]
+            }
+          },
+          {
+            "type": "TextBody",
+            "text": "Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa."
+          },
+          {
+            "type": "TextCaption",
+            "text": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde."
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "FINISH"
+              },
+              "payload": {
+                "service": "${data.service}",
+                "modality": "${data.modality}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "FINISH",
+      "title": "Concluir descoberta",
+      "data": {
+        "service": {
+          "type": "string",
+          "__example__": "0"
+        },
+        "modality": {
+          "type": "string",
+          "__example__": "familiar"
+        }
+      },
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Switch",
+            "value": "${data.modality}",
+            "cases": {
+              "individual": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Individual"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "R$ 29,90/mês"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "Somente titular."
+                }
+              ],
+              "familiar": [
+                {
+                  "type": "TextSubheading",
+                  "text": "Familiar"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "R$ 39,90/mês"
+                },
+                {
+                  "type": "TextBody",
+                  "text": "Titular e até 3 dependentes elegíveis neste exemplo."
+                }
+              ]
+            }
+          },
+          {
+            "type": "TextBody",
+            "text": "Você pode concluir a descoberta ou iniciar uma contratação. Iniciar não contrata nem cobra: primeiro será necessário informar o CPF e revisar os dados e condições."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "intent",
+            "label": "Como deseja continuar?",
+            "required": true,
+            "data-source": [
+              {
+                "id": "finish",
+                "title": "Concluir descoberta"
+              },
+              {
+                "id": "contract",
+                "title": "Iniciar contratação"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Concluir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "service": "${data.service}",
+                "modality": "${data.modality}",
+                "intent": "${form.intent}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

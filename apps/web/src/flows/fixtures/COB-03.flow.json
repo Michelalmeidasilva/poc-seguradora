@@ -1,0 +1,43 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Parcelas pendentes",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Escolha a pendência que deseja consultar para regularização."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Parcelas pendentes",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Setembro de 2026",
+                "description": "Vencimento 10/09 · R$ 39,90 neste exemplo"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Ver pagamento",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

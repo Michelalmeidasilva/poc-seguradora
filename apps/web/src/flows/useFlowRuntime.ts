@@ -22,7 +22,7 @@ export function useFlowRuntime(
   host: FlowHost,
   initialData?: Record<string, unknown>,
 ): FlowRuntime {
-  const [state, setState] = useState(() => initRuntime(flow, initialData));
+  const [state, setState] = useState(() => initRuntime(flow, initialData, initialData));
   const stateRef = useRef(state);
   const latest = useRef({ flow, flowId, host });
   latest.current = { flow, flowId, host };

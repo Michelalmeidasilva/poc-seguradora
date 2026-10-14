@@ -1,0 +1,53 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Escolher contrato",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Você tem mais de um contrato. Qual deseja consultar?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Escolher contrato",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Serviços de Assistência",
+                "description": "Familiar · ativa · contrato final 2048"
+              },
+              {
+                "id": "1",
+                "title": "Serviços de Assistência",
+                "description": "Individual · ativa · contrato final 1092"
+              },
+              {
+                "id": "2",
+                "title": "Serviços de Assistência",
+                "description": "Encerrado · contrato final 0871"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Consultar contrato",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

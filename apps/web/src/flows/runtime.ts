@@ -80,10 +80,14 @@ const fieldName = (c: FlowComponent): string | undefined => {
 const children = (screen: FlowScreen): unknown =>
   isRecord(screen) && isRecord(screen.layout) ? screen.layout.children : undefined;
 
-export function initRuntime(flow: FlowJson, data: Record<string, unknown> = {}): RuntimeState {
+export function initRuntime(
+  flow: FlowJson,
+  data: Record<string, unknown> = {},
+  initialForm: Record<string, unknown> = {},
+): RuntimeState {
   return {
     stack: [{ screenId: entryScreen(flow).id, data: isRecord(data) ? { ...data } : {} }],
-    form: {},
+    form: isRecord(initialForm) ? { ...initialForm } : {},
     touched: {},
     pending: 'idle',
   };

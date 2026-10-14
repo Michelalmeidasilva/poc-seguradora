@@ -4,6 +4,7 @@ import { Bubble } from '../ui/Bubble';
 import { formatTime } from '../ui/time';
 import { CarouselMessage } from './CarouselMessage';
 import { CodeMessage } from './CodeMessage';
+import { DocumentMessage } from './DocumentMessage';
 import type { OpenFlow } from './flow-host';
 import { FlowMessage } from './FlowMessage';
 import { LocationMessage } from './LocationMessage';
@@ -18,6 +19,12 @@ export interface RenderContext {
   interactive: boolean;
   sendChoice(optionId: string, title: string, replyToId: string): void;
   openFlow: OpenFlow;
+  /** Presentation-only grouping; original events and reply identity remain unchanged. */
+  textOverride?: string | undefined;
+}
+
+function assertNever(event: never): never {
+  throw new Error(`Unhandled bot message event: ${JSON.stringify(event)}`);
 }
 
 /** Maps one server message event to its component (exhaustive over `message.*`). */
@@ -40,6 +47,11 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
           code={event.payload.code}
           {...(event.payload.language ? { language: event.payload.language } : {})}
         />,
+      );
+    case 'message.document':
+      return bubble(
+        <DocumentMessage payload={event.payload} />,
+        'Documentos enviados pelo assistente',
       );
     case 'message.location':
       return bubble(
@@ -72,7 +84,7 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
     case 'message.quick_replies':
       return bubble(
         <QuickReplies
-          text={event.payload.text}
+          text={ctx.textOverride ?? event.payload.text}
           options={event.payload.options}
           interactive={ctx.interactive}
           onChoice={onChoice}
@@ -94,4 +106,6 @@ export function renderBotMessage(item: BotItem, ctx: RenderContext): ReactNode {
         'Formulário do assistente',
       );
   }
+
+  return assertNever(event);
 }

@@ -1,6 +1,6 @@
 # Checklist: web
 
-Última atualização: 2026-10-11
+Última atualização: 2026-10-13
 
 ## Estrutura
 
@@ -18,6 +18,7 @@
 - [x] Estado do chat (reducer)
 - [x] Persistência do chat em sessionStorage e aba única (Web Locks)
 - [x] Renderers: texto, voz, código, location, template, quick-reply, carrossel, digitando, aviso, mensagem de Flow
+- [x] Renderer de documentos demonstrativos com descrição do diálogo anunciada a leitores de tela e registry exaustivo para novos eventos `message.*`
 - [x] Tela de chat, composer e gravação de voz
 - [x] Tema claro e escuro, acessibilidade
 - [x] E2E (Playwright) com gateway simulado
@@ -37,6 +38,10 @@
 - [x] E2E de Flows: cotação ponta a ponta, demo percorrido só por teclado (com `data_exchange` e `complete`), Voltar/Fechar com confirmação e retorno do foco
 - [x] Cotação: `cpf` e `nascimento` são `sensitive` na tela `DADOS`; o resumo mostra `••••` e o E2E confere que nem a bolha nem o sessionStorage guardam os valores (só o `user.flow_submit` os leva ao gateway)
 - [x] Fonte única dos Flows: os JSON canônicos ficam em `apps/chatbot/src/domain/flows/`; `src/flows/fixtures/` guarda cópias só para os testes unitários, e `apps/chatbot/src/domain/flows-sync.test.ts` falha se as cópias divergirem
+- [x] Task 7 round 1: revisão com valores seguros, correção pré-preenchida, CPF mascarado e dados iniciais ausentes de saves/loads persistidos
+- [x] Task 7 round 2: load regrava a sessão saneada antes de retornar; Flows dependentes do draft viram mensagem de expiração sem CTA na persistência, preservando o Flow ativo em memória
+- [x] Task 7 rounds 3–4: snapshots legados dos 15 reviews do catálogo, com uma tela terminal `REVIEW` e sem `initialData`, expiram para texto seguro sem CTA no save/load; IDs sincronizados por teste com o catálogo canônico; Flow externo equivalente permanece acionável e Flow ativo segue interativo. Com `initialData`, qualquer ID expira; falha de regravação impede restauração insegura.
+- [x] Task 8: CPF reconhecido em texto do usuário, título de quick reply e resumo de Flow é mascarado só nas cópias persistidas; o estado ativo mantém o original. Saves legados são saneados e regravados antes da restauração; `optionId`/`replyToId` ficam intactos e payload de `flow_submit` continua ausente do histórico.
 
 ### Decisões próprias (Plano 5)
 
@@ -68,6 +73,33 @@
 - [x] Flow de demonstração vem do catálogo do chatbot; o gateway simulado do E2E lê os JSON canônicos de `apps/chatbot/src/domain/flows/` e um teste de deriva falha se as cópias divergirem
 - [x] `data_exchange` explícito no chatbot (turno vazio, sem resposta); a web segue otimista
 
+## Correção da entrada da experiência — 2026-10-13
+
+- [x] Cabeçalho Digio Assistências, identidade visual e tema escuro inicial; boas-vindas uma vez por sessão, preservando conversas restauradas
+- [x] Retomada após reset de sessão e migração do menu anterior; envios ativos pertencem ao cliente atual, sem confundir histórico com reenvio ou duplicar a saudação
+- [x] Suite web 933/933, testes focados de startup/transporte, typecheck e lint; regressão Playwright 16/16
+- [x] E2E Chromium mobile 390×844 na stack real `localhost:8080`: 8/8 para os três produtos, CPF, reset, histórico `sent`, recuperação 401 e retry restaurado; vídeos de evidência em `/tmp/seguradora-assistance-entry-artifacts`
+- [ ] Fidelidade visual e cobertura de todas as jornadas do atlas: continua nas Tasks 9 e 10; estes oito cenários não representam aceite das 247 telas
+
+## Plano WhatsApp Assistance Experience — Task 7
+
+- [x] 46 fixtures Flow sincronizadas com os JSONs canônicos; formulários navegam para revisão local com volta que preserva valores e submit único
+- [x] Composer demonstrativo oferece somente quatro cenários de áudio locais; nenhum caminho de gravação, microfone, upload ou requisição de mídia na tela do chat
+- [x] E2E cobre os quatro IDs e respostas determinísticas, sem chamada a API de mídia
+
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [x] Playwright verifica CPF-canário visível somente no turno ativo, mascarado no `sessionStorage` e restaurado já mascarado
+- [x] Gateway simulado não ecoa mensagens com CPF; E2E confirma que o canário não aparece no histórico persistido nem após recarga
+- [ ] Suíte Playwright ampliada: 19/19 passou após diagnóstico de 429/Retry-After e espera inicial de 30 s (sem alterar rate limit); 11/11 percursos live passaram. Última correção contextual PLA/CAN foi validada por HTTP/unidade e integrada em novo rebuild local; aceite completo da Task 9 permanece pendente dos 247 estados.
+- [x] Fixture IDE-08 sincronizada mecanicamente com o backend: único screen FORM terminal e Footer complete. Suíte web 933/933 e typecheck passaram; demais fontes frontend preservadas.
+
+## Plano WhatsApp Assistance Experience — Task 10
+
+- [x] Checkpoint parcial: 938/938 testes web com um worker e limites temporais originais; 19/19 E2E após respeitar Retry-After, 11/11 live e 24/24 grupos representativos. Typecheck/lint/build aprovados. Execução padrão paralela ainda apresentou falha temporal de renderização; isso foi registrado, não eliminado das asserções.
+- [ ] Fidelidade completa ao atlas e acessibilidade de todos os estados ainda pendentes. Capturas representativas dos 24 grupos passaram em localhost:8080 nas larguras 320/390/1440 px (24/24); não equivalem aos 247 estados nem a todas as alternativas.
+- [ ] Consolidar revisão visual: Flow branco, seções de revisão em duas colunas, nascimento DD/MM/AAAA, CPF mascarado, formatação canônica e agrupamento de texto/quick replies no mesmo turno. Captura mobile DEP-06 conferida após percurso real de inclusão; regressões finais em andamento.
+
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 
 O que existe (verificado localmente, nada aplicado no GCP):
@@ -86,6 +118,10 @@ Pendências (detalhes na seção Pendências do runbook):
 - ID token entre serviços, `svc-*` reais, domínio próprio/Cloud Armor/uptime checks, versões fixadas das imagens base.
 
 ## Qualidade
+
+- [x] Identificação CPF sem formulário Flow; migração de histórico IDE-06/08 para orientação textual ao recarregar, mantendo mascaramento do CPF digitado em storage. Novas regressões RED→GREEN; suíte web 942/942, tipos e build verificados em 2026-10-14. CPF de dependente permanece campo cadastral.
+
+- [x] Descoberta em um único Flow com retorno nativo preservando escolhas e envio somente na conclusão. Verificação de 2026-10-13: 940 testes web, 19 E2E padrão; 13 cenários live passando e regressão de dependente repetida separadamente com sucesso após corrigir seletor concorrente.
 
 - [x] Testes unitários e de componente
 - [x] Lint, formatação e tsconfig estrito sem erros

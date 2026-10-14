@@ -23,6 +23,7 @@ This applies to every agent and person who works in this repository, with no exc
    - on a merge conflict, whoever integrated first keeps the row; pick another.
 5. **Isolate:** work on your own branch, preferably in a separate `git worktree`.
 6. Run `node scripts/workboard-check.mjs` and make sure it passes.
+7. Load `task-tracking` and open a task row in `.agents/metrics/task-execution-log.md` with complexity, prompt/context, SPEC reference and start timestamp. Do this after the workstream claim and before changing task artifacts.
 
 ## While working
 
@@ -36,6 +37,7 @@ This applies to every agent and person who works in this repository, with no exc
 - **Keep `CHECKLIST.md` honest.** Update the service's `CHECKLIST.md` in the same commit that finishes an item. Mark `[x]` only when the code exists, its tests pass and the commit is made.
 - **Commits:** small, conventional (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
 - **Milestones:** update `Atualizado` and `Notas` in the `WORKBOARD.md` row. If you get stuck, set `blocked` and write the reason.
+- **Execution evidence:** append timings for verification runs used as evidence to `.agents/metrics/test-execution-timings.md`; close or hand off the task row with active, blocked and elapsed time. Follow `task-tracking` for the schema and sensitive-data restrictions.
 
 ## Before saying "done"
 

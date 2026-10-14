@@ -5,6 +5,9 @@ import type { ClaimType } from '../domain/models';
 import { drive, type Fakes } from '../test/drive';
 import { aClaim, aClaimOpened, aPolicy, aPolicySummary, aQuote } from '../test/fixtures';
 import { MockLlmProvider } from './mock-llm-provider';
+import { assistanceCatalog } from '../domain/assistance-catalog';
+import { runAssistanceTurn } from '../application/assistance-turn';
+import { MockAssistance } from './mock-assistance';
 
 /**
  * Dialog tests that classify the typed text with the real mock LLM (instead of hand-made
@@ -289,5 +292,41 @@ describe('demo flow with the real classifier', () => {
   it('"demo flow" is a description inside the claim description step', async () => {
     const { calls } = await typed(describing, 'demo flow', { openClaim: ok(aClaimOpened()) });
     expect(calls[0]?.op === 'openClaim' && calls[0].request.descricao).toBe('demo flow');
+  });
+});
+
+describe('public assistance service discovery', () => {
+  it('traverses the catalog chooser to exactly the three approved services without a gate', async () => {
+    const port = new MockAssistance({ capacity: 5, ttlMs: 60_000 });
+    const context = { correlationId: 'public-discovery', idempotencyKey: 'public-discovery-event' };
+    const chooser = assistanceCatalog.byId['DES-01']!;
+    const choices = (chooser.flow as { choices: Array<{ label: string; target: string }> }).choices;
+    expect(choices.map((choice) => choice.label).sort()).toEqual([
+      'Assistência Farmácia',
+      'Assistência Funeral',
+      'Telemedicina',
+    ]);
+
+    for (const [index, choice] of choices.entries()) {
+      let state = { journeyId: 'DES', screenId: 'DES-01', gateApproved: false };
+      const transition = await runAssistanceTurn(
+        {
+          type: 'flow_submit',
+          flowId: 'DES-01',
+          data: { service: String(index), modality: 'familiar', intent: 'finish' },
+        },
+        {
+          port,
+          state,
+          sessionId: `public-${choice.target}`,
+          context,
+        },
+      );
+      expect(transition.ok && transition.value.state.screenId).toBe('DES-11');
+      expect(transition.ok && transition.value.state.gateApproved).toBe(false);
+      expect(['DES-12', 'DES-13', 'DES-14']).toContain(choice.target);
+      state = transition.ok ? transition.value.state : state;
+      expect(state.screenId).toBe('DES-11');
+    }
   });
 });

@@ -6,7 +6,7 @@ import { initialState } from './model';
 import { ChatScreen } from './ChatScreen';
 import type { ChatApi } from './useChat';
 import { chatReducer } from './reducer';
-import { useVoiceRecorder, type VoiceRecorderOptions } from './useVoiceRecorder';
+import { useVoiceRecorder } from './useVoiceRecorder';
 
 vi.mock('./useVoiceRecorder', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./useVoiceRecorder')>();
@@ -16,9 +16,11 @@ vi.mock('./useVoiceRecorder', async (importOriginal) => {
 const api = (over: Partial<ChatApi> = {}): ChatApi => ({
   state: initialState(),
   tab: 'active',
+  hasPendingSend: false,
   sendText: vi.fn(),
   sendChoice: vi.fn(),
   sendVoice: vi.fn(),
+  sendDemoVoice: vi.fn(),
   sendFlowSubmit: vi.fn(),
   sendFlowDataExchange: vi.fn(),
   resend: vi.fn(),
@@ -30,7 +32,7 @@ const api = (over: Partial<ChatApi> = {}): ChatApi => ({
 describe('ChatScreen', () => {
   it('shows the header with the assistant name and the connection state', () => {
     render(<ChatScreen chat={api({ state: { ...initialState(), connection: 'online' } })} />);
-    expect(screen.getByRole('heading', { name: /assistente seguradora/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
     expect(screen.getByText(/online/i)).toBeInTheDocument();
   });
 
@@ -111,36 +113,17 @@ describe('ChatScreen', () => {
     expect(screen.getByText('Olá! Eu sou o assistente.')).toBeInTheDocument();
   });
 
-  describe('voice recorder', () => {
-    const fakeRecorder = () => ({
-      status: 'idle' as const,
-      elapsedMs: 0,
-      start: vi.fn(async () => undefined),
-      stop: vi.fn(async () => undefined),
-      cancel: vi.fn(),
-    });
-
-    it('delivers an auto-stopped recording through chat.sendVoice while the tab is active', () => {
-      let options: VoiceRecorderOptions | undefined;
-      vi.mocked(useVoiceRecorder).mockImplementationOnce((o) => {
-        options = o;
-        return fakeRecorder();
-      });
+  describe('demonstration audio', () => {
+    it('offers four deterministic audio scenarios without opening the microphone', async () => {
       const chat = api();
       render(<ChatScreen chat={chat} />);
-      const blob = new Blob(['audio']);
-      options?.onAutoStop?.({ blob, durationMs: 120_000 });
-      expect(chat.sendVoice).toHaveBeenCalledWith(blob, 120_000);
-    });
-
-    it('cancels the recording (releasing the mic) when the tab is demoted, not while active', () => {
-      const recorder = fakeRecorder();
-      vi.mocked(useVoiceRecorder).mockReturnValue(recorder);
-      const { rerender } = render(<ChatScreen chat={api({ tab: 'active' })} />);
-      expect(recorder.cancel).not.toHaveBeenCalled();
-      rerender(<ChatScreen chat={api({ tab: 'other-tab' })} />);
-      expect(recorder.cancel).toHaveBeenCalledTimes(1);
-      vi.mocked(useVoiceRecorder).mockReset();
+      await userEvent.click(screen.getByRole('button', { name: /áudio demonstrativo/i }));
+      for (const id of ['AUD-01', 'AUD-03', 'AUD-04', 'AUD-05']) {
+        expect(screen.getByRole('button', { name: new RegExp(id) })).toBeInTheDocument();
+      }
+      expect(useVoiceRecorder).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: /AUD-04/ }));
+      expect(chat.sendDemoVoice).toHaveBeenCalledWith('AUD-04');
     });
   });
 });

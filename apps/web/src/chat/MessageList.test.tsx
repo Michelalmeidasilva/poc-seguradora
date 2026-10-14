@@ -27,6 +27,54 @@ const build = (...actions: Parameters<typeof chatReducer>[1][]): ChatState =>
   actions.reduce(chatReducer, initialState());
 
 describe('MessageList', () => {
+  it('does not merge adjacent messages belonging to different turns', () => {
+    const text = botText(1, 'Mensagem anterior.');
+    const choices = {
+      ...quickReplies(2),
+      type: 'message.quick_replies' as const,
+      correlationId: 'another-turn',
+      payload: {
+        text: 'Escolha uma opção para continuar.',
+        options: [{ id: 'DES-01', title: 'Conhecer produtos' }],
+      },
+    };
+    const { container } = render(
+      <MessageList
+        state={build(
+          { type: 'server_event', event: text },
+          { type: 'server_event', event: choices },
+        )}
+        {...ctx()}
+      />,
+    );
+    expect(container.querySelectorAll('.bubble--in')).toHaveLength(2);
+    expect(screen.getByText('Escolha uma opção para continuar.')).toBeInTheDocument();
+  });
+  it('keeps assistance text and its quick replies in one bubble while replying to the actual option event', async () => {
+    const text = botText(1, 'Posso ajudar com os três serviços.');
+    const choices = {
+      ...quickReplies(2),
+      type: 'message.quick_replies' as const,
+      correlationId: text.correlationId,
+      payload: {
+        text: 'Escolha uma opção para continuar.',
+        options: [{ id: 'DES-01', title: 'Conhecer produtos' }],
+      },
+    };
+    const state = build(
+      { type: 'server_event', event: text },
+      { type: 'server_event', event: choices },
+    );
+    const context = ctx();
+    const { container } = render(<MessageList state={state} {...context} />);
+    expect(container.querySelectorAll('.bubble--in')).toHaveLength(1);
+    expect(
+      screen.getByText('Posso ajudar com os três serviços.').closest('.bubble'),
+    ).toContainElement(screen.getByRole('button', { name: 'Conhecer produtos' }));
+    expect(screen.queryByText('Escolha uma opção para continuar.')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Conhecer produtos' }));
+    expect(context.sendChoice).toHaveBeenCalledWith('DES-01', 'Conhecer produtos', choices.id);
+  });
   it('is a live log region', () => {
     render(<MessageList state={initialState()} {...ctx()} />);
     const log = screen.getByRole('log', { name: /conversa/i });

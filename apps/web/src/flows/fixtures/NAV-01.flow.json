@@ -1,0 +1,88 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Como podemos ajudar?",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Você pode escrever o que precisa ou escolher uma destas opções."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Como podemos ajudar?",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Conhecer produtos",
+                "description": "Benefícios, planos e contratação"
+              },
+              {
+                "id": "1",
+                "title": "Usar assistências",
+                "description": "Telemedicina, funeral e farmácia"
+              },
+              {
+                "id": "2",
+                "title": "Consultar meu contrato",
+                "description": "Situação, participantes e documentos"
+              },
+              {
+                "id": "3",
+                "title": "Fazer alterações",
+                "description": "Dependentes, cadastro e plano"
+              },
+              {
+                "id": "4",
+                "title": "Resolver pagamentos",
+                "description": "Cobranças e regularização"
+              },
+              {
+                "id": "5",
+                "title": "Acompanhar solicitações",
+                "description": "Consultar pedidos por contrato"
+              },
+              {
+                "id": "6",
+                "title": "Encerrar contrato",
+                "description": "Condições e cancelamento"
+              },
+              {
+                "id": "7",
+                "title": "Encerrar conversa",
+                "description": "Finalizar este atendimento sem alterar contrato ou pedidos"
+              },
+              {
+                "id": "8",
+                "title": "Tirar dúvidas",
+                "description": "Informações, utilização, coberturas e carências"
+              },
+              {
+                "id": "9",
+                "title": "Falar com uma pessoa",
+                "description": "Atendimento ou pedido de retorno"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

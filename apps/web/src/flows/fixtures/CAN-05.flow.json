@@ -1,0 +1,74 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Cancelar assistência",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira a primeira data permitida e os efeitos consultados."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Encerramento"
+          },
+          {
+            "type": "TextBody",
+            "text": "Contrato: Serviços de Assistência Familiar"
+          },
+          {
+            "type": "TextBody",
+            "text": "Data efetiva neste cenário: 10/10/2026"
+          },
+          {
+            "type": "TextBody",
+            "text": "Acesso aos benefícios: Até a data efetiva consultada"
+          },
+          {
+            "type": "TextBody",
+            "text": "Pessoas afetadas: Titular e dependentes"
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Efeitos financeiros"
+          },
+          {
+            "type": "TextBody",
+            "text": "Próximas cobranças: Conforme cálculo do sistema"
+          },
+          {
+            "type": "TextBody",
+            "text": "Restituição neste cenário: Sem saldo a restituir"
+          },
+          {
+            "type": "TextBody",
+            "text": "Documento: Termo após confirmação"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar cancelamento",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

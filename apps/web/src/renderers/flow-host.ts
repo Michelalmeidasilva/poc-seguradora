@@ -5,6 +5,7 @@ export interface OpenFlowRequest {
   flowJson: Record<string, unknown>;
   header?: string | undefined;
   body: string;
+  initialData?: { intent: 'review' | 'correction'; values: Record<string, string | boolean> } | undefined;
 }
 
 export type OpenFlow = (request: OpenFlowRequest) => void;

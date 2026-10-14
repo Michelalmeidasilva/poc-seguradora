@@ -29,22 +29,15 @@
   let galleryVisible = false;
   let light = false;
   let additions = [];
-  let selectedContract = 'Assistência Saúde';
+  let selectedContract = 'Serviços de Assistência';
   let selectedPlan = 'Familiar';
+  const discoveryState = { page: 0, service: null, modality: null, intent: null };
   let identityReturn = 'CON-02';
   let authenticatedUntil = 0;
   let sessionTimer;
   const isAuthenticated = () => Date.now() < authenticatedUntil;
   function validCpf(value) {
-    const digits = String(value).replace(/\D/g, '');
-    if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
-    for (let size = 9; size <= 10; size++) {
-      let sum = 0;
-      for (let i = 0; i < size; i++) sum += Number(digits[i]) * (size + 1 - i);
-      const digit = (sum * 10) % 11 % 10;
-      if (digit !== Number(digits[size])) return false;
-    }
-    return true;
+    return /^(?:[0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2})$/.test(String(value).trim());
   }
   let toastTimer;
   const modeLabels = {
@@ -81,7 +74,7 @@
       toast('Esta interação depende de definição do produto.');
       return;
     }
-    if (['IDE-01', 'IDE-02'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
+    if (['IDE-01', 'IDE-02', 'IDE-08'].includes(id) && !current.startsWith('IDE-') && !index[current].requiresAuth) {
       if (['ENT-01', 'ENT-05'].includes(current)) identityReturn = 'DEP-01';
       else if (current === 'DES-10') identityReturn = 'ADE-01';
     }
@@ -97,7 +90,7 @@
       id = 'IDE-01';
     }
     if (id === 'IDE-03')
-      index['IDE-03'].actions[0] = { label: 'Continuar solicitação', target: identityReturn };
+      index['IDE-03'].actions[0] = { label: 'Continuar pedido', target: identityReturn };
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
     if (index[id].seed) Object.assign(memory, index[id].seed);
@@ -159,12 +152,12 @@
       .join('');
   }
   function screenBot(step) {
-    if (step.journey === 'SOL' && selectedContract !== 'Assistência Saúde') {
+    if (step.journey === 'SOL' && selectedContract !== 'Serviços de Assistência') {
       if (step.id === 'SOL-02')
         return `Estas são as solicitações do contrato selecionado: ${selectedContract}.`;
     }
     if (step.id === 'DES-08' && selectedPlan === 'Individual')
-      return '**Assistência Saúde Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
+      return '**Serviços de Assistência Individual**\nValor total: R$ 29,90/mês.\nComposição: somente titular.\nVocê poderá revisar carências, limites e pagamento antes de contratar.';
     return step.bot;
   }
   function renderChat(step) {
@@ -221,6 +214,11 @@
       $('overlay').hidden = true;
       return;
     }
+    if (flow.discovery) {
+      Object.assign(discoveryState, { page: 0, service: null, modality: null, intent: null });
+      renderDiscoveryFlow(step);
+      return;
+    }
     let content = '';
     if (step.mode === 'form') content = fieldsMarkup(flow.fields);
     if (step.mode === 'list')
@@ -255,31 +253,6 @@
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       let target = flow.target;
-      if (step.id === 'IDE-08') {
-        const cpf = String(data.get('authCpf') || '');
-        if (!validCpf(cpf) || cpf.replace(/\D/g, '') !== '52998224725') {
-          $('flow-error').textContent = 'Use o CPF fictício válido 529.982.247-25. Nenhuma consulta real é feita.';
-          $('flow-error').hidden = false;
-          return;
-        }
-        go('IDE-02');
-        return;
-      }
-      if (step.id === 'IDE-02') {
-        if (String(data.get('verification') || '') !== '123456') {
-          go('IDE-04');
-          return;
-        }
-        // Code-only represents a previously identified account; never CPF-only.
-        authenticatedUntil = Date.now() + 15 * 60 * 1000;
-        clearTimeout(sessionTimer);
-        sessionTimer = setTimeout(() => {
-          toggleGallery(false);
-          go('IDE-05');
-        }, 15 * 60 * 1000);
-        go('IDE-03');
-        return;
-      }
       if (step.mode === 'list') {
         const choice = listChoices(step)[Number(data.get('choice'))];
         if (!choice || choice.disabled) return;
@@ -312,10 +285,60 @@
       if (target) go(target);
     });
   }
+  function renderDiscoveryFlow(step) {
+    const d = step.flow.discovery;
+    const { page, service, modality } = discoveryState;
+    const rich = (value) => escape(value).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    const paragraph = (value) => `<p>${rich(value)}</p>`;
+    const options = (name, items, selected) => items.map((item) =>
+      `<label class="flow-option"><input type="radio" name="${name}" value="${escape(item.id)}" required ${selected === item.id ? 'checked' : ''} /><span><strong>${escape(item.title)}</strong>${item.description ? `<small>${escape(item.description)}</small>` : ''}</span></label>`,
+    ).join('');
+    const plan = d.plans.find((item) => item.id === modality);
+    const summary = plan ? `<h4>${escape(plan.title)}</h4>${paragraph(plan.price)}${paragraph(plan.composition)}` : '';
+    const titles = ['Conhecer produtos', 'Detalhes do serviço', 'Planos e comparação', 'Condições do plano', 'Concluir descoberta'];
+    const buttons = ['Ver detalhes', 'Ver planos', 'Ver condições', 'Continuar', 'Concluir'];
+    let content;
+    if (page === 0) content = paragraph('Explore os três serviços, veja os detalhes e compare os planos sem sair deste Flow.') + options('service', d.services.map((item, i) => ({ ...item, description: step.flow.choices[i].detail })), service) + paragraph(d.note);
+    if (page === 1) {
+      const chosen = d.services.find((item) => item.id === service);
+      content = `<h4>${escape(chosen.title)}</h4>${paragraph(chosen.description)}<div class="flow-alert">${escape(chosen.note)}</div>${paragraph('Use Voltar para conhecer outro serviço. Todas as etapas continuam neste mesmo Flow.')}`;
+    }
+    if (page === 2) content = '<h4>Comparação de planos</h4>' + paragraph(d.comparison) + options('modality', d.plans, modality) + paragraph(d.note);
+    if (page === 3) content = summary + paragraph(d.conditions) + paragraph(d.note);
+    if (page === 4) content = summary + paragraph('Você pode concluir a descoberta ou iniciar uma contratação. Iniciar não contrata nem cobra: primeiro será necessário informar o CPF e revisar os dados e condições.') + options('intent', d.outcomes.map((item) => ({ id: item.id, title: item.label })), discoveryState.intent);
+    $('overlay').innerHTML = `<form id="flow-form" class="sheet" aria-label="${escape(titles[page])}"><div class="sheet-handle"></div><header class="sheet-header">${page ? '<button type="button" class="sheet-close" data-discovery-back aria-label="Voltar">←</button>' : ''}<div><h3>${escape(titles[page])}</h3><p>Explore sem sair deste Flow</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${buttons[page]}</button><p class="flow-note">Digio · experiência estruturada no WhatsApp</p></footer></form>`;
+    $('overlay').hidden = false;
+    $('flow-form').querySelector('[data-discovery-back]')?.addEventListener('click', () => {
+      discoveryState.page--;
+      renderDiscoveryFlow(step);
+    });
+    const title = $('flow-form').querySelector('.sheet-header h3');
+    title.setAttribute('tabindex', '-1');
+    title.focus();
+    $('flow-form').addEventListener('change', (event) => {
+      if (['service', 'modality', 'intent'].includes(event.target.name))
+        discoveryState[event.target.name] = event.target.value;
+    });
+    $('flow-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      if (page === 0) discoveryState.service = data.get('service');
+      if (page === 2) discoveryState.modality = data.get('modality');
+      if (page < 4) {
+        discoveryState.page++;
+        renderDiscoveryFlow(step);
+        return;
+      }
+      const outcome = d.outcomes.find((item) => item.id === data.get('intent'));
+      if (!outcome) return;
+      selectedPlan = plan.title;
+      go(outcome.target);
+    });
+  }
   function renderInspector(step, group) {
     $('screen-title').textContent = step.title;
     $('screen-status').innerHTML =
-      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : group.code === 'LEG' ? 'Referência documental' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
+      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
     $('screen-intent').textContent = interpolate(step.intent);
     $('screen-behavior').textContent = interpolate(step.behavior).replace(/\*\*/g, '');
     $('screen-component').textContent = modeLabels[step.mode];
@@ -423,7 +446,7 @@
     }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
-      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Assistência Saúde.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
+      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Serviços de Assistência.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
     $('document-dialog').showModal();
   }
   document.addEventListener('click', (event) => {
@@ -514,6 +537,23 @@
     }
     if (/atendente|pessoa|humano/.test(clean)) {
       go('HUM-01');
+      return;
+    }
+    if (['IDE-01', 'IDE-02', 'IDE-04', 'IDE-05', 'IDE-06', 'IDE-08'].includes(current)) {
+      if (!validCpf(text)) {
+        go('IDE-04');
+        return;
+      }
+      // Format-only demonstration. Never retain or repeat the identity CPF.
+      authenticatedUntil = Date.now() + 15 * 60 * 1000;
+      clearTimeout(sessionTimer);
+      sessionTimer = setTimeout(() => {
+        toggleGallery(false);
+        go('IDE-05');
+      }, 15 * 60 * 1000);
+      go(identityReturn);
+      additions.unshift({ user: false, text: index['IDE-03'].bot });
+      render();
       return;
     }
     if (/solicitac|protocolo|meus pedidos/.test(clean)) {

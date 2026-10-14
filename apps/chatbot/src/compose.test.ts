@@ -5,6 +5,77 @@ import { createChatbot, REQUEST_LOG_SERIALIZERS } from './compose';
 import { startFakeServices } from './test/fake-services';
 import { testConfig, textReq } from './test/harness';
 
+describe('assistance composition', () => {
+  it('starts each default session with the canonical fictitious Familiar participant', async () => {
+    const { app, assistance } = await createChatbot(testConfig('http://127.0.0.1:3101'));
+    try {
+      for (const session of ['12345678909', '98765432100']) {
+        const snapshot = await assistance.getSessionSnapshot(session, {
+          correlationId: 'fixture-read',
+          idempotencyKey: 'fixture-read',
+        });
+        expect(snapshot.ok && snapshot.value.contract.modality).toBe('familiar');
+        expect(snapshot.ok && snapshot.value.dependents).toEqual([
+          {
+            id: 'DEP-DEMO-1',
+            name: 'Maria Silva',
+            cpf: '12345678909',
+            birthDate: '2014-03-12',
+            relationship: 'Filha',
+            phone: '11999999999',
+            biologicalSex: 'not_informed',
+          },
+        ]);
+      }
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('exposes session-scoped assistance and applies configured ttl through the injected clock', async () => {
+    let now = 0;
+    const { app, assistance } = await createChatbot(
+      testConfig('http://127.0.0.1:3101', { SESSION_CAPACITY: '1', SESSION_TTL_SECONDS: '60' }),
+      { now: () => now },
+    );
+    const ctx = { correlationId: 'compose-corr', idempotencyKey: 'compose-cancel' };
+    try {
+      const cancelled = await assistance.cancelAssistance(
+        'compose-session',
+        { confirmed: true, reason: 'pedido demonstrativo' },
+        ctx,
+      );
+      expect(cancelled.ok).toBe(true);
+      const afterWrite = await assistance.getSessionSnapshot('compose-session', ctx);
+      expect(afterWrite.ok && afterWrite.value.contract.status).toBe('cancelled');
+      await assistance.getSessionSnapshot('second-session', {
+        correlationId: 'compose-corr-2',
+        idempotencyKey: 'compose-read-2',
+      });
+      const afterCapacityEviction = await assistance.getSessionSnapshot('compose-session', {
+        correlationId: 'compose-corr-3',
+        idempotencyKey: 'compose-read-3',
+      });
+      expect(afterCapacityEviction.ok && afterCapacityEviction.value.contract.status).toBe(
+        'active',
+      );
+      await assistance.cancelAssistance(
+        'compose-session',
+        { confirmed: true, reason: 'pedido demonstrativo' },
+        { correlationId: 'compose-corr-4', idempotencyKey: 'compose-cancel-2' },
+      );
+      now = 60_001;
+      const afterExpiry = await assistance.getSessionSnapshot('compose-session', {
+        correlationId: 'compose-corr-5',
+        idempotencyKey: 'compose-read-5',
+      });
+      expect(afterExpiry.ok && afterExpiry.value.contract.status).toBe('active');
+    } finally {
+      await app.close();
+    }
+  });
+});
+
 describe('request logging', () => {
   it('logs method and url only: no client address, headers or user text', async () => {
     const lines: string[] = [];

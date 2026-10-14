@@ -1,0 +1,53 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Alterar contrato",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Qual alteração você precisa fazer?"
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Alterar contrato",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Gerenciar dependentes",
+                "description": "Consultar, incluir ou excluir"
+              },
+              {
+                "id": "1",
+                "title": "Trocar plano",
+                "description": "Comparar alternativas disponíveis"
+              },
+              {
+                "id": "2",
+                "title": "Atualizar cadastro",
+                "description": "Solicitar atualização de dados"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Continuar",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

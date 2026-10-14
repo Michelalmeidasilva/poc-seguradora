@@ -1,0 +1,58 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "LIST",
+      "title": "Minhas solicitações",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Estas são as solicitações do contrato selecionado."
+          },
+          {
+            "type": "RadioButtonsGroup",
+            "name": "choice",
+            "label": "Minhas solicitações",
+            "required": true,
+            "data-source": [
+              {
+                "id": "0",
+                "title": "Inclusão de dependente",
+                "description": "Aguardando sua confirmação"
+              },
+              {
+                "id": "1",
+                "title": "Troca de plano",
+                "description": "Agendada para o próximo ciclo"
+              },
+              {
+                "id": "2",
+                "title": "Correção cadastral",
+                "description": "Em análise"
+              },
+              {
+                "id": "3",
+                "title": "Contratação",
+                "description": "Concluída"
+              }
+            ]
+          },
+          {
+            "type": "Footer",
+            "label": "Abrir pedido",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "choice": "${form.choice}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,11 +1,9 @@
-import { useEffect } from 'react';
 import './chat.css';
 import type { OpenFlow } from '../renderers/flow-host';
 import { Composer } from './Composer';
 import { Header } from './Header';
 import { MessageList } from './MessageList';
 import type { ChatApi } from './useChat';
-import { useVoiceRecorder } from './useVoiceRecorder';
 
 export interface ChatScreenProps {
   chat: ChatApi;
@@ -15,16 +13,7 @@ export interface ChatScreenProps {
 const ignoreFlow: OpenFlow = () => undefined;
 
 export function ChatScreen({ chat, openFlow = ignoreFlow }: ChatScreenProps) {
-  const recorder = useVoiceRecorder({
-    onAutoStop: (r) => chat.sendVoice(r.blob, r.durationMs),
-  });
   const { state } = chat;
-
-  // Demoted to a passive tab: release the microphone and discard any recording in progress.
-  const cancelRecording = recorder.cancel;
-  useEffect(() => {
-    if (chat.tab === 'other-tab') cancelRecording();
-  }, [chat.tab, cancelRecording]);
 
   return (
     <div className="chat">
@@ -44,7 +33,7 @@ export function ChatScreen({ chat, openFlow = ignoreFlow }: ChatScreenProps) {
           </button>
         </div>
       ) : (
-        <Composer onSendText={chat.sendText} onSendVoice={chat.sendVoice} recorder={recorder} />
+        <Composer onSendText={chat.sendText} onDemoVoice={chat.sendDemoVoice} />
       )}
     </div>
   );

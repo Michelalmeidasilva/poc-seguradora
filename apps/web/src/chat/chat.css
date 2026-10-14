@@ -21,8 +21,10 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--wa-accent);
+  background: #0078ed;
+  color: #fff;
   font-weight: 700;
+  font-size: 28px;
 }
 .chat-header__title {
   margin: 0;
@@ -123,6 +125,32 @@
   background: var(--wa-notice-bg);
   color: var(--wa-error);
   font-size: 0.8rem;
+}
+
+.composer__demo-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 8px;
+  display: grid;
+  gap: 4px;
+  width: min(330px, calc(100vw - 16px));
+  padding: 8px;
+  border-radius: 12px 12px 0 0;
+  background: var(--wa-composer-bg);
+  box-shadow: 0 -4px 12px #0002;
+}
+.composer__demo-menu button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wa-input-bg);
+  color: var(--wa-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.composer__demo-menu button:focus-visible {
+  outline: 2px solid var(--wa-accent);
 }
 
 .chat__other-tab {

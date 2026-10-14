@@ -1,0 +1,71 @@
+{
+  "version": "7.1",
+  "routing_model": {
+    "FORM": [
+      "REVIEW"
+    ],
+    "REVIEW": []
+  },
+  "screens": [
+    {
+      "id": "FORM",
+      "title": "Contestar cobrança",
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Vou registrar sua divergência vinculada à parcela. Conte o que você não reconhece."
+          },
+          {
+            "type": "TextArea",
+            "name": "dispute",
+            "label": "Descreva a divergência",
+            "required": true
+          },
+          {
+            "type": "Footer",
+            "label": "Registrar contestação",
+            "on-click-action": {
+              "name": "navigate",
+              "next": {
+                "type": "screen",
+                "name": "REVIEW"
+              },
+              "payload": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "REVIEW",
+      "title": "Revisar dados",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Revise os dados"
+          },
+          {
+            "type": "TextBody",
+            "text": "Descreva a divergência: ${form.dispute}"
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar formulário",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "dispute": "${form.dispute}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

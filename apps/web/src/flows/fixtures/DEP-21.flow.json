@@ -1,0 +1,62 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Corrigir cadastro",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira a alteração e seus efeitos antes de confirmar."
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Alteração solicitada"
+          },
+          {
+            "type": "TextBody",
+            "text": "Pessoa: Maria Silva"
+          },
+          {
+            "type": "TextBody",
+            "text": "Campo: Nascimento"
+          },
+          {
+            "type": "TextBody",
+            "text": "Dado registrado: 12/03/2015"
+          },
+          {
+            "type": "TextBody",
+            "text": "Dado correto: 12/03/2014"
+          },
+          {
+            "type": "TextBody",
+            "text": "Efeito neste exemplo: Sem alteração de preço"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar correção",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

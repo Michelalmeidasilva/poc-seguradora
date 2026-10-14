@@ -5,6 +5,15 @@ import {
 } from '@seguradora/protocol';
 import { next, type Input, type ServiceCall, type Step } from '../domain/dialog';
 import type { ReplyBody } from '../domain/reply';
+import type { AssistanceState } from '../domain/assistance-journey';
+import {
+  assistanceEntry,
+  assistanceStepForAudio,
+  assistanceStepForText,
+  InMemoryAssistanceStateStore,
+  runAssistanceTurn,
+  type AssistanceInput,
+} from './assistance-turn';
 import type { TurnLog, TurnRecord } from '../domain/turn-log';
 import { idempotencyKeyFor } from './idempotency';
 import type {
@@ -16,6 +25,7 @@ import type {
   Logger,
   ServicesPort,
   TurnRunner,
+  AssistancePort,
 } from './ports';
 
 export interface HandleTurnDeps {
@@ -26,6 +36,8 @@ export interface HandleTurnDeps {
   newId: IdGenerator;
   now: Clock;
   logger: Logger;
+  assistance?: AssistancePort;
+  assistanceStates?: InMemoryAssistanceStateStore;
 }
 
 const MAX_CALLS_PER_TURN = 5;
@@ -57,6 +69,8 @@ const describeError = (error: unknown): { name: string; paths?: string[] } => {
 export class HandleTurn implements TurnRunner {
   /** Turns executing right now (they keep running even when their client is gone). */
   private readonly running = new Set<Promise<void>>();
+  /** A session's stateful turns run in arrival order; unrelated sessions remain concurrent. */
+  private readonly sessionTails = new Map<string, Promise<void>>();
 
   constructor(private readonly d: HandleTurnDeps) {}
 
@@ -64,9 +78,17 @@ export class HandleTurn implements TurnRunner {
     // Event ids come from the client: scope them by session so sessions never share a turn.
     const { record, created } = this.d.turns.begin(`${request.sessionId}\n${request.event.id}`);
     if (created) {
-      const running: Promise<void> = this.execute(request, record)
+      const previous = this.sessionTails.get(request.sessionId) ?? Promise.resolve();
+      const running: Promise<void> = previous
         .catch(() => undefined)
-        .finally(() => this.running.delete(running));
+        .then(() => this.execute(request, record))
+        .catch(() => undefined)
+        .finally(() => {
+          this.running.delete(running);
+          if (this.sessionTails.get(request.sessionId) === running)
+            this.sessionTails.delete(request.sessionId);
+        });
+      this.sessionTails.set(request.sessionId, running);
       this.running.add(running);
     }
     return record.stream();
@@ -106,6 +128,71 @@ export class HandleTurn implements TurnRunner {
         return;
       }
       emit({ type: 'status.typing', payload: { state: 'start' } });
+      const lookup = this.d.assistanceStates?.read(request.sessionId);
+      const expiredAssistance = lookup?.status === 'expired' && Boolean(this.d.assistance);
+      let assistanceState =
+        lookup?.status === 'active'
+          ? lookup.state
+          : expiredAssistance
+            ? assistanceEntry('IDE-05').state
+            : undefined;
+      const legacyDialogIsIdle = this.d.dialogs.get(request.sessionId).name === 'idle';
+      // Older integrations can omit the assistance adapter. Once the new experience
+      // is active, customer text must never escape into legacy insurance screens.
+      if (assistanceState && !this.d.assistance) {
+        this.d.assistanceStates?.clear(request.sessionId);
+        assistanceState = undefined;
+      }
+      if (
+        !assistanceState &&
+        legacyDialogIsIdle &&
+        this.d.assistance &&
+        event.type === 'user.text' &&
+        !assistanceStepForText(event.payload.text) &&
+        !/^demo flow$/i.test(event.payload.text.trim())
+      ) {
+        const intent = await this.d.llm.classify(event.payload.text);
+        if (['unknown', 'greeting', 'help'].includes(intent.name)) {
+          assistanceState = assistanceEntry('ENT-02').state;
+        }
+      }
+      const assistanceInput: AssistanceInput | undefined = expiredAssistance
+        ? { type: 'open', target: 'IDE-05' }
+        : assistanceState
+          ? this.assistanceInput(request)
+          : legacyDialogIsIdle && event.type === 'user.text'
+            ? this.assistanceInput(request, assistanceStepForText(event.payload.text))
+            : legacyDialogIsIdle &&
+                event.type === 'user.voice' &&
+                assistanceStepForAudio(event.payload.mediaId)
+              ? this.assistanceInput(request)
+              : undefined;
+      if (assistanceInput && this.d.assistance && this.d.assistanceStates) {
+        const initial = assistanceState ?? this.entryState(request, assistanceInput);
+        if (initial) {
+          const result = await runAssistanceTurn(assistanceInput, {
+            port: this.d.assistance,
+            state: initial,
+            sessionId: request.sessionId,
+            context: {
+              correlationId: request.correlationId,
+              idempotencyKey: idempotencyKeyFor(request.sessionId, request.event.id),
+            },
+          });
+          emit({ type: 'status.typing', payload: { state: 'stop' } });
+          if (result.ok) {
+            // Persist precisely the domain transition result; initial CPF is never part of it.
+            this.d.assistanceStates.set(request.sessionId, result.value.state);
+            for (const body of result.value.replies) emit(body);
+          } else {
+            emit({
+              type: 'message.text',
+              payload: { text: 'Esta demonstração está indisponível no momento.' },
+            });
+          }
+          return;
+        }
+      }
       const input = await this.toInput(request);
       if (input) {
         const step = await this.decide(request, input);
@@ -133,6 +220,43 @@ export class HandleTurn implements TurnRunner {
     } finally {
       record.finish();
     }
+  }
+
+  private assistanceInput(
+    request: ChatbotRequest,
+    matched?: { id: string },
+  ): AssistanceInput | undefined {
+    const event = request.event;
+    switch (event.type) {
+      case 'user.text':
+        return { type: 'text', text: event.payload.text };
+      case 'user.quick_reply':
+        return { type: 'quick_reply', target: event.payload.optionId };
+      case 'user.flow_submit':
+        return { type: 'flow_submit', flowId: event.payload.flowId, data: event.payload.data };
+      case 'user.voice':
+        return {
+          type: 'voice',
+          mediaId: event.payload.mediaId,
+          durationMs: event.payload.durationMs,
+        };
+      default:
+        return matched ? { type: 'open', target: matched.id } : undefined;
+    }
+  }
+
+  private entryState(request: ChatbotRequest, input: AssistanceInput): AssistanceState | undefined {
+    if (input.type === 'text') {
+      const step = assistanceStepForText(input.text);
+      if (!step) return undefined;
+      // Let the turn apply the gate after reading the initial personal request,
+      // preserving dependent data separately from a later identity CPF message.
+      return { journeyId: step.journeyId, screenId: step.id, gateApproved: false };
+    }
+    if (input.type === 'voice' && assistanceStepForAudio(input.mediaId)) {
+      return assistanceEntry(input.mediaId).state;
+    }
+    return undefined;
   }
 
   private async toInput(request: ChatbotRequest): Promise<Input | undefined> {

@@ -1,6 +1,54 @@
 # Checklist: chatbot
 
-Última atualização: 2026-10-11
+Última atualização: 2026-10-13
+
+## Correção da entrada da experiência — 2026-10-13
+
+- [x] Saudações comuns abrem `ENT-02` e o catálogo dos três serviços; acesso pessoal pelo menu exige CPF antes de continuar
+- [x] Sucesso do CPF em `IDE-03` usa “Continuar pedido”, dentro do limite de 20 caracteres; preserva os dois destinos/ações com IDs de botão distintos e resolução pela tela atual
+- [x] Regressões de saudação, catálogo, gate e resposta válida após CPF; suíte chatbot 597/597 e typecheck aprovados
+- [ ] Aceite completo dos 247 estados e fidelidade do atlas: continua nas Tasks 9 e 10
+
+## Plano WhatsApp Assistance Experience — Task 2
+
+- [x] Catálogo funcional determinístico derivado de `docs/prototypes/whatsapp-experience/catalog.js` com 24 grupos/247 IDs, exclusão do legado, exceção CPF-only `IDE`, artefato JSON sincronizado e teste de deriva por execução do IIFE canônico
+- [x] Transições puras das jornadas com gate CPF, descoberta pública, quick replies válidos/obsoletos, destinos inválidos e sem guardar CPF inicial
+- [x] Parser de dependente limitado a nome, CPF, nascimento e parentesco explicitamente informados (inclui “meu filho João … CPF dele é … ele nasceu …”); correção preserva os outros campos e não infere sexo/gênero
+
+## Plano WhatsApp Assistance Experience — Task 3
+
+- [x] Gate demonstrativo aceita somente 11 dígitos ASCII ou CPF com pontuação canônica, normaliza para 11 dígitos sem checksum/lookup, retorna passo e estado sincronizados, libera jornadas pessoais apenas após formato aceito e descarta a entrada bruta
+
+## Plano WhatsApp Assistance Experience — Task 4
+
+- [x] `AssistancePort` tipado e separado de `ServicesPort`, com leituras e comandos confirmados publicados para consumo da Task 5
+- [x] `MockAssistance` volátil por `sessionId`, fixtures fictícias determinísticas, TTL/capacidade configurados, cópias isoladas, `Result` idempotente e cache FIFO limitada a 256 chaves por sessão
+- [x] Composição manual injeta e expõe a porta de assistência; testes de isolamento, expiração, capacidade, idempotência, mutações, falhas e composição
+
+## Plano WhatsApp Assistance Experience — Task 5
+
+- [x] Orquestração das jornadas catalogadas para texto, quick reply, Flow, áudio de fixture e abertura, preservando o diálogo legado e o tratamento silencioso de `flow_data_exchange`
+- [x] Validação estrita de Flow, tela atual e destinos canônicos; mutações somente no envio confirmado da revisão e falhas mantêm a tela atual
+- [x] Gate CPF persiste apenas `{journeyId, screenId, gateApproved}`, retoma o destino pessoal após aprovação e bloqueia leitura/escrita em qualquer tela protegida sem gate
+- [x] Operações tipadas dedicadas para endereço (estado atual + solicitação pendente de verificação), assistência funeral e preferências opcionais; telefone e sexo biológico obrigatórios no dependente
+- [x] Documentos limitados a `CON-07`, `UTI-09` e `CAN-08`; áudio restrito a IDs determinísticos do catálogo, sem transcrição ou upload
+- [x] Regressões de sessão, idempotência, leitura após escrita, falha sem transição de sucesso, validação, autorização e compatibilidade com o legado
+- [x] Verificação final: 578 testes do chatbot, typecheck, build, dependency-cruiser, ESLint dos arquivos alterados e `git diff --check`
+
+## Plano WhatsApp Assistance Experience — Task 7
+
+- [x] 46 Flows JSON versionados para todos os estados `list`, `form` e `review`, gerados do catálogo e servidos pelo chatbot; cópias web sincronizadas e validadas pelo schema/runtime; revisão/correção mantém valores comuns, mascara CPF e não reutiliza draft em outro fluxo
+- [x] Escolha de lista validada por índice e destino canônico; correção de revisão retorna sem mutação e preserva os dados anteriores; placeholder de seleção rejeitado; mutação terminal é executada uma única vez
+- [x] Quatro IDs de áudio do catálogo continuam sendo os únicos cenários aceitos pelo chatbot
+
+## Plano WhatsApp Assistance Experience — Task 9
+
+- [x] Expiração distingue sessão ausente/expirada e usa TTL `>=`: IDE-05 é emitida no próximo turno, descarta o gate/rascunho e não executa submit antigo. Testes HTTP na fronteira exata e após TTL. Seleção válida PLA-02 preserva modalidade até PLA-06; confirmação reconsulta dependentes e bloqueia Individual incompatível. Sem alteração antes do aceite e replay testados. Suíte chatbot 636/636, typecheck/lint/build aprovados.
+- [x] Checkpoint parcial: confirmação textual PLA/CAN mantém a jornada ativa (RED→GREEN); CPF inválido, entradas compartilhadas e proveniência do formulário testados pelo driver HTTP. Chatbot 633/633, protocol 93/93, resilience 63/63, gateway 177/177; typecheck/lint/build/depcruise aprovados. Auditoria global segue vermelha, sem aceite dos 247 estados.
+- [ ] Aceite completo dos 247 IDs pendente. Removida a whitelist do baseline anterior (55 IDs na lista, embora o ledger dissesse 54). Audit HTTP separado e estrito: `pnpm --filter @seguradora/chatbot exec vitest run --config src/test/catalog-audit.config.mjs`; lê screenId após ações reais, sem direct-open/injeção. Checkpoint atual com fixtures canônica e sem dependentes: 233 estados observados, 14 não observados; falha de transição PLA-08, zero rótulos acima do limite. O teste estrito continua vermelho e o alcance não comprova todos os predicados/mutações.
+- [x] Subset HTTP: correção efetiva de nascimento DEP-14→DEP-16→DEP-17, confirmação única e preservação dos demais campos; cancelamento/replay, retorno humano, leitura do adapter após mutação, isolamento, unavailable/retry, expiração, quatro áudios e documentos com retorno canônico. Suíte chatbot 604/604; logs/eventos do dependente sem CPF-canário e zero chamadas legadas nos cenários de assistência. Isso não comprova leitura dinâmica por todas as telas de cliente nem E2E de todas as mutações.
+- [x] Exceção IDE: IDE-01 em chat e IDE-08 com único submit terminal; fixture web IDE-08 sincronizada mecanicamente. Entrada de texto desconhecida inicial/ativa não oferece menu legado; ServicesPort e regressões internas preservadas.
+- [ ] Smoke atualizado da assistência observado 7/7 após rebuild atual (393 ms): catálogo com exatamente três serviços, gate CPF, documento do contrato pelo adapter e replay na pilha local. Consolidar alterações e regressões no checkpoint; o smoke não equivale ao aceite dos 247 estados.
 
 ## Estrutura
 
@@ -35,6 +83,10 @@
 - [x] Fonte única dos Flows em `src/domain/flows/` com teste de deriva contra as cópias da web
 
 ## Qualidade
+
+- [x] Identificação por CPF digitado no chat (2026-10-14): mensagem inteira após trim, somente 11 dígitos ASCII ou formato canônico, sem checksum; erro preserva pedido e nova tentativa. Retomada mantém plano/dados do dependente enquanto o estado volátil existir; Flow antigo não libera gate e IDE-06 não confirma operações. Suíte chatbot 661/661, tipos e build verificados.
+
+- [x] DES-01 reúne serviços, detalhes, planos e condições em um único Flow; validação estrita da conclusão e plano preservado após o gate CPF. Verificação de 2026-10-13: 645 testes chatbot passando; aceite geral das Tasks 9–10 permanece pendente.
 
 - [x] Testes unitários (domain e application)
 - [x] Testes do diálogo com o classificador real (mock LLM) e frases digitadas por estado (`src/infra/typed-journeys.test.ts`)

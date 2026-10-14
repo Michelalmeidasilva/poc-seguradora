@@ -1,0 +1,72 @@
+{
+  "version": "7.1",
+  "screens": [
+    {
+      "id": "REVIEW",
+      "title": "Solicitar atualização",
+      "terminal": true,
+      "success": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "Confira os dados que serão enviados para verificação."
+          },
+          {
+            "type": "TextInput",
+            "name": "postal",
+            "label": "postal",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "address",
+            "label": "address",
+            "visible": false
+          },
+          {
+            "type": "TextInput",
+            "name": "city",
+            "label": "city",
+            "visible": false
+          },
+          {
+            "type": "TextSubheading",
+            "text": "Novo endereço"
+          },
+          {
+            "type": "TextBody",
+            "text": "CEP: ${form.postal}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Endereço: ${form.address}"
+          },
+          {
+            "type": "TextBody",
+            "text": "Cidade e estado: ${form.city}"
+          },
+          {
+            "type": "EmbeddedLink",
+            "text": "Corrigir",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "correction": true
+              }
+            }
+          },
+          {
+            "type": "Footer",
+            "label": "Enviar solicitação",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

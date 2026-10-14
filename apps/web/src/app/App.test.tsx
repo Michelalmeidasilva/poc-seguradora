@@ -62,6 +62,9 @@ const flowItem = {
 const mock = vi.hoisted(() => ({
   items: [] as unknown[],
   tab: 'active' as 'active' | 'other-tab',
+  sendText: vi.fn(),
+  sessionId: undefined as string | undefined,
+  hasPendingSend: false,
   sendFlowSubmit: (() => undefined) as (...a: unknown[]) => void,
 }));
 
@@ -72,10 +75,12 @@ vi.mock('../chat/useChat', () => ({
       typing: false,
       connection: 'online',
       lastSeq: 0,
+      sessionId: mock.sessionId,
       seen: {},
     } as ChatState,
     tab: mock.tab,
-    sendText: vi.fn(),
+    hasPendingSend: mock.hasPendingSend,
+    sendText: mock.sendText,
     sendChoice: vi.fn(),
     sendVoice: vi.fn(),
     sendFlowSubmit: (...a: unknown[]) => mock.sendFlowSubmit(...a),
@@ -91,12 +96,15 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
   mock.items = [];
   mock.tab = 'active';
+  mock.sendText.mockClear();
+  mock.sessionId = undefined;
+  mock.hasPendingSend = false;
 });
 
 describe('App', () => {
   it('renders the chat screen', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: /assistente seguradora/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /mensagem/i })).toBeInTheDocument();
   });
 
@@ -106,10 +114,124 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('ignores an invalid theme value', () => {
+  it('uses the prototype dark theme when the query value is invalid', () => {
     window.history.replaceState(null, '', '/?theme=neon');
     render(<App />);
-    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('starts an empty active conversation once when the connection is online', () => {
+    const { rerender } = render(<App />);
+    rerender(<App />);
+    expect(mock.sendText).toHaveBeenCalledTimes(1);
+    expect(mock.sendText).toHaveBeenCalledWith('Oi');
+  });
+
+  it('does not restart restored conversations or a conversation owned by another tab', () => {
+    mock.items = [flowItem];
+    const { unmount } = render(<App />);
+    expect(mock.sendText).not.toHaveBeenCalled();
+    unmount();
+    mock.items = [];
+    mock.tab = 'other-tab';
+    render(<App />);
+    expect(mock.sendText).not.toHaveBeenCalled();
+  });
+
+  it('replaces an obsolete main menu after the backend session has reset', () => {
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          type: 'message.quick_replies',
+          payload: {
+            text: 'Escolha uma opção:',
+            options: [
+              { id: 'menu.quote', title: 'Fazer cotação' },
+              { id: 'menu.policies', title: 'Minhas apólices' },
+              { id: 'menu.claim', title: 'Abrir sinistro' },
+            ],
+          },
+        },
+      },
+    ];
+    render(<App />);
+    expect(mock.sendText).toHaveBeenCalledWith('Oi');
+  });
+
+  it('starts the assistance welcome again when its previous backend session has reset', () => {
+    mock.items = [
+      {
+        ...flowItem,
+        event: {
+          ...flowItem.event,
+          type: 'message.quick_replies',
+          payload: {
+            text: 'Como posso ajudar?',
+            options: [{ id: 'DES-01', title: 'Conhecer produtos' }],
+          },
+        },
+      },
+      {
+        kind: 'notice',
+        id: 'reset-2026-10-13',
+        ts: '2026-10-13T12:00:00.000Z',
+        tone: 'info',
+        text: 'Uma nova conversa foi iniciada.',
+      },
+    ];
+    render(<App />);
+    expect(mock.sendText).toHaveBeenCalledWith('Oi');
+  });
+
+  it.each(['sending', 'sent'])(
+    'does not duplicate a greeting already being replayed after reset (%s)',
+    (status) => {
+      mock.sessionId = 'initial-session';
+      const { rerender } = render(<App />);
+      mock.items = [
+        {
+          kind: 'user',
+          id: 'greeting-in-flight',
+          ts: '2026-10-13T12:00:00.000Z',
+          status,
+          content: { type: 'text', text: 'Oi' },
+        },
+        {
+          kind: 'notice',
+          id: 'reset-2026-10-13',
+          ts: '2026-10-13T12:00:00.000Z',
+          tone: 'info',
+          text: 'Uma nova conversa foi iniciada.',
+        },
+      ];
+      mock.sessionId = 'recovered-session';
+      mock.hasPendingSend = true;
+      rerender(<App />);
+      expect(mock.sendText).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('does not mistake a restored sent message for an active transport replay', () => {
+    mock.items = [
+      {
+        kind: 'user',
+        id: 'historical-greeting',
+        ts: '2026-10-13T12:00:00.000Z',
+        status: 'sent',
+        content: { type: 'text', text: 'Oi' },
+      },
+      {
+        kind: 'notice',
+        id: 'reset-2026-10-13',
+        ts: '2026-10-13T12:00:00.000Z',
+        tone: 'info',
+        text: 'Uma nova conversa foi iniciada.',
+      },
+    ];
+    render(<App />);
+    expect(mock.sendText).toHaveBeenCalledWith('Oi');
   });
 
   it('opens the flow sheet from the flow button of a chat message and closes it', async () => {

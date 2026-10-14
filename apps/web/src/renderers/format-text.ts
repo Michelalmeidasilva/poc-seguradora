@@ -10,6 +10,7 @@ type Rule = { kind: 'block' | 'mono' | 'bold' | 'italic' | 'strike'; re: RegExp 
 const RULES: Rule[] = [
   { kind: 'block', re: /```([\s\S]+?)```/u },
   { kind: 'mono', re: /(?<![\p{L}\p{N}`])`(?=\S)([^`\n]+?)(?<=\S)`(?![\p{L}\p{N}`])/u },
+  { kind: 'bold', re: /(?<![\p{L}\p{N}*])\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*(?![\p{L}\p{N}*])/u },
   { kind: 'bold', re: /(?<![\p{L}\p{N}*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\p{L}\p{N}*])/u },
   { kind: 'italic', re: /(?<![\p{L}\p{N}_])_(?=\S)([^_\n]+?)(?<=\S)_(?![\p{L}\p{N}_])/u },
   { kind: 'strike', re: /(?<![\p{L}\p{N}~])~(?=\S)([^~\n]+?)(?<=\S)~(?![\p{L}\p{N}~])/u },

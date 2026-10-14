@@ -11,6 +11,27 @@ afterEach(() => {
 });
 
 describe('Layout', () => {
+  it('presents review sections with distinct labels and values without splitting colons in values', () => {
+    const { container } = renderInFlow(
+      <Layout review />,
+      flowOf([
+        { type: 'TextBody', text: 'Confira antes de confirmar.' },
+        { type: 'TextSubheading', text: 'Pessoa' },
+        { type: 'TextBody', text: 'Nome: Ana Lima' },
+        { type: 'TextBody', text: 'Nascimento: 2012-05-20' },
+        { type: 'TextSubheading', text: 'Atendimento' },
+        { type: 'TextBody', text: 'Horário: 10:30' },
+        { type: 'TextCaption', text: 'Conteúdo demonstrativo.' },
+      ]),
+    );
+    expect(container.querySelectorAll('.flow-review-section')).toHaveLength(2);
+    expect(container.querySelector('.flow-review-line span')).toHaveTextContent('Nome');
+    expect(container.querySelector('.flow-review-line strong')).toHaveTextContent('Ana Lima');
+    expect(screen.getByText('10:30')).toBeInTheDocument();
+    expect(screen.getByText('20/05/2012')).toBeInTheDocument();
+    expect(screen.getByText('Confira antes de confirmar.')).toBeInTheDocument();
+    expect(screen.getByText('Conteúdo demonstrativo.').closest('.flow-review-section')).toBeNull();
+  });
   it('renders visible children and skips unknown types', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderInFlow(
