@@ -23,7 +23,7 @@
           },
           {
             "type": "TextBody",
-            "text": "Data efetiva neste cenário: 10/10/2026"
+            "text": "Data efetiva : 10/10/2026"
           },
           {
             "type": "TextBody",
@@ -43,7 +43,7 @@
           },
           {
             "type": "TextBody",
-            "text": "Restituição neste cenário: Sem saldo a restituir"
+            "text": "Restituição : Sem saldo a restituir"
           },
           {
             "type": "TextBody",

@@ -16,7 +16,7 @@
     biologicalSex: '',
     cancelReason: '',
     postal: '01000-000',
-    address: 'Rua Exemplo, 100',
+    address: 'Rua das Flores, 100',
     city: 'São Paulo / SP',
     funeralCity: 'São Paulo',
     funeralState: 'SP',
@@ -141,13 +141,13 @@
     return `<div class="bubble ${user ? 'user' : ''}"><p>${format(text)}</p>${extra}<div class="timestamp">9:41${user ? '<span class="ticks">✓✓</span>' : ''}</div></div>`;
   }
   function audioMarkup() {
-    return `<div class="audio-bubble"><button type="button" data-audio aria-label="Reproduzir transcrição demonstrativa">▶</button><div class="wave" aria-hidden="true">${[8, 13, 20, 10, 24, 17, 9, 15, 21, 12, 8, 20, 17, 9, 23, 14, 9, 17, 22, 12].map((height) => `<i style="height:${height}px"></i>`).join('')}</div><span class="audio-label">0:18</span></div>`;
+    return `<div class="audio-bubble"><button type="button" data-audio aria-label="Reproduzir áudio">▶</button><div class="wave" aria-hidden="true">${[8, 13, 20, 10, 24, 17, 9, 15, 21, 12, 8, 20, 17, 9, 23, 14, 9, 17, 22, 12].map((height) => `<i style="height:${height}px"></i>`).join('')}</div><span class="audio-label">0:18</span></div>`;
   }
   function documentMarkup(names, mini = false) {
     return names
       .map(
         (name) =>
-          `<div class="document-card"><span class="doc-icon">PDF</span><div><strong>${escape(name)}.pdf</strong><small>Documento demonstrativo · PDF</small></div></div>${mini ? '' : `<button class="wa-action" data-document="${escape(name)}">Abrir documento</button>`}`,
+          `<div class="document-card"><span class="doc-icon">PDF</span><div><strong>${escape(name)}.pdf</strong><small>Documento do plano · PDF</small></div></div>${mini ? '' : `<button class="wa-action" data-document="${escape(name)}">Abrir documento</button>`}`,
       )
       .join('');
   }
@@ -162,7 +162,7 @@
   }
   function renderChat(step) {
     let html =
-      '<div class="chat-day">Hoje</div><p class="secure-notice">Conversa de demonstração · use apenas dados fictícios</p>';
+      '<div class="chat-day">Hoje</div>';
     if (step.user)
       html += step.mode === 'audio' ? bubble('', true, audioMarkup()) : bubble(step.user, true);
     let extras = step.mode === 'document' ? documentMarkup(step.documents) : '';
@@ -241,7 +241,7 @@
     if (flow.note) content += `<div class="flow-alert">${escape(flow.note)}</div>`;
     content += '<p id="flow-error" class="flow-error" role="alert" hidden></p>';
     $('overlay').innerHTML =
-      `<form id="flow-form" class="sheet" aria-label="${escape(flow.title)}"><div class="sheet-handle"></div><header class="sheet-header"><div><h3>${escape(flow.title)}</h3><p>${step.mode === 'list' ? 'Selecione uma opção para continuar' : step.mode === 'review' ? 'Confira as informações antes de confirmar' : 'Preencha os dados solicitados'}</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${escape(flow.submit)}</button>${flow.correction ? `<button type="button" class="sheet-secondary" data-go="${flow.correction}">${escape(flow.secondaryLabel || 'Corrigir pela conversa')}</button>` : ''}<p class="flow-note">Digio · experiência estruturada no WhatsApp</p></footer></form>`;
+      `<form id="flow-form" class="sheet" aria-label="${escape(flow.title)}"><div class="sheet-handle"></div><header class="sheet-header"><div><h3>${escape(flow.title)}</h3><p>${step.mode === 'list' ? 'Selecione uma opção para continuar' : step.mode === 'review' ? 'Confira as informações antes de confirmar' : 'Preencha os dados solicitados'}</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${escape(flow.submit)}</button>${flow.correction ? `<button type="button" class="sheet-secondary" data-go="${flow.correction}">${escape(flow.secondaryLabel || 'Corrigir pela conversa')}</button>` : ''}<p class="flow-note">DIGIO Care</p></footer></form>`;
     $('overlay').hidden = false;
     $('flow-form').addEventListener('input', (event) => {
       if (step.mode !== 'form') return;
@@ -266,7 +266,7 @@
           const raw = data.get(field.name);
           if (field.type === 'file') {
             if (raw && raw.size > 10 * 1024 * 1024) {
-              $('flow-error').textContent = 'Use um arquivo de até 10 MB nesta demonstração.';
+              $('flow-error').textContent = 'Use um arquivo de até 10 MB.';
               $('flow-error').hidden = false;
               return;
             }
@@ -298,15 +298,15 @@
     const titles = ['Conhecer produtos', 'Detalhes do serviço', 'Planos e comparação', 'Condições do plano', 'Concluir descoberta'];
     const buttons = ['Ver detalhes', 'Ver planos', 'Ver condições', 'Continuar', 'Concluir'];
     let content;
-    if (page === 0) content = paragraph('Explore os três serviços, veja os detalhes e compare os planos sem sair deste Flow.') + options('service', d.services.map((item, i) => ({ ...item, description: step.flow.choices[i].detail })), service) + paragraph(d.note);
+    if (page === 0) content = paragraph('Explore os três serviços, veja os detalhes e compare os planos sem sair deste Flow.') + options('service', d.services.map((item, i) => ({ ...item, description: step.flow.choices[i].detail })), service);
     if (page === 1) {
       const chosen = d.services.find((item) => item.id === service);
-      content = `<h4>${escape(chosen.title)}</h4>${paragraph(chosen.description)}<div class="flow-alert">${escape(chosen.note)}</div>${paragraph('Use Voltar para conhecer outro serviço. Todas as etapas continuam neste mesmo Flow.')}`;
+      content = `<h4>${escape(chosen.title)}</h4>${paragraph(chosen.description)}${paragraph('Use Voltar para conhecer outro serviço. Todas as etapas continuam neste mesmo Flow.')}`;
     }
-    if (page === 2) content = '<h4>Comparação de planos</h4>' + paragraph(d.comparison) + options('modality', d.plans, modality) + paragraph(d.note);
-    if (page === 3) content = summary + paragraph(d.conditions) + paragraph(d.note);
+    if (page === 2) content = '<h4>Comparação de planos</h4>' + paragraph(d.comparison) + options('modality', d.plans, modality);
+    if (page === 3) content = summary + paragraph(d.conditions);
     if (page === 4) content = summary + paragraph('Você pode concluir a descoberta ou iniciar uma contratação. Iniciar não contrata nem cobra: primeiro será necessário informar o CPF e revisar os dados e condições.') + options('intent', d.outcomes.map((item) => ({ id: item.id, title: item.label })), discoveryState.intent);
-    $('overlay').innerHTML = `<form id="flow-form" class="sheet" aria-label="${escape(titles[page])}"><div class="sheet-handle"></div><header class="sheet-header">${page ? '<button type="button" class="sheet-close" data-discovery-back aria-label="Voltar">←</button>' : ''}<div><h3>${escape(titles[page])}</h3><p>Explore sem sair deste Flow</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${buttons[page]}</button><p class="flow-note">Digio · experiência estruturada no WhatsApp</p></footer></form>`;
+    $('overlay').innerHTML = `<form id="flow-form" class="sheet" aria-label="${escape(titles[page])}"><div class="sheet-handle"></div><header class="sheet-header">${page ? '<button type="button" class="sheet-close" data-discovery-back aria-label="Voltar">←</button>' : ''}<div><h3>${escape(titles[page])}</h3><p>Explore sem sair deste Flow</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer"><button type="submit" class="sheet-primary">${buttons[page]}</button><p class="flow-note">DIGIO Care</p></footer></form>`;
     $('overlay').hidden = false;
     $('flow-form').querySelector('[data-discovery-back]')?.addEventListener('click', () => {
       discoveryState.page--;
@@ -338,12 +338,13 @@
   function renderInspector(step, group) {
     $('screen-title').textContent = step.title;
     $('screen-status').innerHTML =
-      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : ['CAD', 'PRE'].includes(group.code) ? 'Proposta a validar' : 'Percurso principal'}</span>`;
+      `<span class="status-tag ${step.alternative ? 'alternative' : ''}">${step.alternative ? 'Variação / exceção' : ['CAD', 'PRE'].includes(group.code) ? 'Atendimento' : 'Percurso principal'}</span>`;
     $('screen-intent').textContent = interpolate(step.intent);
     $('screen-behavior').textContent = interpolate(step.behavior).replace(/\*\*/g, '');
     $('screen-component').textContent = modeLabels[step.mode];
-    $('screen-rule').textContent = step.rule;
-    $('journey-decision').textContent = group.decision;
+    $('screen-rule').hidden = true;
+    $('screen-rule').previousElementSibling.hidden = true;
+    $('journey-decision').closest('.decision-box').hidden = true;
     const links = [
       ...step.actions,
       ...(step.flow?.target ? [{ label: step.flow.submit, target: step.flow.target }] : []),
@@ -422,7 +423,7 @@
     $('gallery').innerHTML = groups
       .map(
         (group) =>
-          `<header class="gallery-heading"><div><h3>${group.code} · ${escape(group.title)}</h3><p>${group.steps.length} estados · ${escape(group.decision)}</p></div></header><div class="gallery-grid">${group.steps.map((step) => `<article class="gallery-card"><header><span>${step.id}</span><span>${step.alternative ? 'Variação' : modeLabels[step.mode].split(' · ')[0]}</span></header><h4>${escape(step.title)}</h4><div class="mini-phone ${light ? 'light-wa' : ''}"><div class="mini-header"><span class="wa-avatar">d</span><span>Digio Assistências ✓</span></div><div class="mini-chat">${step.user ? bubble(step.user, true, '', true) : ''}${bubble(step.bot, false, step.documents ? documentMarkup(step.documents, true) : actionsMarkup(step.actions, true), true)}</div>${galleryFlow(step)}</div><button class="gallery-open" data-gallery-go="${step.id}">Abrir interação · ${step.id}</button></article>`).join('')}</div>`,
+          `<header class="gallery-heading"><div><h3>${group.code} · ${escape(group.title)}</h3><p>${group.steps.length} etapas de atendimento</p></div></header><div class="gallery-grid">${group.steps.map((step) => `<article class="gallery-card"><header><span>${step.id}</span><span>${step.alternative ? 'Variação' : modeLabels[step.mode].split(' · ')[0]}</span></header><h4>${escape(step.title)}</h4><div class="mini-phone ${light ? 'light-wa' : ''}"><div class="mini-header"><span class="wa-avatar">d</span><span>DIGIO Care ✓</span></div><div class="mini-chat">${step.user ? bubble(step.user, true, '', true) : ''}${bubble(step.bot, false, step.documents ? documentMarkup(step.documents, true) : actionsMarkup(step.actions, true), true)}</div>${galleryFlow(step)}</div><button class="gallery-open" data-gallery-go="${step.id}">Abrir interação · ${step.id}</button></article>`).join('')}</div>`,
       )
       .join('');
   }
@@ -446,7 +447,7 @@
     }
     $('document-title').textContent = title;
     $('document-content').innerHTML =
-      `<div class="document-content"><p><strong>Digio · ${escape(title)}</strong></p><p>Este documento representa o ponto de acesso ao conteúdo completo na experiência do cliente.</p><p>Produto: Serviços de Assistência.<br>Contrato demonstrativo: final 2048.<br>Participante: Ana Silva.<br>Data demonstrativa: 10/10/2026.</p><p>No produto real, o arquivo será gerado pelo sistema responsável e vinculado à versão correta das condições, ao contrato ou à solicitação.</p></div>`;
+      `<div class="document-content"><p><strong>DIGIO Care · ${escape(title)}</strong></p><p>Produto: Serviços de Assistência.<br>Contrato: final 2048.<br>Participante: Ana Silva.<br>Data: 10/10/2026.</p></div>`;
     $('document-dialog').showModal();
   }
   document.addEventListener('click', (event) => {
@@ -470,7 +471,7 @@
     const documentButton = event.target.closest('[data-document]');
     if (documentButton) showDocument(documentButton.dataset.document);
     if (event.target.closest('[data-audio]'))
-      toast('Transcrição demonstrativa: quero incluir minha filha na assistência.');
+      toast('Transcrição: quero incluir minha filha na assistência.');
   });
   const move = (delta) => {
     const step = index[current];
@@ -577,7 +578,7 @@
         { user: true, text },
         {
           user: false,
-          text: 'Recebi a correção. Nesta demonstração, você pode escrever “a data correta é 12/03/2014” ou “o nome é Maria Silva”. Outros dados precisam ser verificados pelo produto.',
+          text: 'Recebi a correção. Informe a data de nascimento ou o nome para atualizar os dados.',
         },
       );
     } else if (/cancel/.test(clean)) {
@@ -622,7 +623,7 @@
         { user: true, text },
         {
           user: false,
-          text: 'Dados recebidos na demonstração. Você pode abrir a revisão para conferir, ou continuar preenchendo pelo formulário.',
+          text: 'Dados recebidos. Você pode abrir a revisão para conferir, ou continuar preenchendo pelo formulário.',
         },
       );
     } else
@@ -630,7 +631,7 @@
         { user: true, text },
         {
           user: false,
-          text: 'Esta é uma conversa demonstrativa. Use os botões desta tela ou escreva uma necessidade, como “incluir dependente”, “ver documentos” ou “resolver pagamento”.',
+          text: 'Escolha uma opção ou escreva como podemos ajudar: incluir um dependente, ver documentos ou consultar pagamentos.',
         },
       );
     renderChat(step);

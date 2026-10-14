@@ -139,14 +139,14 @@ const baseFixture = (): SessionState => ({
     },
   ],
   documents: [
-    { id: 'DOC-ADESAO-DEMO', title: 'Termo demonstrativo de adesão', status: 'available' },
-    { id: 'DOC-CONDICOES-DEMO', title: 'Condições demonstrativas do serviço', status: 'available' },
-    { id: 'DOC-COMPROVANTE-DEMO', title: 'Comprovante demonstrativo', status: 'generating' },
+    { id: 'DOC-ADESAO-DEMO', title: 'Termo de adesão', status: 'available' },
+    { id: 'DOC-CONDICOES-DEMO', title: 'Condições do serviço', status: 'available' },
+    { id: 'DOC-COMPROVANTE-DEMO', title: 'Comprovante de contratação', status: 'generating' },
   ],
   billing: {
     status: 'demonstrative',
     reference: 'REF-DEMO-001',
-    message: 'Informação demonstrativa; nenhuma cobrança foi realizada.',
+    message: 'Consulte as informações de cobrança do seu contrato.',
   },
   preferences: {
     contactChannel: 'whatsapp',
@@ -155,7 +155,7 @@ const baseFixture = (): SessionState => ({
     optionalDocs: true,
     optionalBenefits: false,
   },
-  currentAddress: { postal: '01000-000', address: 'Rua Demonstrativa, 100', city: 'São Paulo/SP' },
+  currentAddress: { postal: '01000-000', address: 'Rua das Flores, 100', city: 'São Paulo/SP' },
   requests: [],
   dependentSequence: 0,
   requestSequence: 0,
@@ -315,7 +315,7 @@ export class MockAssistance implements AssistancePort {
     if (!command.confirmed) return fail('invalid');
     return this.mutate(sessionId, ctx, 'renewAssistance', (state) => {
       return ok(
-        structuredClone(this.addRequest(state, 'renewal', 'Renovação demonstrativa registrada.')),
+        structuredClone(this.addRequest(state, 'renewal', 'Pedido de renovação recebido.')),
       );
     });
   }
@@ -331,7 +331,7 @@ export class MockAssistance implements AssistancePort {
           this.addRequest(
             state,
             'address_update',
-            'Solicitação demonstrativa de atualização cadastral recebida para verificação.',
+            'Solicitação de atualização cadastral recebida.',
           ),
         ),
       );
@@ -351,7 +351,7 @@ export class MockAssistance implements AssistancePort {
           this.addRequest(
             state,
             'funeral_assistance',
-            'Solicitação demonstrativa de assistência funeral recebida.',
+            'Solicitação de assistência funeral recebida.',
           ),
         ),
       ),
@@ -369,7 +369,7 @@ export class MockAssistance implements AssistancePort {
       const request = this.addRequest(
         state,
         'cancellation',
-        'Cancelamento demonstrativo confirmado.',
+        'Solicitação de cancelamento recebida.',
       );
       state.contract.status = 'cancelled';
       return ok(structuredClone(request));
@@ -387,9 +387,9 @@ export class MockAssistance implements AssistancePort {
       state.billing = {
         status: 'demonstrative',
         reference: `REG-DEMO-${state.requestSequence + 1}`,
-        message: 'Regularização demonstrativa registrada; nenhum pagamento foi realizado.',
+        message: 'Pedido de regularização recebido.',
       };
-      this.addRequest(state, 'billing_regularization', 'Regularização demonstrativa registrada.');
+      this.addRequest(state, 'billing_regularization', 'Pedido de regularização recebido.');
       return ok(structuredClone(state.billing));
     });
   }

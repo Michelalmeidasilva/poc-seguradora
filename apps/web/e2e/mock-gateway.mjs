@@ -14,9 +14,17 @@ const fixture = (name) => {
 };
 const COTACAO_FLOW = fixture('cotacao.flow.json');
 const DEMO_FLOW = fixture('demo-componentes.flow.json');
-const catalog = JSON.parse(readFileSync(new URL('../../chatbot/src/domain/assistance-catalog.generated.json', import.meta.url)));
-const audioReplies = new Map(catalog.groups.flatMap((group) => group.steps)
-  .filter((step) => step.mode === 'audio').map((step) => [step.id, step.bot]));
+const catalog = JSON.parse(
+  readFileSync(
+    new URL('../../chatbot/src/domain/assistance-catalog.generated.json', import.meta.url),
+  ),
+);
+const audioReplies = new Map(
+  catalog.groups
+    .flatMap((group) => group.steps)
+    .filter((step) => step.mode === 'audio')
+    .map((step) => [step.id, step.bot]),
+);
 const FLOW_EVENTS = new Set(['user.flow_submit', 'user.flow_data_exchange']);
 
 const uuid = () => crypto.randomUUID();
@@ -80,7 +88,10 @@ function reply(session, event) {
       return;
     }
     if (event.type === 'user.voice') {
-      publish(session, text(audioReplies.get(event.payload.mediaId) ?? 'Use um áudio demonstrativo disponível.'));
+      publish(
+        session,
+        text(audioReplies.get(event.payload.mediaId) ?? 'Use um áudio demonstrativo disponível.'),
+      );
       return;
     }
     if (event.type === 'user.quick_reply') {
@@ -185,7 +196,7 @@ function reply(session, event) {
         payload: {
           flowId: 'demo',
           body: 'Conheça todos os componentes.',
-          ctaLabel: 'Abrir demonstração',
+          ctaLabel: 'Abrir formulário',
           flowJson: DEMO_FLOW,
         },
       });
@@ -206,7 +217,10 @@ function reply(session, event) {
     } else if (said === 'sessao') {
       session.valid = false;
       publish(session, text('Sessão invalidada.'));
-    } else if (event.type === 'user.text' && /(?:\b\d{11}\b|\b\d{3}\.\d{3}\.\d{3}-\d{2}\b)/.test(event.payload.text)) {
+    } else if (
+      event.type === 'user.text' &&
+      /(?:\b\d{11}\b|\b\d{3}\.\d{3}\.\d{3}-\d{2}\b)/.test(event.payload.text)
+    ) {
       publish(session, text('Recebi sua mensagem. Vamos continuar com segurança.'));
     } else {
       publish(

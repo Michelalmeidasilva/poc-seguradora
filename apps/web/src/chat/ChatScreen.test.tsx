@@ -32,7 +32,7 @@ const api = (over: Partial<ChatApi> = {}): ChatApi => ({
 describe('ChatScreen', () => {
   it('shows the header with the assistant name and the connection state', () => {
     render(<ChatScreen chat={api({ state: { ...initialState(), connection: 'online' } })} />);
-    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /DIGIO Care/i })).toBeInTheDocument();
     expect(screen.getByText(/online/i)).toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe('ChatScreen', () => {
     it('offers four deterministic audio scenarios without opening the microphone', async () => {
       const chat = api();
       render(<ChatScreen chat={chat} />);
-      await userEvent.click(screen.getByRole('button', { name: /áudio demonstrativo/i }));
+      await userEvent.click(screen.getByRole('button', { name: /mensagem de áudio/i }));
       for (const id of ['AUD-01', 'AUD-03', 'AUD-04', 'AUD-05']) {
         expect(screen.getByRole('button', { name: new RegExp(id) })).toBeInTheDocument();
       }

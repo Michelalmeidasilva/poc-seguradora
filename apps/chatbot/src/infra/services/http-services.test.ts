@@ -65,7 +65,7 @@ describe('HttpServices happy paths', () => {
     const r = await makeServices().listPolicies('12345678901', ctx);
     expect(r.ok && r.value.map((p) => [p.numero, p.produto, p.status, p.vigenciaFim])).toEqual([
       ['AP-1001', 'AUTO', 'ATIVA', '2026-12-31'],
-      ['AP-1002', 'RESIDENCIAL', 'VENCIDA', '2025-12-31'],
+      ['AP-1002', 'VIDA', 'VENCIDA', '2025-12-31'],
       ['AP-1003', 'VIDA', 'CANCELADA', '2026-06-30'],
     ]);
   });

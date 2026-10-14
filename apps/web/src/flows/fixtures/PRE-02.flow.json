@@ -15,7 +15,7 @@
         "children": [
           {
             "type": "TextBody",
-            "text": "Selecione os avisos opcionais que deseja receber neste exemplo."
+            "text": "Selecione os avisos opcionais que deseja receber."
           },
           {
             "type": "OptIn",

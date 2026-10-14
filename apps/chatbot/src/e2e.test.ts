@@ -235,16 +235,10 @@ describe('chatbot end to end (fake internal services)', () => {
     expect(textsOf(privateStart.events)).toContain('11 dígitos');
     const cpfForm = await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
     expect(cpfForm.events.some((event) => event.type === 'message.flow')).toBe(false);
-    const malformed = await turn(
-      bot.url,
-      textReq('12345', { session: 'private' }),
-    );
+    const malformed = await turn(bot.url, textReq('12345', { session: 'private' }));
     expect(textsOf(malformed.events)).toContain('11 dígitos');
     await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
-    const accepted = await turn(
-      bot.url,
-      textReq('52998224725', { session: 'private' }),
-    );
+    const accepted = await turn(bot.url, textReq('52998224725', { session: 'private' }));
     expect(findEvent(accepted.events, 'message.flow').payload.flowId).toBe('CON-01');
     expect(
       JSON.stringify([privateStart.events, cpfForm.events, malformed.events, accepted.events]),
@@ -307,10 +301,7 @@ describe('chatbot end to end (fake internal services)', () => {
     const gated = await turn(bot.url, textReq(oneSentence, { session }));
     expect(textsOf(gated.events)).toContain('11 dígitos');
     await turn(bot.url, choiceReq('IDE-08', { session }));
-    const acceptedCpf = await turn(
-      bot.url,
-      textReq(cpfCanary, { session }),
-    );
+    const acceptedCpf = await turn(bot.url, textReq(cpfCanary, { session }));
     expect(textsOf(acceptedCpf.events)).not.toContain(cpfCanary);
 
     const captured = await turn(bot.url, textReq(oneSentence, { session }));
@@ -697,7 +688,7 @@ describe('chatbot end to end (fake internal services)', () => {
         payload: { flowId: 'demo', data: { nome: canary } },
       },
     } as unknown as Parameters<typeof turn>[1]);
-    expect(textsOf(submitted.events)).toContain('Nenhum dado foi guardado');
+    expect(textsOf(submitted.events)).toContain('Recebi seu formulário');
     expect(JSON.stringify(submitted.events)).not.toContain(canary);
   });
 

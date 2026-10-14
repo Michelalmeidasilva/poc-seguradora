@@ -5,7 +5,7 @@ import { z } from 'zod';
 const policyNumber = z.string().regex(/^AP-\d{3,6}$/);
 const claimProtocol = z.string().regex(/^SN-\d{3,6}$/);
 
-const product = z.enum(['AUTO', 'RESIDENCIAL', 'VIDA']);
+const product = z.enum(['AUTO', 'VIDA']);
 const money = z.object({ valorCentavos: z.number().int(), moeda: z.literal('BRL') });
 const coverage = z.object({
   codigo: z.string(),

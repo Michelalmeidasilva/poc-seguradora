@@ -70,10 +70,6 @@
             "text": "Cancelamento: Primeira data permitida pelo produto"
           },
           {
-            "type": "TextCaption",
-            "text": "Assistência não é plano de saúde. Condições ilustrativas, sujeitas à validação."
-          },
-          {
             "type": "EmbeddedLink",
             "text": "Corrigir",
             "on-click-action": {

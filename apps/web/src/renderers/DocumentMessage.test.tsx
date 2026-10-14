@@ -36,9 +36,7 @@ describe('DocumentMessage', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Resumo do contrato' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveAccessibleDescription(
-      'Este é um conteúdo demonstrativo. Nenhum documento real está disponível.',
-    );
+    expect(dialog).toHaveAccessibleDescription('Consulte as informações do seu documento.');
     expect(screen.getByRole('button', { name: 'Fechar' })).toHaveFocus();
 
     await user.keyboard('{Escape}');

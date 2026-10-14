@@ -25,7 +25,6 @@ type QuickOption = Extract<
 
 const PRODUCT_LABEL: Record<Product, string> = {
   AUTO: 'Auto',
-  RESIDENCIAL: 'Residencial',
   VIDA: 'Vida',
 };
 const POLICY_STATUS_LABEL: Record<PolicyStatus, string> = {
@@ -195,9 +194,9 @@ export const demoFlow = (): ReplyBody[] => [
     type: 'message.flow',
     payload: {
       flowId: 'demo',
-      header: 'Demonstração',
-      body: 'Este é um formulário de demonstração, com dados fictícios, que mostra os componentes de um Flow. Toque no botão para abrir. Nenhum dado preenchido será guardado.',
-      ctaLabel: 'Abrir demonstração',
+      header: 'Sua solicitação',
+      body: 'Preencha os dados da solicitação e escolha como deseja continuar.',
+      ctaLabel: 'Abrir formulário',
       flowJson: structuredClone(demoFlowJson),
     },
   },
@@ -205,7 +204,7 @@ export const demoFlow = (): ReplyBody[] => [
 
 /** Takes no argument on purpose: the submitted values are never echoed back. */
 export const demoFlowReceived = (): ReplyBody[] => [
-  text('Recebi o formulário de demonstração. Nenhum dado foi guardado.'),
+  text('Recebi seu formulário. Acompanhe os próximos passos por aqui.'),
   quick('Posso ajudar com outra coisa?', [MENU_OPTION]),
 ];
 

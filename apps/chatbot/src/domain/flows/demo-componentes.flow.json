@@ -9,14 +9,14 @@
   "screens": [
     {
       "id": "INICIO",
-      "title": "Demonstração",
+      "title": "Sua solicitação",
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
           { "type": "TextHeading", "text": "Todos os componentes" },
-          { "type": "TextSubheading", "text": "Um Flow de demonstração" },
+          { "type": "TextSubheading", "text": "Dados do atendimento" },
           { "type": "TextBody", "text": "Este Flow percorre *todos* os componentes do motor." },
-          { "type": "TextCaption", "text": "Dados fictícios, apenas para teste." },
+          { "type": "TextCaption", "text": "Confira os dados antes de continuar." },
           {
             "type": "RichText",
             "text": [

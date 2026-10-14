@@ -38,13 +38,6 @@ const Submit = z.discriminatedUnion('produto', [
     ano: z.coerce.number().int().min(1980).max(2100),
     cep,
   }),
-  z.object({
-    produto: z.literal('RESIDENCIAL'),
-    ...common,
-    cep,
-    tipoImovel: z.enum(['CASA', 'APARTAMENTO']),
-    valorImovel: reais,
-  }),
   z.object({ produto: z.literal('VIDA'), ...common, capital: reais }),
 ]);
 
@@ -68,17 +61,6 @@ export function parseQuoteSubmit(data: unknown): Result<QuoteRequest, string> {
         produto: 'AUTO',
         cliente,
         dados: { veiculo: { marca: s.marca, modelo: s.modelo, ano: s.ano }, cep: s.cep },
-        coberturas: [],
-      });
-    case 'RESIDENCIAL':
-      return ok({
-        produto: 'RESIDENCIAL',
-        cliente,
-        dados: {
-          cep: s.cep,
-          tipoImovel: s.tipoImovel,
-          valorImovelCentavos: toCentavos(s.valorImovel),
-        },
         coberturas: [],
       });
     case 'VIDA':

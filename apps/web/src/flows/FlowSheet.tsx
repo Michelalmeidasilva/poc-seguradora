@@ -314,7 +314,7 @@ function SheetFrame({
         {footerRef ? (
           <div className="flow-sheet__footer">
             <div ref={footerRef} />
-            <p className="flow-sheet__note">Digio · experiência estruturada no WhatsApp</p>
+            <p className="flow-sheet__note">DIGIO Care</p>
           </div>
         ) : null}
       </div>

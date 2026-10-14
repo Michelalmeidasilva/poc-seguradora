@@ -9,9 +9,9 @@
     mode: 'chat',
     actions: [],
     alternative: false,
-    ...options,
+   ...options,
   });
-  const variant = (options = {}) => ({ alternative: true, ...options });
+  const variant = (options = {}) => ({ alternative: true,...options });
   // Explicit customer copy, never silent truncation: quick-reply titles are limited to 20.
   // IDs, intent and destinations are unchanged; the runtime and offline atlas share this source.
   const actionTitles = {
@@ -22,13 +22,13 @@
     'Solicitar atendimento': 'Pedir atendimento',
     'Serviços de assistência': 'Ver assistências',
     'Continuar com autenticação': 'Informar CPF',
-    'Abrir demonstração segura': 'Abrir demonstração',
+    'Continuar pagamento': 'Continuar pagamento',
     'Informar dados que faltam': 'Completar dados',
-    'Simular dado informado': 'Simular dado',
-    'Simular correção de data': 'Simular nova data',
+    'Informar dado': 'Informar dado',
+    'Corrigir data': 'Corrigir data',
     'Substituir pessoa do pedido': 'Trocar pessoa',
     'Ver revisão atualizada': 'Ver nova revisão',
-    'Simular correção informada': 'Simular correção',
+    'Corrigir informação': 'Corrigir informação',
     'Revisar alteração permitida': 'Revisar alteração',
     'Corrigir pela conversa': 'Corrigir no chat',
     'Acompanhar agendamento': 'Ver agendamento',
@@ -50,15 +50,15 @@
   const action = (label, target) => ({ label: actionTitles[label] ?? label, target });
   const form = (title, fields, submit, target, extra = {}) => ({
     mode: 'form',
-    flow: { title, fields, submit, target, ...extra },
+    flow: { title, fields, submit, target,...extra },
   });
   const list = (title, choices, submit, extra = {}) => ({
     mode: 'list',
-    flow: { title, choices, submit, ...extra },
+    flow: { title, choices, submit,...extra },
   });
   const review = (title, sections, submit, target, extra = {}) => ({
     mode: 'review',
-    flow: { title, sections, submit, target, ...extra },
+    flow: { title, sections, submit, target,...extra },
   });
   const person = [
     ['Nome', '{{name}}'],
@@ -112,7 +112,7 @@
     {
       title: 'Efeitos da inclusão',
       rows: [
-        ['Valor adicional', 'Sem adicional neste exemplo'],
+        ['Valor adicional', 'Sem adicional '],
         ['Mensalidade total', 'R$ 39,90'],
         ['Inclusão efetiva', '10/10/2026'],
         ['Telemedicina', 'Conforme condições do benefício'],
@@ -143,7 +143,7 @@
         'ENT-02',
         'Boas-vindas',
         'Oi',
-        'Olá! Sou o assistente virtual da Digio para assistências. Como posso ajudar você hoje?',
+        'Olá! Sou o assistente virtual da DIGIO Care. Como posso ajudar você hoje?',
         {
           actions: [
             action('Conhecer produtos', 'DES-01'),
@@ -158,7 +158,7 @@
         'Quero cancelar.',
         'Você quer cancelar um contrato existente ou desistir de uma solicitação que ainda não concluiu?',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Cancelar contrato', 'CAN-01'), action('Desistir do pedido', 'RET-08')],
         },
       ),
@@ -166,14 +166,14 @@
         'ENT-04',
         'Informação sem identificação',
         'O que são os serviços de assistência?',
-        'É um pacote de serviços e benefícios, conforme o plano. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
+        'É um pacote de serviços e benefícios, conforme o plano.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver opções', 'DES-05'), action('Tirar dúvidas', 'FAQ-01')] },
       ),
       screen(
         'ENT-05',
         'Pedido com dados pessoais',
         'Quem está no meu plano?',
-        'Para consultar as pessoas vinculadas nesta demonstração, informe um CPF fictício. Depois continuamos seu pedido.',
+        'Para consultar as pessoas vinculadas, informe um CPF. Depois continuamos seu pedido.',
         { actions: [action('Informar CPF', 'IDE-08')] },
       ),
       screen(
@@ -187,9 +187,9 @@
         'ENT-07',
         'Nenhum contrato localizado',
         'Quero ver minha assistência.',
-        'Não localizei uma assistência vinculada nesta demonstração. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.',
+        'Não localizei uma assistência vinculada. Se você contratou recentemente, podemos consultar uma solicitação ou pedir ajuda.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Ver solicitações', 'SOL-01'),
             action('Pedir ajuda', 'HUM-01'),
@@ -227,16 +227,16 @@
         'Tópicos de dúvidas',
         'Quero tirar uma dúvida.',
         'Sobre qual assunto você quer saber?',
-        { ...list('Central de dúvidas', [
+        {...list('Central de dúvidas', [
           { label: 'Informações gerais', detail: 'O que são os serviços de assistência', target: 'FAQ-02' },
           { label: 'Como utilizar', detail: 'Telemedicina, funeral e farmácia', target: 'FAQ-03' },
           { label: 'Coberturas', detail: 'O que está incluído e o que não está', target: 'FAQ-04' },
           { label: 'Carências', detail: 'Consultar condições do plano', target: 'FAQ-05' },
         ], 'Ver resposta'), actions: [action('Menu', 'NAV-01')] },
       ),
-      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas. Não é um plano de saúde.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-02', 'Informações gerais', 'O que é a assistência?', 'Os serviços de assistência incluem exclusivamente Telemedicina, Assistência Funeral com suporte ao titular e dependentes, e Assistência Farmácia com descontos em redes credenciadas.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-03', 'Como utilizar', 'Como uso os serviços?', 'A Telemedicina é acessada no ambiente do prestador; a Assistência Funeral oferece suporte ao titular e dependentes; a Assistência Farmácia dá acesso a descontos em redes credenciadas. Disponibilidade e instruções específicas devem ser consultadas para o seu plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01'), action('Consultar meus benefícios', 'UTI-01')] }),
-      screen('FAQ-04', 'Coberturas', 'Quais são as coberturas?', 'Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. A assistência não é plano de saúde e não cobre procedimentos médicos, hospitalares ou ambulatoriais. Os limites e condições dependem do plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
+      screen('FAQ-04', 'Coberturas', 'Quais são as coberturas?', 'Os serviços são Telemedicina, Assistência Funeral para titular e dependentes, e descontos em redes credenciadas de farmácia. Consulte os benefícios incluídos no seu plano.', { actions: [action('Voltar aos tópicos', 'FAQ-01')] }),
       screen('FAQ-05', 'Carências', 'Quais são as carências?', 'A carência aplicável depende do serviço e das condições vigentes do seu plano. Não vou estimar um prazo: consulte seu contrato ou autentique para verificarmos a condição aplicável.', { actions: [action('Ver contrato', 'CON-01'), action('Voltar aos tópicos', 'FAQ-01')] }),
     ],
   );
@@ -335,7 +335,7 @@
         'Não quero continuar esta inclusão.',
         'Você quer abandonar esta solicitação de inclusão? Seu contrato atual não será alterado.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Abandonar solicitação', 'RET-08'),
             action('Continuar inclusão', 'DEP-04'),
@@ -350,28 +350,28 @@
     'Identificação e sessão',
     'Começar',
     'CPF obrigatório antes de qualquer jornada pessoal, com retorno ao pedido original.',
-    'Qualquer CPF no formato de 11 dígitos ou XXX.XXX.XXX-XX libera a sessão demonstrativa. Sem consulta cadastral ou verificação de identidade.',
+    'Informe seu CPF para consultar seus serviços e continuar seu pedido.',
     'Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.',
     [
       screen(
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.',
+        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
         { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
-        'Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.',
+        'Informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
         { actions: [] },
       ),
       screen(
         'IDE-03',
-        'Acesso demonstrativo liberado',
+        'Acesso liberado',
         'CPF informado.',
-        'Formato do CPF aceito. O acesso demonstrativo está liberado. Vamos continuar sua solicitação.',
+        'Tudo pronto. Vamos continuar seu pedido.',
         { actions: [action('Continuar solicitação', 'CON-02'), action('Ver contrato', 'CON-02')] },
       ),
       screen(
@@ -380,7 +380,7 @@
         'Não consegui continuar.',
         'Confira o formato do CPF: use 11 números ou o formato XXX.XXX.XXX-XX.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Tentar novamente', 'IDE-08'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -388,14 +388,14 @@
         'IDE-05',
         'Sessão expirada',
         'Quero continuar.',
-        'Sua sessão demonstrativa expirou. Os dados da solicitação estão salvos nesta página. Informe o CPF novamente para continuar.',
-        { ...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
+        'Sua sessão expirou. Informe seu CPF para continuar seu pedido.',
+        {...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-06',
         'Renovar acesso',
         'Quero confirmar o cancelamento.',
-        'Informe o CPF para renovar o acesso demonstrativo. Depois, você poderá revisar o cancelamento.',
+        'Informe seu CPF para continuar a revisão do cancelamento.',
         {
           actions: [action('Pedir ajuda', 'HUM-01')],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
@@ -406,13 +406,13 @@
         'Vínculo não reconhecido',
         'Esse contrato não é meu.',
         'Não vou exibir outros dados desse contrato. Podemos encaminhar a divergência para a equipe responsável.',
-        { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
+        {...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
       ),
       screen(
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.',
+        'Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.',
         { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
     ],
@@ -445,7 +445,7 @@
         'Compreensão parcial',
         'Áudio · 0:21',
         'Entendi o pedido de inclusão, mas não consegui confirmar a data de nascimento. Pode escrevê-la ou enviar outro áudio?',
-        { ...variant({ mode: 'audio' }), actions: [action('Informar por texto', 'DEP-04')] },
+        {...variant({ mode: 'audio' }), actions: [action('Informar por texto', 'DEP-04')] },
       ),
       screen(
         'AUD-04',
@@ -453,7 +453,7 @@
         'Áudio · 0:08',
         'Não consegui compreender este áudio. Você pode reenviar, escrever seu pedido ou falar com uma pessoa.',
         {
-          ...variant({ mode: 'audio' }),
+         ...variant({ mode: 'audio' }),
           actions: [action('Escrever pedido', 'ENT-02'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -485,7 +485,7 @@
     'Escolher',
     'Entender benefícios e comparar alternativas elegíveis, com a escolha nas mãos do cliente.',
     'Comparação neutra: mesmo destaque, nenhuma opção pré-selecionada.',
-    'Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.',
+    'Condições do serviço escolhido.',
     [
       screen(
         'DES-01',
@@ -560,7 +560,7 @@
         'DES-03',
         'Apresentação do produto',
         'Quero conhecer os serviços de assistência.',
-        'Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas. Não é um plano de saúde e não oferece cobertura para procedimentos médicos, hospitalares ou ambulatoriais.',
+        'Os serviços de assistência incluem somente três serviços: Telemedicina; Assistência Funeral, com suporte ao titular e aos dependentes; e Assistência Farmácia, com descontos em redes credenciadas.',
         { actions: [action('Ver benefícios', 'DES-04'), action('Ver planos', 'DES-05')] },
       ),
       screen(
@@ -574,7 +574,7 @@
         'DES-05',
         'Opções elegíveis',
         'Quero ver os planos.',
-        'Neste exemplo, há duas opções. Escolha uma para ver detalhes ou compare as diferenças.',
+        'Conheça os planos Individual e Familiar e escolha o que combina com você.',
         list(
           'Opções de assistência',
           [
@@ -592,16 +592,16 @@
         'DES-06',
         'Comparação neutra',
         'Qual é a diferença entre os planos?',
-        '**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.',
-        { actions: [action('Ver planos', 'DES-05'), action('Simular para mim', 'DES-07')] },
+        '**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.',
+        { actions: [action('Ver planos', 'DES-05'), action('Escolher meu plano', 'DES-07')] },
       ),
       screen(
         'DES-07',
-        'Dados para simulação',
-        'Quero simular.',
+        'Dados para contratação',
+        'Quero escolher um plano.',
         'Vamos coletar somente os dados necessários para consultar uma opção disponível.',
         form(
-          'Simular assistência',
+          'Escolher plano',
           [
             {
               name: 'composition',
@@ -619,7 +619,7 @@
         'DES-08',
         'Oferta consultada',
         'Quero o Familiar.',
-        '**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição deste exemplo: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
+        '**Serviços de Assistência Familiar**\nValor total: R$ 39,90/mês.\nComposição: titular e até 3 dependentes elegíveis.\nVocê poderá revisar carências, limites e pagamento antes de contratar.',
         {
           actions: [
             action('Revisar contratação', 'ADE-01'),
@@ -633,7 +633,7 @@
         'Isso cobre uma internação?',
         'Esta assistência não cobre procedimentos hospitalares. Ela não atende a essa necessidade. Posso explicar seus benefícios ou verificar outros produtos disponíveis.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Outros produtos', 'DES-01'), action('Falar com alguém', 'HUM-01')],
         },
       ),
@@ -649,7 +649,7 @@
         'Decisão adiada',
         'Vou pensar.',
         'Tudo bem. Você pode retomar por aqui. Consultaremos novamente preço e condições antes de contratar.',
-        { ...variant(), actions: [action('Menu', 'NAV-01')] },
+        {...variant(), actions: [action('Menu', 'NAV-01')] },
       ),
     ],
   );
@@ -660,20 +660,20 @@
     'Contratar',
     'Da escolha ao aceite, com participação opcional dos dependentes e resultado confirmado pelo sistema.',
     'Contratar no WhatsApp; dependentes podem entrar depois; resumo e aceite explícito.',
-    'Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço fictício de R$ 39,90.',
+    'Elegibilidade, documentos, cobrança e emissão dependem do produto. Preço de R$ 39,90.',
     [
       screen(
         'ADE-01',
         'Plano escolhido',
         'Quero contratar o Familiar.',
         'Você escolheu Serviços de Assistência Familiar. Vamos conferir os dados e condições antes de confirmar.',
-        { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-05')] },
+        { actions: [action('Continuar', 'ADE-02'), action('Rever planos', 'DES-01')] },
       ),
       screen(
         'ADE-02',
         'Identificação na adesão',
         'Vamos continuar.',
-        'Primeiro, informe um CPF fictício. Se sua sessão demonstrativa estiver válida, esta etapa será aproveitada.',
+        'Informe seu CPF para continuar a contratação.',
         {
           actions: [
             action('Continuar com autenticação', 'ADE-03'),
@@ -706,7 +706,7 @@
         'ADE-04',
         'Dependentes agora ou depois',
         'Dados conferidos.',
-        'Você pode incluir dependentes agora ou depois. Neste exemplo, o plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.',
+        'Você pode incluir dependentes agora ou depois. O plano permanece R$ 39,90/mês. Cada inclusão terá as condições e datas consultadas naquele momento.',
         { actions: [action('Incluir agora', 'DEP-04'), action('Incluir depois', 'ADE-05')] },
       ),
       screen(
@@ -755,7 +755,7 @@
           'ADE-07',
           {
             correction: 'ADE-03',
-            note: 'Assistência não é plano de saúde. Condições ilustrativas, sujeitas à validação.',
+            note: '',
           },
         ),
       ),
@@ -822,9 +822,9 @@
         'ADE-11',
         'Pessoa inelegível',
         'Posso continuar?',
-        'Uma condição de elegibilidade não foi atendida neste exemplo. Vou mostrar o critério informado pelo sistema antes de prosseguir.',
+        'Uma condição de elegibilidade não foi atendida. Vou mostrar o critério informado pelo sistema antes de prosseguir.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Rever dados', 'ADE-03'), action('Pedir esclarecimento', 'HUM-01')],
         },
       ),
@@ -834,7 +834,7 @@
         'Quero confirmar.',
         'As condições da oferta mudaram desde sua última revisão. Você precisa conferir a oferta atualizada antes de contratar.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Revisar oferta', 'ADE-06'), action('Deixar para depois', 'DES-11')],
         },
       ),
@@ -844,7 +844,7 @@
         'O pagamento foi confirmado?',
         'O pagamento está confirmado, mas a emissão ainda está em processamento. Não há confirmação de contrato emitido neste momento.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Acompanhar pedido', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -881,7 +881,7 @@
             },
             {
               label: 'Outro meio disponível',
-              detail: 'Exemplo de integração segura com a instituição',
+              detail: 'Pagamento seguro pela instituição',
               target: 'PAG-03',
             },
           ],
@@ -895,11 +895,11 @@
         'A autorização acontece no ambiente seguro da instituição. Sua contratação está salva e o resultado será consultado ao retornar.',
         {
           actions: [
-            action('Abrir demonstração segura', 'PAG-04'),
+            action('Continuar pagamento', 'PAG-04'),
             action('Retornar depois', 'RET-01'),
           ],
           behavior:
-            'Ação simula o retorno da etapa segura; não abre processadora ou coleta dados de cartão.',
+            'Continue na etapa de pagamento para consultar as opções disponíveis.',
         },
       ),
       screen(
@@ -944,7 +944,7 @@
         'Meu pagamento falhou.',
         'O pagamento não foi concluído. Os dados da contratação estão salvos. Você pode tentar novamente ou escolher outro meio disponível.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Tentar novamente', 'PAG-04'),
             action('Trocar pagamento', 'PAG-02'),
@@ -957,21 +957,21 @@
         'Nenhum meio elegível',
         'Quero pagar.',
         'Não há um meio de pagamento elegível disponível neste momento. Podemos registrar um pedido de atendimento.',
-        { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
+        {...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
       ),
       screen(
         'PAG-09',
         'Retorno após abandono',
         'Fechei a página de pagamento.',
         'Sua contratação está salva. Primeiro vamos consultar se houve autorização antes de retomar.',
-        { ...variant(), actions: [action('Consultar tentativa', 'PAG-05')] },
+        {...variant(), actions: [action('Consultar tentativa', 'PAG-05')] },
       ),
       screen(
         'PAG-10',
         'Pagamento duplicado evitado',
         'Cliquei duas vezes.',
         'Há uma tentativa vinculada à sua solicitação. Vou consultar essa operação, sem criar outra cobrança.',
-        { ...variant(), actions: [action('Ver resultado', 'PAG-05')] },
+        {...variant(), actions: [action('Ver resultado', 'PAG-05')] },
       ),
     ],
   );
@@ -1010,7 +1010,7 @@
         'Já posso usar?',
         'Seu contrato está aguardando ativação. A utilização depende da confirmação e das condições de cada benefício.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Acompanhar emissão', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1020,7 +1020,7 @@
         'Minha assistência está ativa?',
         'Há uma restrição registrada no contrato. Consulte o motivo e as ações disponíveis antes de utilizar os benefícios.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Consultar pendências', 'COB-01'),
             action('Pedir esclarecimento', 'HUM-01'),
@@ -1031,7 +1031,7 @@
         'CON-05',
         'Cancelamento agendado',
         'Quero ver minha assistência.',
-        'Seu cancelamento está agendado para 10/11/2026 neste exemplo. Os benefícios permanecem conforme as condições informadas até a data efetiva.',
+        'Seu cancelamento está agendado para 10/11/2026. Os benefícios permanecem conforme as condições informadas até a data efetiva.',
         { actions: [action('Ver cancelamento', 'CAN-09'), action('Ver documentos', 'CON-07')] },
       ),
       screen(
@@ -1040,7 +1040,7 @@
         'Serviços de Assistência encerrado',
         'Este contrato foi encerrado em 10/09/2026. Você pode consultar documentos e solicitações ainda disponíveis.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Ver documentos', 'CON-07'),
             action('Minhas solicitações', 'SOL-02'),
@@ -1065,7 +1065,7 @@
         'Não encontrei o termo.',
         'O documento ainda está sendo gerado. A solicitação permanece disponível para acompanhamento.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Acompanhar', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1073,9 +1073,9 @@
         'CON-09',
         'Nenhum contrato',
         'Meus contratos',
-        'Não há contratos disponíveis nesta demonstração. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.',
+        'Não há contratos disponíveis. Você pode acompanhar uma contratação em andamento ou conhecer os produtos.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver solicitação', 'SOL-08'), action('Conhecer produtos', 'DES-01')],
         },
       ),
@@ -1085,7 +1085,7 @@
         'Consultar contrato',
         'Não foi possível consultar o contrato agora. Tente novamente ou solicite ajuda. Nenhuma alteração foi realizada.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Tentar novamente', 'CON-01'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1093,7 +1093,7 @@
         'CON-11',
         'Troca de plano visível',
         'Quero ver meu plano.',
-        '**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026 neste exemplo. Até lá, permanece válido o plano atual.',
+        '**Plano atual:** Familiar · R$ 39,90/mês.\n**Próximo plano:** Individual · R$ 29,90/mês.\nTroca agendada para 10/11/2026. Até lá, permanece válido o plano atual.',
         { actions: [action('Ver agendamento', 'PLA-10'), action('Ver documentos', 'CON-07')] },
       ),
     ],
@@ -1105,13 +1105,13 @@
     'Gerenciar',
     'Jornada piloto: coleta conversacional, revisão estruturada e confirmação de uma pessoa por vez.',
     'Somente titular. Correções pela conversa, inclusive após inclusão quando permitido.',
-    'Campos obrigatórios, vagas, carências e custos precisam ser validados. O exemplo tem titular + até 3 dependentes.',
+    'Consulte os participantes, benefícios e condições do plano.',
     [
       screen(
         'DEP-01',
         'Pedido de inclusão',
         'Quero incluir minha filha.',
-        'Posso ajudar. Informe um CPF fictício para continuar. Depois mostramos o contrato e as condições demonstrativas para inclusão.',
+        'Posso ajudar. Informe seu CPF para consultar o contrato e incluir um dependente.',
         { actions: [action('Continuar inclusão', 'DEP-02')] },
       ),
       screen(
@@ -1135,7 +1135,7 @@
         'DEP-03',
         'Consultar vagas e condições',
         'Serviços de Assistência Familiar',
-        'Você tem 2 vagas disponíveis neste exemplo. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
+        'Você tem 2 vagas disponíveis. Pode informar os dados pela conversa ou preencher um formulário. Mostraremos as condições antes de confirmar.',
         {
           actions: [
             action('Informar na conversa', 'DEP-33'),
@@ -1165,20 +1165,20 @@
         'DEP-34',
         'Completar dados do dependente',
         'Quero concluir o cadastro.',
-        'Qual é o celular do João e qual sexo biológico ele informa? Esses dados não são inferidos. Use apenas dados fictícios nesta demonstração.',
+        'Qual é o celular do João e qual sexo biológico ele informa?',
         form('Dados complementares', [
           { name: 'phone', label: 'Celular do dependente', type: 'tel', placeholder: '(00) 00000-0000', required: true },
           { name: 'biologicalSex', label: 'Sexo biológico informado', type: 'select', choices: ['Selecione', 'Feminino', 'Masculino', 'Prefiro não informar'], required: true },
-        ], 'Revisar inclusão', 'DEP-06', { note: 'O legado solicita estes dados. Obrigatoriedade e opções precisam ser validadas pelo produto.', rule: 'Sexo biológico e celular são perguntados explicitamente e não são inferidos. A necessidade e a obrigatoriedade destes campos ainda dependem de validação do produto.' }),
+        ], 'Revisar inclusão', 'DEP-06', { note: '', rule: 'Sexo biológico e celular são perguntados explicitamente e não são inferidos. A necessidade e a obrigatoriedade destes campos ainda dependem de validação do produto.' }),
       ),
       screen(
         'DEP-04',
         'Coleta pela conversa',
         'Minha filha é Maria Silva, nasceu em 12/03/2014.',
-        'Recebi o nome, a data de nascimento e o parentesco. Falta o CPF exigido neste exemplo. Você pode informar por aqui.',
+        'Recebi o nome, a data de nascimento e o parentesco. Falta o CPF do dependente. Você pode informar por aqui.',
         {
           actions: [
-            action('Simular dado informado', 'DEP-06'),
+            action('Informar dado', 'DEP-06'),
             action('Preencher formulário', 'DEP-05'),
           ],
         },
@@ -1189,7 +1189,7 @@
         'Prefiro o formulário.',
         'Preencha os dados da pessoa que será incluída. Você poderá revisar tudo antes de confirmar.',
         form('Incluir dependente', dependentFields, 'Revisar inclusão', 'DEP-06', {
-          note: 'Use dados fictícios. Campos ilustrativos, sujeitos à validação do produto.',
+          note: '',
         }),
       ),
       screen(
@@ -1199,7 +1199,7 @@
         'Confira os dados e os efeitos da inclusão. Correções são feitas pela conversa.',
         review('Revisar inclusão', dependentReview(), 'Confirmar inclusão', 'DEP-08', {
           correction: 'DEP-14',
-          note: 'Confira a disponibilidade de cada benefício nas condições do produto.',
+          note: '',
         }),
       ),
       screen(
@@ -1240,7 +1240,7 @@
         'DEP-10',
         'Lista de participantes',
         'Quem está no meu plano?',
-        '**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis neste exemplo: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.',
+        '**Pessoas vinculadas**\nAna Silva · titular.\n{{name}} · filha.\nVagas disponíveis: 2.\nA disponibilidade para inclusão é consultada novamente a cada pedido.',
         {
           actions: [
             action('Incluir pessoa', 'DEP-01'),
@@ -1268,14 +1268,14 @@
         'Sequência interrompida',
         'Vou continuar depois.',
         'A inclusão de Maria foi concluída. João ainda não foi incluído. Podemos retomar a solicitação pendente quando você voltar.',
-        { ...variant(), actions: [action('Ver solicitações', 'SOL-02')] },
+        {...variant(), actions: [action('Ver solicitações', 'SOL-02')] },
       ),
       screen(
         'DEP-14',
         'Solicitar correção',
         'Corrigir dados',
         'Qual informação você quer corrigir? Podemos alterar apenas esse dado e preservar o restante.',
-        { actions: [action('Simular correção de data', 'DEP-16')] },
+        { actions: [action('Corrigir data', 'DEP-16')] },
       ),
       screen(
         'DEP-15',
@@ -1283,7 +1283,7 @@
         'Troque para minha outra filha.',
         'Você quer substituir a pessoa desta solicitação ou corrigir um dado de Maria?',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Substituir pessoa do pedido', 'DEP-04'),
             action('Corrigir um dado', 'DEP-14'),
@@ -1322,7 +1322,7 @@
         'Entender correção',
         'Maria Silva',
         'Qual informação precisa mudar e qual é o dado correto?',
-        { actions: [action('Simular correção informada', 'DEP-20')] },
+        { actions: [action('Corrigir informação', 'DEP-20')] },
       ),
       screen(
         'DEP-20',
@@ -1351,7 +1351,7 @@
                 ['Campo', 'Nascimento'],
                 ['Dado registrado', '12/03/2015'],
                 ['Dado correto', '12/03/2014'],
-                ['Efeito neste exemplo', 'Sem alteração de preço'],
+                ['Efeito ', 'Sem alteração de preço'],
               ],
             },
           ],
@@ -1380,7 +1380,7 @@
         'Preciso alterar o CPF.',
         'Esta alteração exige análise. Vou registrar a informação correta e vincular o pedido à inclusão original. Trocar a pessoa não será tratado automaticamente como correção.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Registrar pedido', 'HUM-08'), action('Acompanhar', 'SOL-03')],
         },
       ),
@@ -1390,7 +1390,7 @@
         'Quero incluir mais uma pessoa.',
         'Não há vagas disponíveis neste contrato. Você pode consultar os participantes ou verificar alternativas permitidas.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver participantes', 'DEP-10'), action('Ver planos', 'PLA-02')],
         },
       ),
@@ -1400,7 +1400,7 @@
         'Quero incluir Maria.',
         'Maria já está vinculada a este contrato. Você pode consultar seus benefícios ou corrigir um dado.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver benefícios', 'UTI-01'), action('Corrigir cadastro', 'DEP-18')],
         },
       ),
@@ -1409,15 +1409,15 @@
         'Dados inválidos',
         'Informei um CPF.',
         'Não foi possível validar o CPF informado. Confira o documento e envie a correção. Os outros dados estão preservados.',
-        { ...variant(), actions: [action('Corrigir pela conversa', 'DEP-14')] },
+        {...variant(), actions: [action('Corrigir pela conversa', 'DEP-14')] },
       ),
       screen(
         'DEP-28',
         'Pessoa inelegível',
         'Posso confirmar a inclusão?',
-        'A pessoa não atende ao critério de elegibilidade retornado pelo produto neste exemplo. Podemos revisar os dados ou pedir esclarecimento.',
+        'A pessoa não atende ao critério de elegibilidade retornado pelo produto. Podemos revisar os dados ou pedir esclarecimento.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Revisar dados', 'DEP-14'), action('Pedir esclarecimento', 'HUM-01')],
         },
       ),
@@ -1427,7 +1427,7 @@
         'Quero preencher a vaga que liberei.',
         'Existe uma restrição de nova inclusão após a exclusão anterior. A data e o alcance dessa restrição precisam ser consultados nas regras do produto.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver exclusão', 'EXC-06'), action('Pedir esclarecimento', 'HUM-01')],
         },
       ),
@@ -1436,7 +1436,7 @@
         'Inclusão agendada',
         'Foi incluída?',
         'A inclusão foi aceita e está agendada para a data informada pelo produto. Ainda não há confirmação de benefício disponível.\nProtocolo: DEP-2026-0320.',
-        { ...variant(), actions: [action('Acompanhar agendamento', 'SOL-05')] },
+        {...variant(), actions: [action('Acompanhar agendamento', 'SOL-05')] },
       ),
       screen(
         'DEP-31',
@@ -1444,7 +1444,7 @@
         'Deu certo?',
         'Não foi possível confirmar o resultado. Vamos consultar a solicitação original antes de tentar novamente.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Consultar solicitação', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1454,7 +1454,7 @@
         'Sou dependente e quero incluir minha irmã.',
         'A gestão de dependentes precisa ser realizada pelo titular. Você pode consultar o acesso aos seus próprios benefícios quando o produto permitir.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Consultar meus benefícios', 'UTI-01'),
             action('Informações gerais', 'ENT-04'),
@@ -1505,9 +1505,9 @@
               title: 'Pessoa e efeitos',
               rows: [
                 ['Pessoa', 'Maria Silva'],
-                ['Exclusão efetiva', '10/11/2026 neste exemplo'],
+                ['Exclusão efetiva', '10/11/2026 '],
                 ['Acesso aos benefícios', 'Até a data efetiva, conforme regras'],
-                ['Mensalidade', 'Sem redução neste exemplo'],
+                ['Mensalidade', 'Sem redução '],
                 ['Nova inclusão', 'Conforme restrições do produto'],
               ],
             },
@@ -1537,7 +1537,7 @@
         'EXC-06',
         'Resultado da exclusão',
         'Consultar resultado',
-        'A exclusão de Maria está agendada para 10/11/2026 neste exemplo.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.',
+        'A exclusão de Maria está agendada para 10/11/2026.\nProtocolo: EXC-2026-0091.\nA vaga só será apresentada como utilizável quando as regras permitirem.',
         { actions: [action('Ver agendamento', 'EXC-08'), action('Ver contrato', 'EXC-07')] },
       ),
       screen(
@@ -1563,7 +1563,7 @@
         'EXC-09',
         'Revisar desistência',
         'Quero desfazer.',
-        'Vou verificar o agendamento. Neste exemplo, Maria permanece vinculada e não há ajuste de preço para desfazer.',
+        'Vou verificar o agendamento. Maria permanece vinculada e não há ajuste de preço para desfazer.',
         {
           actions: [
             action('Confirmar manutenção', 'EXC-10'),
@@ -1591,7 +1591,7 @@
         'Quero desfazer a exclusão.',
         'A exclusão já foi efetivada. Podemos verificar uma nova inclusão, conforme vagas e regras atuais.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Consultar inclusão', 'DEP-03'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1601,7 +1601,7 @@
         'Pode manter Maria?',
         'Não foi possível confirmar a desistência do agendamento. O pedido precisa ser acompanhado antes de considerar o vínculo mantido.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Acompanhar', 'SOL-04'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1610,7 +1610,7 @@
         'Pessoa já excluída',
         'Excluir Maria',
         'Maria já foi excluída deste contrato. Você pode consultar o comprovante e a data efetiva.',
-        { ...variant(), actions: [action('Ver pedido', 'SOL-06')] },
+        {...variant(), actions: [action('Ver pedido', 'SOL-06')] },
       ),
     ],
   );
@@ -1668,7 +1668,7 @@
         'Como posso continuar?',
         'Para esta troca, é necessário resolver o vínculo da dependente conforme as regras. Você pode consultar a exclusão ou escolher outra alternativa.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Consultar exclusão', 'EXC-01'), action('Rever planos', 'PLA-02')],
         },
       ),
@@ -1685,7 +1685,7 @@
               rows: [
                 ['Atual', 'Familiar · R$ 39,90/mês'],
                 ['Novo', 'Individual · R$ 29,90/mês'],
-                ['Participantes', 'Somente titular neste cenário'],
+                ['Participantes', 'Somente titular '],
               ],
             },
             {
@@ -1744,7 +1744,7 @@
         'Meu plano mudou?',
         'Não foi possível confirmar a efetivação da troca. Consulte a situação atual do contrato ou solicite atendimento.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Consultar contrato', 'CON-02'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1754,7 +1754,7 @@
         'Quero mudar.',
         'Não há alternativas elegíveis para este contrato neste momento. Posso explicar as condições atuais ou encaminhar sua dúvida.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver contrato', 'CON-02'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -1886,8 +1886,8 @@
         'UTI-04',
         'Acesso disponível',
         'Posso acessar?',
-        'O acesso à telemedicina está disponível para Maria neste cenário. O atendimento acontece no ambiente do prestador.',
-        { actions: [action('Acessar demonstração', 'UTI-05'), action('Ver condições', 'DES-04')] },
+        'O acesso à telemedicina está disponível para Maria. O atendimento acontece no ambiente do prestador.',
+        { actions: [action('Acessar telemedicina', 'UTI-05'), action('Ver condições', 'DES-04')] },
       ),
       screen(
         'UTI-05',
@@ -1900,7 +1900,7 @@
         'UTI-06',
         'Situação do encaminhamento',
         'A consulta foi realizada?',
-        'O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada neste exemplo.',
+        'O sistema confirma apenas que o acesso foi disponibilizado. Não há confirmação de consulta realizada.',
         { actions: [action('Acessar novamente', 'UTI-04'), action('Falar com alguém', 'HUM-01')] },
       ),
       screen(
@@ -1909,7 +1909,7 @@
         'Já posso usar?',
         'Este benefício ainda está em carência. A data de liberação deve ser consultada nas condições do contrato. Outros benefícios podem ter situações diferentes.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Ver outros benefícios', 'UTI-01'),
             action('Pedir esclarecimento', 'HUM-01'),
@@ -1927,7 +1927,7 @@
         'UTI-09',
         'Identificação para benefício',
         'Ver identificação',
-        'Seu acesso demonstrativo ao benefício está disponível. A identificação real e a rede serão definidas com o parceiro.',
+        'Seu acesso ao benefício está disponível. Consulte as orientações para utilizar o serviço.',
         {
           mode: 'document',
           documents: ['Identificação do benefício'],
@@ -1938,9 +1938,9 @@
         'UTI-10',
         'Prestador indisponível',
         'O acesso não abriu.',
-        'O prestador está indisponível neste cenário. Você pode tentar novamente ou solicitar suporte.',
+        'O prestador está indisponível. Você pode tentar novamente ou solicitar suporte.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Tentar novamente', 'UTI-04'), action('Solicitar suporte', 'HUM-08')],
         },
       ),
@@ -2054,7 +2054,7 @@
         'FUN-08',
         'Recebimento confirmado',
         'Consultar resultado',
-        'O prestador confirmou o recebimento neste cenário.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.',
+        'O prestador confirmou o recebimento.\nProtocolo: FUN-2026-0082.\nA próxima orientação e a previsão de contato dependem do prestador.',
         { actions: [action('Acompanhar pedido', 'SOL-04'), action('Falar com alguém', 'HUM-01')] },
       ),
       screen(
@@ -2070,7 +2070,7 @@
         'O prestador recebeu?',
         'Ainda não há confirmação de recebimento. Para continuar, podemos consultar o pedido ou encaminhar você ao atendimento disponível.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Consultar pedido', 'SOL-04'), action('Contato humano', 'HUM-01')],
         },
       ),
@@ -2089,7 +2089,7 @@
         'COB-01',
         'Resumo financeiro',
         'Quero ver meus pagamentos.',
-        '**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nNeste cenário há 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
+        '**Serviços de Assistência Familiar**\nPróxima cobrança: R$ 39,90 em 10/11/2026.\nHá 1 parcela pendente. Você pode consultar o detalhe antes de pagar.',
         {
           actions: [
             action('Ver pendência', 'COB-02'),
@@ -2102,7 +2102,7 @@
         'COB-02',
         'Composição da cobrança',
         'Por que veio esse valor?',
-        'Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00 neste exemplo.\nSituação: em aberto.\nVencimento: 10/09/2026.',
+        'Parcela de setembro: R$ 39,90.\nPlano Familiar: R$ 39,90.\nAdicional de dependentes: R$ 0,00.\nSituação: em aberto.\nVencimento: 10/09/2026.',
         { actions: [action('Regularizar parcela', 'COB-03'), action('Não reconheço', 'COB-10')] },
       ),
       screen(
@@ -2115,7 +2115,7 @@
           [
             {
               label: 'Setembro de 2026',
-              detail: 'Vencimento 10/09 · R$ 39,90 neste exemplo',
+              detail: 'Vencimento 10/09 · R$ 39,90 ',
               target: 'COB-04',
             },
           ],
@@ -2126,7 +2126,7 @@
         'COB-04',
         'Meios disponíveis',
         'Setembro de 2026',
-        'Neste cenário há um meio de regularização disponível. A disponibilidade real depende do produto e da processadora.',
+        'Escolha o meio de pagamento para regularizar sua parcela.',
         list(
           'Regularizar parcela',
           [
@@ -2152,7 +2152,7 @@
               rows: [
                 ['Competência', 'Setembro de 2026'],
                 ['Valor atualizado', 'R$ 39,90'],
-                ['Encargos neste exemplo', 'R$ 0,00'],
+                ['Encargos ', 'R$ 0,00'],
                 ['Efeito no contrato', 'Consultar após baixa confirmada'],
               ],
             },
@@ -2192,7 +2192,7 @@
         'Pagamento não concluído',
         'O pagamento falhou.',
         'A tentativa não foi concluída. Podemos consultar os meios disponíveis para tentar novamente.',
-        { ...variant(), actions: [action('Ver meios', 'COB-04'), action('Pedir ajuda', 'HUM-01')] },
+        {...variant(), actions: [action('Ver meios', 'COB-04'), action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'COB-10',
@@ -2218,21 +2218,21 @@
         'Pagamento já reconhecido',
         'Quero pagar setembro.',
         'A parcela já está quitada. Não será criada outra tentativa. Você pode consultar o comprovante.',
-        { ...variant(), actions: [action('Ver comprovante', 'CON-07')] },
+        {...variant(), actions: [action('Ver comprovante', 'CON-07')] },
       ),
       screen(
         'COB-13',
         'Contrato encerrado',
         'Quero pagar uma pendência antiga.',
         'O contrato está encerrado. Precisamos verificar se essa parcela pode ser cobrada e quais meios são permitidos.',
-        { ...variant(), actions: [action('Solicitar análise', 'HUM-08')] },
+        {...variant(), actions: [action('Solicitar análise', 'HUM-08')] },
       ),
       screen(
         'COB-14',
         'Valor atualizado',
         'Quero confirmar o pagamento.',
         'O valor disponível mudou desde a última consulta. Revise a parcela atualizada antes de pagar.',
-        { ...variant(), actions: [action('Revisar valor', 'COB-05')] },
+        {...variant(), actions: [action('Revisar valor', 'COB-05')] },
       ),
     ],
   );
@@ -2268,7 +2268,7 @@
         'CAN-03',
         'Uma oferta opcional',
         'Quero cancelar porque está caro.',
-        'Há uma opção de menor valor elegível neste cenário: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.',
+        'Há uma opção de menor valor elegível: Individual, R$ 29,90/mês. Você pode comparar os efeitos ou seguir com o cancelamento.',
         { actions: [action('Ver alternativa', 'PLA-03'), action('Seguir cancelamento', 'CAN-05')] },
       ),
       screen(
@@ -2290,7 +2290,7 @@
               title: 'Encerramento',
               rows: [
                 ['Contrato', 'Serviços de Assistência Familiar'],
-                ['Data efetiva neste cenário', '10/10/2026'],
+                ['Data efetiva ', '10/10/2026'],
                 ['Acesso aos benefícios', 'Até a data efetiva consultada'],
                 ['Pessoas afetadas', 'Titular e dependentes'],
               ],
@@ -2299,7 +2299,7 @@
               title: 'Efeitos financeiros',
               rows: [
                 ['Próximas cobranças', 'Conforme cálculo do sistema'],
-                ['Restituição neste cenário', 'Sem saldo a restituir'],
+                ['Restituição ', 'Sem saldo a restituir'],
                 ['Documento', 'Termo após confirmação'],
               ],
             },
@@ -2327,7 +2327,7 @@
         'CAN-08',
         'Cancelamento concluído',
         'Consultar resultado',
-        '**Contrato encerrado**\nData efetiva neste cenário: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.',
+        '**Contrato encerrado**\nData efetiva: 10/10/2026.\nProtocolo: CAN-2026-0110.\nO termo de cancelamento está disponível.',
         {
           mode: 'document',
           documents: ['Termo de cancelamento'],
@@ -2338,9 +2338,9 @@
         'CAN-09',
         'Cancelamento agendado',
         'Meu cancelamento aconteceu?',
-        'O cancelamento está agendado para a primeira data permitida neste cenário. Até lá, consulte as condições de utilização e cobrança apresentadas na revisão.',
+        'O cancelamento está agendado para a primeira data permitida. Até lá, consulte as condições de utilização e cobrança apresentadas na revisão.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Ver agendamento', 'SOL-05'), action('Ver contrato', 'CON-05')],
         },
       ),
@@ -2348,9 +2348,9 @@
         'CAN-10',
         'Restituição em acompanhamento',
         'Tenho valor para receber?',
-        'Há uma restituição em acompanhamento neste cenário. O valor, destino e prazo serão os retornados pelo sistema financeiro, sem estimativas do assistente.',
+        'Há uma restituição em acompanhamento. O valor, destino e prazo serão os retornados pelo sistema financeiro, sem estimativas do assistente.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Acompanhar restituição', 'SOL-04'),
             action('Pedir esclarecimento', 'HUM-01'),
@@ -2362,21 +2362,21 @@
         'Sem oferta elegível',
         'Quero cancelar.',
         'Não há alternativa elegível para apresentar. Vamos revisar diretamente os efeitos do cancelamento.',
-        { ...variant(), actions: [action('Revisar efeitos', 'CAN-05')] },
+        {...variant(), actions: [action('Revisar efeitos', 'CAN-05')] },
       ),
       screen(
         'CAN-12',
         'Data ainda indisponível',
         'Quando termina?',
         'Não foi possível determinar a data e os efeitos agora. A solicitação precisa de resolução antes da confirmação.',
-        { ...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
+        {...variant(), actions: [action('Solicitar atendimento', 'HUM-08')] },
       ),
       screen(
         'CAN-13',
         'Motivo do cancelamento (opcional)',
         'Quero cancelar minha assistência.',
         'Se quiser, conte por que está cancelando. Sua resposta é opcional e não impede o cancelamento.',
-        { ...list('Motivo (opcional)', [
+        {...list('Motivo (opcional)', [
           { label: 'O valor não compensa', target: 'CAN-14' },
           { label: 'Não utilizei o benefício', target: 'CAN-14' },
           { label: 'Contratei outro serviço', target: 'CAN-14' },
@@ -2413,7 +2413,7 @@
         'REN-01',
         'Aviso de fim de vigência',
         'Recebi um aviso de renovação.',
-        'Seu contrato termina em 10/11/2026 neste cenário. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.',
+        'Seu contrato termina em 10/11/2026. Há uma opção de continuidade com novas condições. Você pode revisar antes de decidir.',
         { actions: [action('Revisar condições', 'REN-02'), action('Tirar uma dúvida', 'HUM-01')] },
       ),
       screen(
@@ -2428,8 +2428,8 @@
               title: 'Atual e próximo período',
               rows: [
                 ['Valor atual', 'R$ 39,90/mês'],
-                ['Novo valor neste exemplo', 'R$ 42,90/mês'],
-                ['Participantes', 'Mantidos, sujeitos à validação'],
+                ['Novo valor ', 'R$ 42,90/mês'],
+                ['Participantes', 'Mantidos'],
                 ['Benefícios', 'Conforme documento atualizado'],
                 ['Novo início', '11/11/2026'],
               ],
@@ -2485,28 +2485,28 @@
         'Contrato encerrado',
         'Não quero continuar.',
         'Sua decisão foi registrada. O contrato segue até a data final informada e será tratado conforme suas condições. Não houve aceite do novo período.',
-        { ...variant(), actions: [action('Ver vigência', 'CON-06')] },
+        {...variant(), actions: [action('Ver vigência', 'CON-06')] },
       ),
       screen(
         'REN-07',
         'Decisão adiada',
         'Vou decidir depois.',
         'Você pode retomar enquanto a opção estiver disponível. A falta de resposta não será registrada como aceite.',
-        { ...variant(), actions: [action('Minhas solicitações', 'SOL-02')] },
+        {...variant(), actions: [action('Minhas solicitações', 'SOL-02')] },
       ),
       screen(
         'REN-08',
         'Oferta expirada',
         'Quero renovar.',
         'A opção anterior expirou. Precisamos consultar as condições disponíveis agora.',
-        { ...variant(), actions: [action('Consultar opção atual', 'REN-02')] },
+        {...variant(), actions: [action('Consultar opção atual', 'REN-02')] },
       ),
       screen(
         'REN-09',
         'Condições mudaram',
         'Confirmar continuidade',
         'As condições mudaram desde a última revisão. Você precisa conferir novamente antes de aceitar.',
-        { ...variant(), actions: [action('Revisar condições', 'REN-02')] },
+        {...variant(), actions: [action('Revisar condições', 'REN-02')] },
       ),
     ],
   );
@@ -2526,7 +2526,7 @@
         'Para qual contrato deseja consultar os pedidos?',
         list(
           'Escolher contrato',
-          contracts.map((c) => ({ ...c, target: 'SOL-02' })),
+          contracts.map((c) => ({...c, target: 'SOL-02' })),
           'Ver solicitações',
         ),
       ),
@@ -2561,7 +2561,7 @@
         'SOL-04',
         'Em processamento',
         'Quero acompanhar o pedido.',
-        '**Solicitação em processamento**\nProtocolo: CAD-2026-0041 neste cenário.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.',
+        '**Solicitação em processamento**\nProtocolo: CAD-2026-0041.\nÚltima atualização: 10/10/2026.\nA previsão será exibida quando confirmada pela operação.',
         {
           actions: [
             action('Consultar atualização', 'SOL-06'),
@@ -2581,7 +2581,7 @@
         'SOL-06',
         'Pedido concluído',
         'Quero ver o resultado.',
-        '**Solicitação concluída neste cenário**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.',
+        '**Solicitação concluída**\nO resultado e os documentos correspondentes estão disponíveis. Consulte o detalhe do pedido para conferir seu efeito no contrato.',
         { actions: [action('Ver documentos', 'CON-07'), action('Ver histórico', 'SOL-09')] },
       ),
       screen(
@@ -2590,7 +2590,7 @@
         'Por que meu pedido não terminou?',
         'A solicitação não foi concluída. O motivo retornado pela operação será apresentado, com opções para corrigir ou solicitar ajuda.',
         {
-          ...variant(),
+         ...variant(),
           actions: [action('Corrigir pendência', 'DEP-14'), action('Pedir ajuda', 'HUM-01')],
         },
       ),
@@ -2599,7 +2599,7 @@
         'Nenhuma solicitação',
         'Meus pedidos',
         'Não há solicitações disponíveis para este contrato. Você pode consultar o contrato ou iniciar um novo pedido.',
-        { ...variant(), actions: [action('Ver contrato', 'CON-02'), action('Menu', 'NAV-01')] },
+        {...variant(), actions: [action('Ver contrato', 'CON-02'), action('Menu', 'NAV-01')] },
       ),
       screen(
         'SOL-09',
@@ -2619,7 +2619,7 @@
         'SOL-10',
         'Entrada por protocolo',
         'Protocolo DEP-2026-0318',
-        'Vou consultar o pedido correspondente após informar um CPF fictício.',
+        'Vou consultar o pedido correspondente após informar um CPF.',
         { actions: [action('Ver pedido', 'DEP-09'), action('Verificação necessária', 'IDE-01')] },
       ),
     ],
@@ -2657,14 +2657,14 @@
         'Aguardando atendimento',
         'Estou aguardando.',
         'Você está aguardando atendimento. A previsão aparece somente quando disponível. A solicitação anterior permanece preservada.',
-        { actions: [action('Simular início', 'HUM-04'), action('Ver meu pedido', 'SOL-04')] },
+        { actions: [action('Iniciar atendimento', 'HUM-04'), action('Ver meu pedido', 'SOL-04')] },
       ),
       screen(
         'HUM-04',
         'Pessoa assume',
         'Olá.',
         'Olá, Ana. Sou Carla, da equipe de atendimento. Recebi o contexto da sua solicitação de inclusão. Como posso continuar ajudando?',
-        { agent: 'Carla · atendimento', actions: [action('Simular conclusão', 'HUM-07')] },
+        { agent: 'Carla · atendimento', actions: [action('Concluir atendimento', 'HUM-07')] },
       ),
       screen(
         'HUM-05',
@@ -2672,7 +2672,7 @@
         'Preciso de atendimento.',
         'Nossa equipe está indisponível neste momento. Posso registrar seu pedido para continuar por aqui.',
         {
-          ...variant(),
+         ...variant(),
           actions: [
             action('Solicitar retorno', 'HUM-08'),
             action('Continuar autosserviço', 'NAV-01'),
@@ -2684,13 +2684,13 @@
         'Transferência indisponível',
         'Não consegui atendimento.',
         'Não foi possível iniciar a transferência agora. Podemos registrar um retorno com o contexto da conversa.',
-        { ...variant(), actions: [action('Registrar retorno', 'HUM-08')] },
+        {...variant(), actions: [action('Registrar retorno', 'HUM-08')] },
       ),
       screen(
         'HUM-07',
         'Atendimento concluído',
         'Obrigada.',
-        'Seu atendimento foi concluído neste cenário.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.',
+        'Seu atendimento foi concluído.\nProtocolo: HUM-2026-0042.\nOs próximos passos combinados permanecem disponíveis na solicitação.',
         {
           agent: 'Carla · atendimento',
           actions: [action('Ver solicitação', 'SOL-06'), action('Menu', 'NAV-01')],
@@ -2727,7 +2727,7 @@
         'Cliente não responde',
         'Voltei agora.',
         'O atendimento tentou continuar e está com a situação registrada. Vou consultar como retomar conforme a política operacional.',
-        { ...variant(), actions: [action('Retomar atendimento', 'HUM-02')] },
+        {...variant(), actions: [action('Retomar atendimento', 'HUM-02')] },
       ),
       screen(
         'HUM-12',
@@ -2766,7 +2766,7 @@
         'Operação já em processamento',
         'Quero tentar de novo.',
         'Há uma operação em processamento. Vou consultar o resultado antes de permitir outra tentativa.',
-        { ...variant(), actions: [action('Consultar resultado', 'SOL-04')] },
+        {...variant(), actions: [action('Consultar resultado', 'SOL-04')] },
       ),
       screen(
         'RET-04',
@@ -2780,14 +2780,14 @@
         'Condições alteradas',
         'Quero confirmar o que vi antes.',
         'As condições mudaram desde sua última revisão. Confira a versão atual antes de confirmar.',
-        { ...variant(), actions: [action('Revisar condições', 'ADE-06')] },
+        {...variant(), actions: [action('Revisar condições', 'ADE-06')] },
       ),
       screen(
         'RET-06',
         'Solicitação expirada',
         'Quero continuar o pedido antigo.',
         'Este rascunho expirou. Vamos informar quais dados podem ser recuperados e consultar novamente as condições.',
-        { ...variant(), actions: [action('Recomeçar com contexto', 'ADE-01')] },
+        {...variant(), actions: [action('Recomeçar com contexto', 'ADE-01')] },
       ),
       screen(
         'RET-07',
@@ -2882,7 +2882,7 @@
         'Notificação antiga resolvida',
         'Abri um aviso antigo de cobrança.',
         'A situação foi atualizada desde aquele aviso. A parcela já está quitada; não há necessidade de novo pagamento.',
-        { ...variant(), actions: [action('Ver comprovante', 'CON-07')] },
+        {...variant(), actions: [action('Ver comprovante', 'CON-07')] },
       ),
     ],
   );
@@ -2906,7 +2906,7 @@
         'PRE-02',
         'Escolher avisos opcionais',
         'Quero escolher.',
-        'Selecione os avisos opcionais que deseja receber neste exemplo.',
+        'Selecione os avisos opcionais que deseja receber.',
         form(
           'Preferências de avisos',
           [
@@ -2925,14 +2925,14 @@
           ],
           'Salvar preferências',
           'PRE-03',
-          { note: 'Classificação dos avisos ainda sujeita à validação do negócio.' },
+          { note: '' },
         ),
       ),
       screen(
         'PRE-03',
         'Preferências salvas',
         'Salvar preferências',
-        'Suas escolhas opcionais foram salvas na demonstração. Comunicações necessárias seguem a política e os canais aplicáveis.',
+        'Suas preferências foram salvas.',
         { actions: [action('Ver preferências', 'PRE-02'), action('Menu', 'NAV-01')] },
       ),
     ],
@@ -2960,7 +2960,7 @@
       index[step.id] = step;
     });
   }
-  // One informational experience: its internal screens never submit to chat.
+  // Discovery carries the selected service and plan into contracting.
   // Existing catalog states remain references for their approved copy.
   index['DES-01'].flow.discovery = {
     services: ['DES-12', 'DES-13', 'DES-14'].map((id, position) => ({
@@ -2971,11 +2971,11 @@
     plans: [
       { id: 'individual', title: 'Individual', price: 'R$ 29,90/mês', composition: 'Somente titular.',
         description: index['DES-05'].flow.choices[0].detail },
-      { id: 'familiar', title: 'Familiar', price: 'R$ 39,90/mês', composition: 'Titular e até 3 dependentes elegíveis neste exemplo.',
+      { id: 'familiar', title: 'Familiar', price: 'R$ 39,90/mês', composition: 'Titular e até 3 dependentes elegíveis.',
         description: index['DES-05'].flow.choices[1].detail },
     ],
-    conditions: 'Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.',
-    note: 'Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.',
+    conditions: 'Confira os benefícios e as condições de uso do plano escolhido.',
+    note: '',
     outcomes: [
       { id: 'finish', label: 'Concluir descoberta', target: 'DES-11' },
       { id: 'contract', label: 'Iniciar contratação', target: 'ADE-01' },

@@ -55,7 +55,7 @@ test('integrated audio fixtures use real gateway transport and no media upload',
   page.on('request', (request) => {
     if (/\/v1\/media|\.(wav|ogg|webm)(\?|$)/.test(request.url())) media.push(request.url());
   });
-  await page.getByRole('button', { name: 'Áudio demonstrativo' }).click();
+  await page.getByRole('button', { name: 'Mensagem de áudio' }).click();
   await page.getByRole('button', { name: /AUD-04/ }).click();
   await expect(page.getByText(/Não consegui compreender/)).toBeVisible();
   expect(media).toEqual([]);

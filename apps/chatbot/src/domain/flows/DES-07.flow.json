@@ -9,7 +9,7 @@
   "screens": [
     {
       "id": "FORM",
-      "title": "Simular assistência",
+      "title": "Escolher plano",
       "layout": {
         "type": "SingleColumnLayout",
         "children": [

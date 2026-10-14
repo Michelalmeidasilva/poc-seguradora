@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatState } from '../chat/model';
@@ -102,9 +102,70 @@ afterEach(() => {
 });
 
 describe('App', () => {
+  it('switches previews without clearing the conversation or composer draft', async () => {
+    mock.items = [flowItem];
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(screen.getByRole('textbox', { name: 'Mensagem' }), 'Meu pedido');
+    await user.click(screen.getByRole('button', { name: 'Android' }));
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }));
+    expect(screen.queryByRole('textbox', { name: 'Mensagem' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Catálogo' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Desktop' }));
+    await user.click(screen.getByRole('tab', { name: 'Conversa' }));
+    expect(screen.getByRole('textbox', { name: 'Mensagem' })).toHaveValue('Meu pedido');
+    expect(screen.getByRole('button', { name: 'Começar' })).toBeInTheDocument();
+  });
+
+  it('opens catalog forms locally without submitting them to the chat transport', async () => {
+    const submit = vi.fn();
+    mock.sendFlowSubmit = submit;
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }));
+    await user.click(screen.getByRole('button', { name: 'Abrir formulário' }));
+    const dialog = screen.getByRole('dialog', { name: 'Solicitar assistência' });
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /Nome completo/ }),
+      'Pessoa de exemplo',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Concluir solicitação' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole('status', { name: 'Resultado da seleção' })).toHaveTextContent(
+      'Solicitação concluída',
+    );
+  });
+
+  it('provides light, dark and system theme selection', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Escuro' }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    await user.click(screen.getByRole('button', { name: 'Claro' }));
+    expect(document.documentElement.dataset.theme).toBe('light');
+    await user.click(screen.getByRole('button', { name: 'Sistema' }));
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(screen.getByRole('button', { name: 'Sistema' })).toHaveAttribute('aria-pressed', 'true');
+  });
+  it('offers only the three supported DIGIO Care products in the catalog', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }));
+    const catalog = screen.getByRole('tabpanel', { name: 'Catálogo' });
+    for (const title of ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina']) {
+      expect(within(catalog).getByRole('group', { name: title })).toBeInTheDocument();
+    }
+    expect(
+      within(catalog).queryByText(
+        /residencial|chaveiro|eletricista|encanador|demonstrativ|fictício|ilustrativo/i,
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it('renders the chat screen', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: /digio assistências/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /DIGIO Care/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /mensagem/i })).toBeInTheDocument();
   });
 
@@ -114,10 +175,10 @@ describe('App', () => {
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('uses the prototype dark theme when the query value is invalid', () => {
+  it('uses the system theme when the query value is invalid', () => {
     window.history.replaceState(null, '', '/?theme=neon');
     render(<App />);
-    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('light');
   });
 
   it('starts an empty active conversation once when the connection is online', () => {

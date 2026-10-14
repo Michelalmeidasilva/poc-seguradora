@@ -212,7 +212,7 @@ describe('quote flow limits', () => {
         }
       }
     }
-    expect(names.filter((n) => n === 'cep')).toHaveLength(2);
+    expect(names).toContain('cep');
     expect(names).toContain('cpf');
   });
 
@@ -248,11 +248,11 @@ describe('demo flow', () => {
   it('sends the demo Flow JSON with the fixed header and call to action', () => {
     const { payload } = demo();
     expect(payload.flowId).toBe('demo');
-    expect(payload.header).toBe('Demonstração');
-    expect(payload.ctaLabel).toBe('Abrir demonstração');
+    expect(payload.header).toBe('Sua solicitação');
+    expect(payload.ctaLabel).toBe('Abrir formulário');
     expect(payload.flowJson).toEqual(demoFlowJson);
-    expect(payload.body).toMatch(/demonstração/i);
-    expect(payload.body).toMatch(/nenhum dado/i);
+    expect(payload.body).toMatch(/dados da solicitação/i);
+    expect(payload.body).not.toMatch(/demonstração|fictício|nenhum dado/i);
   });
 
   it('satisfies the protocol FlowPayload schema and stays well below the event size limit', () => {
@@ -282,7 +282,7 @@ describe('demo flow', () => {
     expect(replies.map((r) => r.type)).toEqual(['message.text', 'message.quick_replies']);
     const [first, second] = replies;
     expect(first?.type === 'message.text' && first.payload.text).toBe(
-      'Recebi o formulário de demonstração. Nenhum dado foi guardado.',
+      'Recebi seu formulário. Acompanhe os próximos passos por aqui.',
     );
     expect(second?.type === 'message.quick_replies' && second.payload.options).toEqual([
       { id: 'menu', title: 'Menu principal' },

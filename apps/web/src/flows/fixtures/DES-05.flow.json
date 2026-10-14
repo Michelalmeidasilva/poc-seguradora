@@ -11,7 +11,7 @@
         "children": [
           {
             "type": "TextBody",
-            "text": "Neste exemplo, há duas opções. Escolha uma para ver detalhes ou compare as diferenças."
+            "text": "Conheça os planos Individual e Familiar e escolha o que combina com você."
           },
           {
             "type": "RadioButtonsGroup",

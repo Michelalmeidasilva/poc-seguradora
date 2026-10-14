@@ -67,7 +67,7 @@ for (const id of ids) {
     } else if (id === 'AUD-01') {
       await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
       await cpf(page);
-      await page.getByRole('button', { name: 'Áudio demonstrativo', exact: true }).click();
+      await page.getByRole('button', { name: 'Mensagem de áudio', exact: true }).click();
       await page.getByRole('button', { name: /^AUD-01/ }).click();
       await expect(page.getByText(step.bot.replace(/\*\*/g, ''), { exact: false })).toBeVisible();
     } else if (id !== 'ENT-02') {

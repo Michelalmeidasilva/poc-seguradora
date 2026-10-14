@@ -14,7 +14,7 @@ export function Header({ connection, typing }: { connection: Connection; typing:
         d
       </div>
       <div className="chat-header__text">
-        <h1 className="chat-header__title">Digio Assistências</h1>
+        <h1 className="chat-header__title">DIGIO Care</h1>
         <span className="chat-header__status">
           Conta comercial · {typing ? 'digitando…' : STATUS[connection]}
         </span>

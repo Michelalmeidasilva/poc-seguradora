@@ -83,7 +83,7 @@
           },
           {
             "type": "TextBody",
-            "text": "Valor adicional: Sem adicional neste exemplo"
+            "text": "Valor adicional: Sem adicional "
           },
           {
             "type": "TextBody",
@@ -100,10 +100,6 @@
           {
             "type": "TextBody",
             "text": "Vagas após inclusão: 1 vaga"
-          },
-          {
-            "type": "TextCaption",
-            "text": "Confira a disponibilidade de cada benefício nas condições do produto."
           },
           {
             "type": "EmbeddedLink",

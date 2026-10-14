@@ -18,13 +18,20 @@ const formatElapsed = (ms: number): string => {
 };
 
 const inactiveRecorder: VoiceRecorder = {
-  status: 'idle', elapsedMs: 0,
+  status: 'idle',
+  elapsedMs: 0,
   start: async () => undefined,
   stop: async () => undefined,
   cancel: () => undefined,
 };
 
-export function Composer({ onSendText, onSendVoice = () => undefined, recorder = inactiveRecorder, onDemoVoice, disabled = false }: ComposerProps) {
+export function Composer({
+  onSendText,
+  onSendVoice = () => undefined,
+  recorder = inactiveRecorder,
+  onDemoVoice,
+  disabled = false,
+}: ComposerProps) {
   const [text, setText] = useState('');
   const [demoOpen, setDemoOpen] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -62,25 +69,54 @@ export function Composer({ onSendText, onSendVoice = () => undefined, recorder =
     return (
       <form className="composer" onSubmit={(e) => e.preventDefault()}>
         {demoOpen ? (
-          <div className="composer__demo-menu" role="group" aria-label="Cenários de áudio demonstrativo">
+          <div className="composer__demo-menu" role="group" aria-label="Opções de áudio">
             {demoAudio.map((scenario) => (
-              <button key={scenario.id} type="button" disabled={disabled}
-                onClick={() => { onDemoVoice(scenario.id); setDemoOpen(false); input.current?.focus(); }}>
+              <button
+                key={scenario.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  onDemoVoice(scenario.id);
+                  setDemoOpen(false);
+                  input.current?.focus();
+                }}
+              >
                 {scenario.id} · {scenario.label}
               </button>
             ))}
           </div>
         ) : null}
-        <textarea ref={input} className="composer__input" aria-label="Mensagem"
-          placeholder="Digite uma mensagem" rows={1} maxLength={LIMITS.maxTextLength}
-          value={text} disabled={disabled} onChange={(e) => setText(e.target.value)} onKeyDown={onKeyDown} />
+        <textarea
+          ref={input}
+          className="composer__input"
+          aria-label="Mensagem"
+          placeholder="Digite uma mensagem"
+          rows={1}
+          maxLength={LIMITS.maxTextLength}
+          value={text}
+          disabled={disabled}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
         {text.trim() ? (
-          <button type="button" className="composer__action" aria-label="Enviar" disabled={disabled} onClick={send}>
+          <button
+            type="button"
+            className="composer__action"
+            aria-label="Enviar"
+            disabled={disabled}
+            onClick={send}
+          >
             <SendIcon />
           </button>
         ) : (
-          <button type="button" className="composer__action" aria-label="Áudio demonstrativo"
-            aria-expanded={demoOpen} disabled={disabled} onClick={() => setDemoOpen((open) => !open)}>
+          <button
+            type="button"
+            className="composer__action"
+            aria-label="Mensagem de áudio"
+            aria-expanded={demoOpen}
+            disabled={disabled}
+            onClick={() => setDemoOpen((open) => !open)}
+          >
             <MicIcon />
           </button>
         )}

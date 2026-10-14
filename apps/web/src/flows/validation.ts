@@ -5,6 +5,10 @@ const REQUIRED = 'Campo obrigatório';
 const INVALID = 'Valor inválido';
 
 const FORMAT_RULES: Record<string, { test: RegExp; message: string }> = {
+  cpf: {
+    test: /^(?:[0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2})$/,
+    message: 'Informe um CPF com 11 dígitos.',
+  },
   number: { test: /^-?\d+([.,]\d+)?$/, message: 'Informe um número' },
   email: { test: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Informe um e-mail válido' },
   phone: { test: /^\+?[\d\s().-]+$/, message: 'Informe um telefone válido' },

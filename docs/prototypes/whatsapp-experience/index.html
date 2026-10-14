@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0b141a" />
     <link rel="icon" href="data:," />
-    <title>Digio · Atlas da experiência no WhatsApp</title>
+    <title>DIGIO Care · Atlas da experiência no WhatsApp</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="catalog.js" defer></script>
     <script src="app.js" defer></script>
@@ -57,7 +57,7 @@
             <h2 id="journey-title"></h2>
             <p id="journey-description"></p>
           </div>
-          <span class="scope-label">Protótipo UX · dados fictícios</span>
+          <span class="scope-label">DIGIO Care</span>
         </section>
         <div id="explorer" class="explorer">
           <section class="state-panel" aria-label="Estados da jornada">
@@ -87,18 +87,18 @@
                 <div class="wa-avatar">d</div>
                 <div class="wa-contact">
                   <strong
-                    >Digio Assistências
+                    >DIGIO Care
                     <span class="verified" aria-label="Perfil verificado">✓</span></strong
                   ><small>Conta comercial</small>
                 </div>
                 <button id="phone-help" aria-label="Abrir atendimento humano">⋮</button>
               </header>
-              <div id="chat" class="chat" aria-label="Conversa simulada"></div>
+              <div id="chat" class="chat" aria-label="Conversa"></div>
               <form id="composer" class="composer">
-                <button type="button" id="attach" aria-label="Simular envio de documento">＋</button
+                <button type="button" id="attach" aria-label="Enviar documento">＋</button
                 ><input
                   id="message-input"
-                  aria-label="Mensagem de demonstração"
+                  aria-label="Mensagem"
                   placeholder="Mensagem"
                   autocomplete="off"
                 /><button type="submit" aria-label="Enviar mensagem">➤</button>
@@ -112,7 +112,7 @@
               ><button id="next" class="primary-button">Próxima tela →</button>
             </div>
             <p class="preview-caption">
-              Clique nos botões para percorrer a jornada. Texto livre usa respostas demonstrativas.
+              Escolha uma opção ou escreva como podemos ajudar.
             </p>
           </section>
           <aside class="inspector" aria-label="Especificação da tela">
@@ -135,10 +135,7 @@
             </div>
             <div id="transitions" class="transitions"></div>
             <button id="copy-link" class="quiet-button">Copiar link desta tela</button>
-            <p class="prototype-note">
-              Representação de UX. Interface nativa, autenticação, pagamentos e integrações dependem
-              do provedor e da validação do produto.
-            </p>
+
           </aside>
         </div>
         <section
@@ -158,13 +155,11 @@
     </div>
     <dialog id="document-dialog">
       <div class="document-header">
-        <h2 id="document-title">Documento de demonstração</h2>
+        <h2 id="document-title">Documento do plano</h2>
         <button id="close-document" aria-label="Fechar documento">✕</button>
       </div>
       <div id="document-content"></div>
-      <p class="document-disclaimer">
-        Exemplo visual. Não é um documento contratual ou comprovante válido.
-      </p>
+
     </dialog>
     <div id="toast" class="toast" role="status" hidden></div>
   </body>

@@ -96,7 +96,7 @@ export function DocumentMessage({ payload }: { payload: DocumentPayload }) {
               </button>
             </header>
             <p className="document-dialog__notice" id="document-dialog-description">
-              Este é um conteúdo demonstrativo. Nenhum documento real está disponível.
+              Consulte as informações do seu documento.
             </p>
           </section>
         </div>

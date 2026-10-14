@@ -4,6 +4,54 @@ Registro histórico de entregas, decisões e pendências; não é gate de conclu
 
 Última atualização: 2026-10-13
 
+## Entrada e catálogo de componentes — 2026-10-14
+
+Entregue em React a apresentação aprovada na prévia HTML (`5066b3c`, branch
+`feat/web-preview-shell`). A aplicação oferece abas Conversa/Catálogo e seletores
+iPhone/Android/Desktop e Claro/Escuro/Sistema. No celular, detecta o SO e ocupa
+a tela; o botão no cabeçalho abre configurações com navegação entre as abas.
+
+A conversa e o rascunho permanecem montados durante as trocas. A sessão do gateway,
+a saudação inicial e os envios reais continuam geridos pelo `useChat`. O tema
+inicial passa a seguir o sistema, mantendo os overrides `?theme=light|dark`.
+
+O catálogo reutiliza os renderizadores reais de mensagens (texto, respostas
+rápidas, template, carrossel, documentos, código, localização, áudio e Flow),
+bolhas com estados de envio, avisos e indicador de digitação. As ilustrações
+são SVGs locais e o áudio ilustrativo é gerado localmente. O Flow de demonstração
+inclui todos os tipos registrados, com um seletor de mídia por tela, e usa callbacks
+isolados: seleções, uploads e conclusão não enviam eventos ao gateway nem são
+gravados no histórico de chat. A fonte canônica das jornadas reais não mudou.
+
+A moldura impede rolagem externa ao focar os diálogos; a rolagem permanece no
+conteúdo. Flows e documentos ficam contidos no aparelho selecionado. O retorno do
+foco é feito após remover `inert`, preservando o acesso ao botão de abertura.
+
+Evidência proporcional: 946 testes web passaram; typecheck e ESLint dos arquivos
+afetados limpos; seis E2E da apresentação passaram em Chromium desktop/iPhone 13/
+Pixel 7; dois E2E de regressão dos Flows reais passaram (cotação ponta a ponta e
+Voltar/Fechar/foco). O build Vite foi realizado pelas execuções E2E. Screenshots
+do catálogo e do formulário foram revisados visualmente. Workboard e whitespace
+validados. Branch de entrega: `feat/web-experience-shell`.
+
+Esta entrega é local, sem merge, push ou deploy. As pendências anteriores de
+fidelidade e aceite das Tasks 9–10 continuam fora deste escopo.
+
+### Reconstrução do ambiente local — 2026-10-14
+
+Após autorização do usuário, a imagem `seguradora-web:latest` foi reconstruída
+com `docker compose -f infra/docker-compose.yml build web` e o container web foi
+recriado com `up -d --no-deps --no-build --wait web`. A nova interface está servida
+em http://localhost:8080. Gateway, chatbot e fake-services mantiveram seus IDs
+e permaneceram saudáveis. Imagem web: `c1090cb28928`; bundle JS: `index-4Y_JS2Na.js`.
+
+A suíte raiz passou após repetição com permissão para abrir portas locais
+(a execução inicial foi interrompida devido a EPERM do sandbox). Build concluído,
+smoke 7/7 e oito verificações de navegador no ambiente real passaram: backend
+online, catálogo/imagens, tema, aparelho, conclusão local de Flow e Android em
+tela cheia. Screenshots revisados em `/private/tmp/seguradora-web-runtime-*.png`.
+Operação local; sem merge, push ou GCP.
+
 ## Estrutura
 
 - [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows entregues no Plano 5)
@@ -152,3 +200,21 @@ Pendências (detalhes na seção Pendências do runbook):
   - Erros de `data_exchange` não são visíveis ao servidor (o evento é enviado sem resposta).
 - [x] nginx resolvido uma vez (feito no Plano 7): o host do gateway é resolvido a cada requisição (`resolver` com o primeiro `nameserver` do `/etc/resolv.conf`, `valid=10s`, e variável no `proxy_pass` com `$request_uri`), então uma troca de IP do upstream não exige reiniciar o nginx (testado recriando o gateway com outro IP). `GATEWAY_URL` precisa ser `http(s)://host[:port]`: a barra final é removida e path, query ou credenciais fazem o contêiner falhar na inicialização com mensagem clara. `Host` e SNI enviados são os do gateway (porta só se não for a padrão), o `Origin` do navegador passa intacto, `X-Forwarded-Proto` vem do salto anterior (ou `$scheme`). `/health` responde `ok` sem log de acesso. Script de entrada: `/docker-entrypoint.d/15-resolver.envsh`, embutido no Dockerfile.
 - Caminho de liveness do nginx é `/health` (não `/healthz`): o front end do Cloud Run pode interceptar caminhos terminados em `z`.
+
+
+## 2026-10-14 — Descoberta ligada à contratação
+
+- Desenho aprovado em conversa: seleção do serviço → detalhes com benefícios, planos, preços e condições → uma única tela de seleção do plano e CPF → contratação no chat. Substitui, nesta jornada, a sequência anterior de cinco telas e a exigência de CPF exclusivamente textual.
+- CPF aparece somente na etapa de contratação e para sessão ainda não identificada; aceita formato com ou sem pontuação, com teclado numérico. A seleção do serviço/plano sobrevive ao retorno; “Rever planos” abre a descoberta com as escolhas preenchidas.
+- A conclusão envia uma única submissão ao chatbot. Fechar ou navegar entre telas não inicia contratação. O chat mantém o serviço e o plano selecionados e segue aos dados restantes, sem repetir identificação.
+- Evidência: 947 testes web; E2E real de Individual/Familiar, três serviços, CPF inválido, retorno para rever planos, identificação reaproveitada e armazenamento sem CPF bruto. Layout inspecionado em 320/390/1440 px. Tipos e builds web/chatbot verificados; Task TASK-20261014-007.
+- Validação em processos locais temporários isolados. Containers existentes e GCP não foram atualizados.
+
+
+## 2026-10-14 — DIGIO Care e revisão de linguagem
+
+- Marca apresentada como DIGIO Care no cabeçalho, molduras, título da página e Flows. Catálogo de seguros alinhado a Assistência Funeral, Assistência Farmácia e Telemedicina.
+- Removidos conteúdo e ícone residencial, serviços de chaveiro/eletricista/encanador e referências de demonstração nas mensagens, acessibilidade, formulários, documentos e retornos do catálogo. Formulário de componentes passa a utilizar somente os três serviços suportados, reaproveitando a linguagem visual existente.
+- Nenhuma foto nova ou nova interação de produto foi adicionada. Preferência de elementos visuais solicitada ao usuário em pergunta separada; execução permanece pendente dessa resposta.
+- Evidência: 948 testes web e 22 E2E de chat/catálogo passaram; tipos/builds/lint e varredura de textos visíveis aprovados. Identificação e descoberta/contratação verificadas com backend temporário atual. Histórico de execuções: TASK-20261014-009.
+- Teste E2E de Rever planos passa a aguardar a nova mensagem antes de abri-la, evitando seleção acidental do formulário antigo. Containers existentes não foram atualizados; sem deploy.

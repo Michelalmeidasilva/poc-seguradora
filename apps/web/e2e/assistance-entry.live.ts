@@ -9,7 +9,7 @@ const products = [
 
 async function openWelcome(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Digio Assistências' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'DIGIO Care' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Conhecer produtos', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fazer cotação' })).toHaveCount(0);
 }
@@ -43,7 +43,9 @@ test('personal contract entry asks for CPF and accepts eleven digits without che
   await openWelcome(page);
   await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
   await identifyByChat(page, '00000000000');
-  await expect(page.getByText('O formato do CPF foi aceito.', { exact: false })).toBeVisible();
+  await expect(
+    page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
 });
 
