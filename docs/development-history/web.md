@@ -218,3 +218,13 @@ Pendências (detalhes na seção Pendências do runbook):
 - Nenhuma foto nova ou nova interação de produto foi adicionada. Preferência de elementos visuais solicitada ao usuário em pergunta separada; execução permanece pendente dessa resposta.
 - Evidência: 948 testes web e 22 E2E de chat/catálogo passaram; tipos/builds/lint e varredura de textos visíveis aprovados. Identificação e descoberta/contratação verificadas com backend temporário atual. Histórico de execuções: TASK-20261014-009.
 - Teste E2E de Rever planos passa a aguardar a nova mensagem antes de abri-la, evitando seleção acidental do formulário antigo. Containers existentes não foram atualizados; sem deploy.
+
+
+## 2026-10-14 — Integração em develop e atualização local
+
+- Merge local de feat/digio-care-copy em develop: 81bd846, sem conflitos. O resultado inclui a moldura web, a descoberta ligada à contratação e a revisão DIGIO Care. Sem push e sem alteração de master/GCP.
+- Reconstruídas e recriadas as quatro imagens/containers locais, todos healthy: web bc4721cf8f5b, chatbot 10f37c9956de, gateway 5cd2d19c1854 e fake-services 649a57e436d9. Fonte da imagem: merge 81bd846 + coordenação 150f481; commits seguintes registram evidências e ajuste de espera no teste, sem mudança do produto.
+- Disponível em http://localhost:8080. Navegador confirmou título/marca DIGIO Care, catálogo com os três serviços, assets carregados e ausência de referências residenciais/avisos de demonstração na apresentação do catálogo. Captura local: /tmp/DIGIO-Care-develop-local-catalog.png.
+- Verificação: suíte raiz em workspaces sequenciais e typecheck raiz passaram; build das quatro imagens; smoke 7/7; quatro E2E reais de identificação e contratação Individual/Familiar passaram.
+- Duas esperas de teste corrigidas: auditoria visual aguarda imagens lazy; E2E aguarda o novo botão Continuar em vez do botão desabilitado da mensagem anterior. Sem mudança de aplicação por esses ajustes.
+- A primeira conferência visual sofreu timeout da revisão automática de permissão, sem execução; a repetição permitida foi aprovada e concluída. TASK-20261014-010 contém os tempos e resultados, incluindo as tentativas falhas.

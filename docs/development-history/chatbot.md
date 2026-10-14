@@ -130,3 +130,10 @@ Registro histórico de entregas, decisões e pendências; não é gate de conclu
 - Retirado o ramo residencial dos modelos, schemas, parser de cotação, Flow antigo e fake. IDs de sessão e regras funcionais das jornadas atuais preservados. Catálogo apresentado pela web contém Funeral, Farmácia e Telemedicina.
 - Evidência: 664 testes chatbot, 177 gateway, 93 protocolo e 63 resiliência passaram em execução sequencial; web 948/948; verificadores raiz 116/116 e deploy hermético 52/52. Rodadas concorrentes falharam em testes temporais preexistentes de heartbeat/timeout do gateway; execução sequencial passou sem alterar gateway.
 - A revisão independente aprovou a redação e os limites de ações. Varredura dos campos de apresentação de todas as etapas e todos os Flows canônicos não encontrou avisos de demonstração remanescentes. Task TASK-20261014-009; sem deploy.
+
+
+## 2026-10-14 — develop integrado e runtime local atualizado
+
+- DIGIO Care integrado localmente em develop pelo merge 81bd846. Imagem chatbot 10f37c9956de reconstruída/recriada com gateway, web e fake-services; todos saudáveis em localhost:8080.
+- Suíte raiz e tipos raiz passaram no resultado integrado; smoke 7/7 e quatro cenários E2E reais de identificação e descoberta/contratação passaram. Sem push, master ou GCP.
+- Operação e evidências detalhadas em web.md e TASK-20261014-010. Continuam pendentes as imagens/novas interações ainda não escolhidas pelo usuário e as Tasks 9–10 gerais anteriores.

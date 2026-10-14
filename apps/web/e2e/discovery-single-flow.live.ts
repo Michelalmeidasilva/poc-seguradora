@@ -80,10 +80,14 @@ for (const plan of ['Individual', 'Familiar']) {
     await modal().getByRole('button', { name: 'Escolher plano', exact: true }).click();
     await expect(modal().getByRole('radio', { name: new RegExp(`^${plan}`) })).toBeChecked();
     await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
+    const continueButtons = page.getByRole('button', { name: 'Continuar', exact: true });
+    const previousContinues = await continueButtons.count();
     await modal().getByRole('button', { name: 'Continuar contratação', exact: true }).click();
     await expect.poll(() => submissions.length).toBe(2);
+    await expect(continueButtons).toHaveCount(previousContinues + 1);
+    await expect(continueButtons.last()).toBeEnabled();
     expect((submissions[1]!.data as Record<string, unknown>).cpf).toBeUndefined();
-    await page.getByRole('button', { name: 'Continuar', exact: true }).last().click();
+    await continueButtons.last().click();
     await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
     await expect(modal().getByLabel('Nome completo', { exact: true })).toBeVisible();
     await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
