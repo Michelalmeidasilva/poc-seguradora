@@ -62,33 +62,29 @@ for (const plan of ['Individual', 'Familiar']) {
       flowId: 'DES-01',
       data: { intent: 'contract', service: '2', modality: plan.toLowerCase() },
     });
-    await expect(modal()).toHaveCount(0);
-    await expect(
-      page.getByText(`Você escolheu Telemedicina ${plan}.`, { exact: false }),
-    ).toBeVisible();
-    // Revisit the selected service from the chat, keeping both choices and the valid gate.
+    await expect(modal()).toHaveAccessibleName('Dados e pagamento');
+    await expect(page.getByText('Você escolheu', { exact: false })).toHaveCount(0);
+    await expect(modal().getByLabel('Nome completo', { exact: true })).toBeVisible();
+    await modal().getByRole('button', { name: 'Fechar', exact: true }).click();
+    // Revisit discovery through the conversation with both choices and the CPF gate preserved.
+    const input = page.getByRole('textbox', { name: 'Mensagem', exact: true });
+    await input.fill('O que vocês oferecem?');
+    await input.press('Enter');
     const discoveryOpeners = page.getByRole('button', {
       name: 'Selecionar uma opção',
       exact: true,
     });
-    const previousOpeners = await discoveryOpeners.count();
-    await page.getByRole('button', { name: 'Rever planos', exact: true }).last().click();
-    await expect(discoveryOpeners).toHaveCount(previousOpeners + 1);
+    await expect(discoveryOpeners).toHaveCount(2);
     await discoveryOpeners.last().click();
     await expect(modal().getByRole('radio', { name: /Telemedicina/ })).toBeChecked();
     await modal().getByRole('button', { name: 'Ver detalhes', exact: true }).click();
     await modal().getByRole('button', { name: 'Escolher plano', exact: true }).click();
     await expect(modal().getByRole('radio', { name: new RegExp(`^${plan}`) })).toBeChecked();
     await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
-    const continueButtons = page.getByRole('button', { name: 'Continuar', exact: true });
-    const previousContinues = await continueButtons.count();
     await modal().getByRole('button', { name: 'Continuar contratação', exact: true }).click();
     await expect.poll(() => submissions.length).toBe(2);
-    await expect(continueButtons).toHaveCount(previousContinues + 1);
-    await expect(continueButtons.last()).toBeEnabled();
     expect((submissions[1]!.data as Record<string, unknown>).cpf).toBeUndefined();
-    await continueButtons.last().click();
-    await page.getByRole('button', { name: 'Abrir formulário', exact: true }).last().click();
+    await expect(modal()).toHaveAccessibleName('Dados e pagamento');
     await expect(modal().getByLabel('Nome completo', { exact: true })).toBeVisible();
     await expect(modal().getByLabel('CPF', { exact: true })).toHaveCount(0);
     await modal().getByRole('button', { name: 'Fechar', exact: true }).click();

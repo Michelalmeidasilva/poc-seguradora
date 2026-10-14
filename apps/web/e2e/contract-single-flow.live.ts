@@ -24,8 +24,7 @@ for (const [service, plan, payment, price] of [
     await dialog.getByRole('radio', { name: new RegExp(`^${plan}`) }).check();
     await dialog.getByLabel('CPF', { exact: true }).fill('12345678900');
     await dialog.getByRole('button', { name: 'Continuar contratação' }).click();
-    await page.getByRole('button', { name: 'Continuar', exact: true }).last().click();
-    await page.getByRole('button', { name: 'Dados e pagamento', exact: true }).click();
+    await expect(page.getByText('Você escolheu', { exact: false })).toHaveCount(0);
     await expect(dialog).toHaveAccessibleName('Dados e pagamento');
     await expect(dialog.getByLabel('Nome completo')).toBeEmpty();
     await dialog.getByLabel('Nome completo').fill('Beatriz Costa');

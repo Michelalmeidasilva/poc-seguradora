@@ -4,7 +4,7 @@ import { defineConfig } from '@playwright/test';
 // Isolated real web/gateway/chatbot servers; no shared Docker stack is changed.
 export default defineConfig({
   testDir: '.',
-  testMatch: 'contract-single-flow.live.ts',
+  testMatch: ['contract-single-flow.live.ts', 'discovery-single-flow.live.ts'],
   timeout: 45_000,
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:4186', trace: 'retain-on-failure' },

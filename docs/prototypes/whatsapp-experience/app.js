@@ -91,6 +91,7 @@
     }
     if (id === 'IDE-03')
       index['IDE-03'].actions[0] = { label: 'Continuar pedido', target: identityReturn };
+    if (['ADE-01', 'ADE-02'].includes(id) && isAuthenticated()) id = 'ADE-03';
     if (id === 'ADE-04' && selectedPlan === 'Individual') id = 'ADE-05';
     current = id;
     if (index[id].seed) Object.assign(memory, index[id].seed);

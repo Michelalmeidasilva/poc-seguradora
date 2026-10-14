@@ -298,7 +298,7 @@ describe('runAssistanceTurn', () => {
       },
     );
     expect(chosen.ok && chosen.value.state.screenId).toBe('IDE-01');
-    expect(chosen.ok && chosen.value.state.pendingStep).toBe('ADE-01');
+    expect(chosen.ok && chosen.value.state.pendingStep).toBe('ADE-03');
     expect(chosen.ok && chosen.value.state.temporaryData?.modality).toBe('individual');
     expect(assistance.createRequest).not.toHaveBeenCalled();
   });
@@ -320,7 +320,7 @@ describe('runAssistanceTurn', () => {
         },
       );
       expect(result.ok && result.value.state).toMatchObject({
-        screenId: 'ADE-01',
+        screenId: 'ADE-03',
         gateApproved: true,
         temporaryData: { service: '2', modality },
       });
@@ -331,11 +331,11 @@ describe('runAssistanceTurn', () => {
         modality === 'individual' ? 'Individual' : 'Familiar',
       );
       if (!result.ok) return;
-      const next = await runAssistanceTurn(
-        { type: 'quick_reply', target: 'ADE-02' },
-        { port: assistance, state: result.value.state, sessionId: 'discovery', context: ctx },
+      const flow = result.value.replies.find((reply) => reply.type === 'message.flow');
+      expect(flow && flow.type === 'message.flow' && flow.payload.flowJson.autoOpen).toBe(true);
+      expect(result.value.replies.some((reply) => reply.type === 'message.quick_replies')).toBe(
+        false,
       );
-      expect(next.ok && next.value.state.screenId).toBe('ADE-03');
       expect(assistance.createRequest).not.toHaveBeenCalled();
     },
   );

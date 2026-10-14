@@ -101,7 +101,7 @@ function validateFlowData(
     if (!parsed.success) return undefined;
     const { intent, service, modality } = parsed.data;
     const selection = { intent, service, modality };
-    return { ...selection, target: selection.intent === 'contract' ? 'ADE-01' : 'DES-11' };
+    return { ...selection, target: selection.intent === 'contract' ? 'ADE-03' : 'DES-11' };
   }
   const fields = Array.isArray(flow?.fields)
     ? flow.fields.map(recordOf).filter((item) => item !== undefined)
@@ -238,6 +238,7 @@ const textReply = (
   state?: AssistanceState,
   intent?: 'review' | 'correction',
   listChoices?: Array<{ id: string; title: string; description: string }>,
+  autoOpen = false,
 ): ReplyBody[] => {
   const replies: ReplyBody[] = [];
   let body = step.bot;
@@ -318,6 +319,15 @@ const textReply = (
       );
     };
     const flowJson = assistanceFlows[step.id] ?? { title: step.title };
+    const renderedFlow =
+      body === step.bot &&
+      !listChoices &&
+      !draft?.dependentName &&
+      !individualPlan &&
+      !(selectedService && ['ADE', 'PAG'].includes(step.journeyId)) &&
+      !(step.id === 'DES-01' && state?.gateApproved)
+        ? flowJson
+        : hydrate(flowJson);
     replies.push({
       type: 'message.flow',
       payload: {
@@ -331,15 +341,7 @@ const textReply = (
               : step.mode === 'review'
                 ? 'Abrir revisão'
                 : 'Abrir formulário',
-        flowJson:
-          body === step.bot &&
-          !listChoices &&
-          !draft?.dependentName &&
-          !individualPlan &&
-          !(selectedService && ['ADE', 'PAG'].includes(step.journeyId)) &&
-          !(step.id === 'DES-01' && state?.gateApproved)
-            ? flowJson
-            : hydrate(flowJson),
+        flowJson: autoOpen ? { ...recordOf(renderedFlow), autoOpen: true } : renderedFlow,
         ...(initialData ? { initialData } : {}),
       },
     } as ReplyBody);
@@ -870,18 +872,12 @@ export async function runAssistanceTurn(
   }
   // Legacy payment entry points reopen the same contracting Flow with the saved draft.
   if (
-    ['PAG-01', 'PAG-02', 'PAG-03', 'PAG-04', 'ADE-05'].includes(step.id) &&
+    ['ADE-01', 'ADE-02', 'PAG-01', 'PAG-02', 'PAG-03', 'PAG-04', 'ADE-05'].includes(step.id) &&
     nextState.gateApproved
   ) {
     const unified = nextAssistanceState(nextState, { type: 'open', target: 'ADE-03' });
     nextState = unified.state;
     step = unified.step;
-  }
-  // An identified customer continues straight to holder details.
-  if (step.id === 'ADE-02' && state.screenId === 'ADE-01' && nextState.gateApproved) {
-    const holder = nextAssistanceState(nextState, { type: 'open', target: 'ADE-03' });
-    nextState = holder.state;
-    step = holder.step;
   }
   // The Individual choice carries through the same gate and skips dependent
   // collection, matching the already approved prototype's contracting branch.
@@ -964,7 +960,13 @@ export async function runAssistanceTurn(
             submitted?.correction === true
           ? 'correction'
           : undefined;
-    replies = textReply(step, nextState, hydrationIntent, listChoices);
+    replies = textReply(
+      step,
+      nextState,
+      hydrationIntent,
+      listChoices,
+      step.id === 'ADE-03' && state.screenId !== 'ADE-03',
+    );
   }
   if (step.id === 'DEP-10') {
     const dependents = await port.listDependents(sessionId, context);

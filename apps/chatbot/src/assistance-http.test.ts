@@ -34,8 +34,8 @@ it.each(['individual', 'familiar'])(
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const resumed = await turn(bot.url, textReq('11111111111', { session }));
     const title = modality === 'individual' ? 'Individual' : 'Familiar';
-    expect(textsOf(resumed.events)).toContain(`Assistência Funeral ${title}`);
-    const opened = await turn(bot.url, choiceReq('ADE-02', { session }));
+    expect(textsOf(resumed.events)).not.toContain('Você escolheu');
+    const opened = resumed;
     expect(bot.screenId(session)).toBe('ADE-03');
     const json = JSON.stringify(findEvent(opened.events, 'message.flow').payload.flowJson);
     expect(json).toContain(`Assistência Funeral ${title}`);
