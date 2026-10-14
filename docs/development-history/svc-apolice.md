@@ -1,4 +1,4 @@
-# Checklist: svc-sinistro
+# Histórico de desenvolvimento: svc-apolice
 
 Última atualização: 2026-10-10
 
@@ -8,9 +8,9 @@
 - [ ] Dockerfile e execução local
 
 ## Funcionalidades
-- [ ] POST /v1/sinistros
-- [ ] GET /v1/sinistros/{protocolo}
-- [ ] GET /v1/sinistros?apolice=
+- [ ] GET /v1/apolices?cpf=
+- [ ] GET /v1/apolices/{numero}
+- [ ] GET /v1/apolices/{numero}/segunda-via
 - [ ] openapi.yaml fiel ao contrato
 - [ ] Fixtures em data/*.json
 - [ ] Injeção de falha (X-Mock-Latency-Ms, X-Mock-Error)

@@ -1,4 +1,4 @@
-# Checklist: infra — Plano 8
+# Histórico de desenvolvimento: infra — Plano 8
 
 Última atualização: 2026-10-11
 

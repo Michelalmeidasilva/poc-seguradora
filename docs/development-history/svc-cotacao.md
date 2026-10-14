@@ -1,4 +1,4 @@
-# Checklist: svc-apolice
+# Histórico de desenvolvimento: svc-cotacao
 
 Última atualização: 2026-10-10
 
@@ -8,9 +8,9 @@
 - [ ] Dockerfile e execução local
 
 ## Funcionalidades
-- [ ] GET /v1/apolices?cpf=
-- [ ] GET /v1/apolices/{numero}
-- [ ] GET /v1/apolices/{numero}/segunda-via
+- [ ] GET /v1/produtos
+- [ ] POST /v1/cotacoes
+- [ ] GET /v1/cotacoes/{cotacaoId}
 - [ ] openapi.yaml fiel ao contrato
 - [ ] Fixtures em data/*.json
 - [ ] Injeção de falha (X-Mock-Latency-Ms, X-Mock-Error)
