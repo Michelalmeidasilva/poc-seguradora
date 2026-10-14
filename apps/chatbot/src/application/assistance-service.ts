@@ -18,6 +18,12 @@ export interface AssistanceDependent {
   biologicalSex: 'female' | 'male' | 'not_informed';
 }
 
+export interface AssistanceDependentRemoval {
+  dependentId: string;
+  effectiveDate: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+}
+
 export interface AssistanceBenefit {
   id: string;
   name: string;
@@ -75,6 +81,7 @@ export interface AssistanceSessionSnapshot {
   demonstrative: true;
   contract: AssistanceContract;
   dependents: AssistanceDependent[];
+  dependentRemovals?: AssistanceDependentRemoval[];
   benefits: AssistanceBenefit[];
   documents: AssistanceDocument[];
   billing: AssistanceBilling;

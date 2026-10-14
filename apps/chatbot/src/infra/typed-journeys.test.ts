@@ -302,19 +302,31 @@ describe('public assistance service discovery', () => {
     const chooser = assistanceCatalog.byId['DES-01']!;
     const choices = (chooser.flow as { choices: Array<{ label: string; target: string }> }).choices;
     expect(choices.map((choice) => choice.label).sort()).toEqual([
-      'Assistência Farmácia', 'Assistência Funeral', 'Telemedicina',
+      'Assistência Farmácia',
+      'Assistência Funeral',
+      'Telemedicina',
     ]);
 
-    for (const choice of choices) {
+    for (const [index, choice] of choices.entries()) {
       let state = { journeyId: 'DES', screenId: 'DES-01', gateApproved: false };
-      const transition = await runAssistanceTurn({ type: 'flow_submit', flowId: 'DES-01', data: { target: choice.target } }, {
-        port, state, sessionId: `public-${choice.target}`, context,
-      });
-      expect(transition.ok && transition.value.state.screenId).toBe(choice.target);
+      const transition = await runAssistanceTurn(
+        {
+          type: 'flow_submit',
+          flowId: 'DES-01',
+          data: { service: String(index), modality: 'familiar', intent: 'finish' },
+        },
+        {
+          port,
+          state,
+          sessionId: `public-${choice.target}`,
+          context,
+        },
+      );
+      expect(transition.ok && transition.value.state.screenId).toBe('DES-11');
       expect(transition.ok && transition.value.state.gateApproved).toBe(false);
       expect(['DES-12', 'DES-13', 'DES-14']).toContain(choice.target);
       state = transition.ok ? transition.value.state : state;
-      expect(state.screenId).toBe(choice.target);
+      expect(state.screenId).toBe('DES-11');
     }
   });
 });

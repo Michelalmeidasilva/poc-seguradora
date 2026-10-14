@@ -83,6 +83,7 @@ const assistancePort = (requests: AssistanceRequest[] = []): AssistancePort => (
   addDependent: async () => err('unavailable' as const),
   updateDependent: async () => err('unavailable' as const),
   removeDependent: async () => err('unavailable' as const),
+  cancelDependentRemoval: async () => err('unavailable' as const),
   changeModality: async () => err('unavailable' as const),
   renewAssistance: async () => err('unavailable' as const),
   updateAddress: async () => err('unavailable' as const),
@@ -662,14 +663,8 @@ describe('HandleTurn', () => {
     await collect(handler.run(quickReply('IDE-01', 404)));
     expect(assistanceStates.get('s1')).toMatchObject({ screenId: 'IDE-01', gateApproved: false });
     const cpf = await collect(handler.run(quickReply('IDE-08', 405)));
-    expect(cpf).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'message.flow',
-          payload: expect.objectContaining({ flowId: 'IDE-08' }),
-        }),
-      ]),
-    );
+    expect(cpf.some((event) => event.type === 'message.flow')).toBe(false);
+    expect(assistanceStates.get('s1')?.gateApproved).toBe(false);
   });
 
   it('routes valid assistance CPF submit, persists the exact domain state, and discards CPF', async () => {
@@ -765,7 +760,7 @@ describe('HandleTurn', () => {
     expect(assistanceStates.get('s1')?.screenId).not.toBe('DEP-06');
   });
 
-  it('routes a recognized legacy quote request after clearing assistance state', async () => {
+  it('keeps internal legacy behavior when the assistance adapter is not configured', async () => {
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', { journeyId: 'CON', screenId: 'CON-07', gateApproved: true });
     const services = okServices();

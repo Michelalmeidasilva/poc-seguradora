@@ -2,9 +2,6 @@ import flow0 from './ENT-06.flow.json';
 import flow1 from './FAQ-01.flow.json';
 import flow2 from './NAV-01.flow.json';
 import flow3 from './NAV-02.flow.json';
-import flow4 from './IDE-01.flow.json';
-import flow5 from './IDE-06.flow.json';
-import flow6 from './IDE-08.flow.json';
 import flow7 from './DES-01.flow.json';
 import flow8 from './DES-05.flow.json';
 import flow9 from './DES-07.flow.json';
@@ -50,9 +47,6 @@ export const assistanceFlows: Readonly<Record<string, Record<string, unknown>>> 
   'FAQ-01': flow1,
   'NAV-01': flow2,
   'NAV-02': flow3,
-  'IDE-01': flow4,
-  'IDE-06': flow5,
-  'IDE-08': flow6,
   'DES-01': flow7,
   'DES-05': flow8,
   'DES-07': flow9,

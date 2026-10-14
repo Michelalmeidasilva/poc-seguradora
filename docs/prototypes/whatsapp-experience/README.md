@@ -22,7 +22,9 @@ O catálogo usa “Serviços de Assistência” como rótulo neutro para as tela
 
 Seguro Celular, proteção de bens e jornadas de sinistro não fazem parte deste escopo. Contratação, dependentes, pagamentos, documentos e atendimento são jornadas de gestão das assistências, não serviços adicionais. Esta definição substitui as hipóteses anteriores de catálogo; documentos técnicos compartilhados e fontes históricas externas não foram alterados nesta revisão.
 
-Em `DES-01`, “Conhecer produtos disponíveis” apresenta Assistência Funeral, Assistência Farmácia e Telemedicina com resumos. Cada item abre uma mensagem conversacional de detalhes (`DES-12` a `DES-14`) com quick replies “Ver opções” e “Voltar aos serviços”. O WhatsApp permite até três botões de resposta rápida por mensagem; os rótulos usados respeitam o limite de 20 caracteres. Os textos não presumem coberturas, valores, carências, redes específicas ou disponibilidade não confirmadas.
+Em `DES-01`, “Conhecer produtos” abre **um único Flow**, com cinco etapas internas: serviços → detalhes → planos e comparação → condições do plano → conclusão. Assistência Funeral, Assistência Farmácia e Telemedicina continuam sendo os únicos serviços; os textos de referência `DES-12` a `DES-14` alimentam os detalhes internos. Individual e Familiar têm o mesmo destaque e nenhuma opção pré-selecionada. Preços e composição continuam fictícios.
+
+O botão **Voltar** mantém o Flow aberto e as escolhas durante a exploração. Não há envio de formulário nem retorno ao chat ao selecionar serviço, conhecer detalhes ou comparar planos. Somente a última etapa envia uma decisão: concluir a descoberta (`DES-11`) ou iniciar contratação (`ADE-01`). Iniciar exige o gate de CPF antes da jornada pessoal e não contrata nem cobra. O backend valida estritamente serviço, modalidade e decisão; não aceita destino arbitrário ou o antigo envio parcial de uma escolha. Navegação interna não usa `data_exchange` nem provider real. Os textos não presumem coberturas, valores, carências, redes específicas ou disponibilidade não confirmadas.
 
 A tela `DEP-33` demonstra a jornada do slide: uma mensagem fornece nome, CPF, nascimento e parentesco de João da Silva. `DEP-34` pergunta explicitamente celular e sexo biológico, campos encontrados no legado; nunca infere sexo/gênero. A obrigatoriedade e as opções desses campos precisam de validação do produto. `DEP-06` reúne os dados para revisão.
 
@@ -66,6 +68,8 @@ Fontes fornecidas pelo usuário:
 Depois de alterar os arquivos-fonte, rode `node docs/prototypes/whatsapp-experience/export.mjs` para atualizar a versão em arquivo único. `preview-desktop.png` e `preview-mobile.png` mostram duas vistas inspecionadas.
 
 ## Verificação
+
+Identificação CPF: digitar diretamente no chat, inclusive na primeira solicitação e na tentativa após erro/expiração. Não existe Flow de identificação. Aceita somente a mensagem completa com 11 números ou XXX.XXX.XXX-XX, sem checksum nem consulta cadastral; retoma o pedido e não repete o CPF. O CPF de dependente continua no cadastro.
 
 `node docs/prototypes/whatsapp-experience/verify.mjs` verifica IDs, destinos, estrutura de componentes, ausência de telas legadas e ausência de autenticação por código. A interface também deve ser inspecionada no navegador para verificar renderização, formulários e responsividade.
 

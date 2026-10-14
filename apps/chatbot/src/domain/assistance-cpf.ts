@@ -5,6 +5,7 @@ export type AssistanceCpfResult =
   | { ok: false; error: AssistanceCpfError };
 
 export function parseAssistanceCpf(input: string): AssistanceCpfResult {
+  input = input.trim();
   if (/^[0-9]{11}$/.test(input)) return { ok: true, value: { normalized: input } };
 
   const canonical = /^([0-9]{3})\.([0-9]{3})\.([0-9]{3})-([0-9]{2})$/.exec(input);

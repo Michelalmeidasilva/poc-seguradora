@@ -67,7 +67,11 @@ export interface AssistancePort {
     ctx: CallContext,
   ): AssistanceOutcome<AssistanceSessionSnapshot>;
   listBenefits(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceBenefit[]>;
-  listDocuments(sessionId: string, screenId: AssistanceDocumentScreen, ctx: CallContext): AssistanceOutcome<AssistanceDocument[]>;
+  listDocuments(
+    sessionId: string,
+    screenId: AssistanceDocumentScreen,
+    ctx: CallContext,
+  ): AssistanceOutcome<AssistanceDocument[]>;
   listDependents(sessionId: string, ctx: CallContext): AssistanceOutcome<AssistanceDependent[]>;
   addDependent(
     sessionId: string,
@@ -80,6 +84,11 @@ export interface AssistancePort {
     ctx: CallContext,
   ): AssistanceOutcome<AssistanceDependent>;
   removeDependent(
+    sessionId: string,
+    command: RemoveDependentCommand,
+    ctx: CallContext,
+  ): AssistanceOutcome<void>;
+  cancelDependentRemoval(
     sessionId: string,
     command: RemoveDependentCommand,
     ctx: CallContext,

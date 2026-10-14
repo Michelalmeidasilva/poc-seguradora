@@ -221,7 +221,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar atendimento",
+              "label": "Continuar conversa",
               "target": "HUM-02"
             }
           ],
@@ -317,7 +317,7 @@
               "target": "FAQ-01"
             },
             {
-              "label": "Consultar meus benefícios",
+              "label": "Meus benefícios",
               "target": "UTI-01"
             }
           ],
@@ -518,7 +518,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Abandonar solicitação",
+              "label": "Abandonar pedido",
               "target": "RET-08"
             },
             {
@@ -544,19 +544,19 @@
           "id": "IDE-01",
           "title": "Informe o CPF",
           "user": "",
-          "bot": "Para abrir esta demonstração, informe um CPF com 11 dígitos. Este formato não confirma identidade.",
-          "mode": "form",
+          "bot": "Para abrir esta demonstração, digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX. Este formato não confirma identidade.",
+          "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero consultar meu contrato.",
-          "behavior": "Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.",
+          "behavior": "Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.",
           "next": "IDE-02",
           "journeyId": "IDE"
         },
@@ -566,12 +566,7 @@
           "user": "",
           "bot": "Recebi o CPF para validar o formato da demonstração.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Informar CPF",
-              "target": "IDE-08"
-            }
-          ],
+          "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
@@ -588,7 +583,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar solicitação",
+              "label": "Continuar pedido",
               "target": "CON-02"
             },
             {
@@ -636,8 +631,8 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": true,
@@ -650,14 +645,14 @@
         },
         {
           "id": "IDE-06",
-          "title": "Confirmar ação",
+          "title": "Renovar acesso",
           "user": "",
-          "bot": "Confirme explicitamente se deseja concluir esta ação demonstrativa.",
-          "mode": "review",
+          "bot": "Digite o CPF aqui no chat para renovar o acesso demonstrativo e retomar a revisão da ação.",
+          "mode": "chat",
           "actions": [
             {
-              "label": "Informar CPF",
-              "target": "IDE-08"
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
             }
           ],
           "alternative": false,
@@ -676,7 +671,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Solicitar atendimento",
+              "label": "Pedir atendimento",
               "target": "HUM-08"
             }
           ],
@@ -690,29 +685,21 @@
         },
         {
           "id": "IDE-08",
-          "title": "CPF",
+          "title": "Informar CPF",
           "user": "",
-          "bot": "Informe um CPF com 11 dígitos para abrir a demonstração.",
-          "mode": "form",
-          "actions": [],
+          "bot": "Digite um CPF com 11 dígitos aqui no chat, com ou sem pontuação XXX.XXX.XXX-XX, para abrir a demonstração.",
+          "mode": "chat",
+          "actions": [
+            {
+              "label": "Pedir ajuda",
+              "target": "HUM-01"
+            }
+          ],
           "alternative": false,
-          "flow": {
-            "title": "Informar CPF",
-            "fields": [
-              {
-                "name": "cpf",
-                "label": "CPF",
-                "required": true,
-                "sensitive": true
-              }
-            ],
-            "submit": "Continuar",
-            "target": "IDE-02"
-          },
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Vou informar meu CPF.",
-          "behavior": "Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.",
+          "behavior": "Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.",
           "next": null,
           "journeyId": "IDE"
         }
@@ -887,7 +874,60 @@
                 "target": "DES-14"
               }
             ],
-            "submit": "Ver detalhes"
+            "submit": "Ver detalhes",
+            "discovery": {
+              "services": [
+                {
+                  "id": "0",
+                  "title": "Assistência Funeral",
+                  "description": "A Assistência Funeral oferece suporte ao titular e aos dependentes. A utilização depende das condições, limites e elegibilidade previstos no serviço contratado.",
+                  "note": "Não prometer cobertura, valores, carência ou procedimentos sem confirmação das condições vigentes."
+                },
+                {
+                  "id": "1",
+                  "title": "Assistência Farmácia",
+                  "description": "A Assistência Farmácia oferece descontos em redes credenciadas. As redes participantes e as condições de uso devem ser confirmadas antes da utilização.",
+                  "note": "Não informar percentual, preço ou rede específica sem confirmação das condições vigentes."
+                },
+                {
+                  "id": "2",
+                  "title": "Telemedicina",
+                  "description": "A Telemedicina acontece no ambiente do prestador, conforme disponibilidade, limites e condições do serviço contratado.",
+                  "note": "Não prometer especialidades, atendimento 24 horas, preços ou disponibilidade sem validação do prestador."
+                }
+              ],
+              "comparison": "**Individual**\nR$ 29,90/mês · somente titular.\n\n**Familiar**\nR$ 39,90/mês · titular e até 3 dependentes neste exemplo.\n\nOs benefícios, limites e carências precisam ser conferidos nas condições de cada plano.",
+              "plans": [
+                {
+                  "id": "individual",
+                  "title": "Individual",
+                  "price": "R$ 29,90/mês",
+                  "composition": "Somente titular.",
+                  "description": "R$ 29,90/mês · somente titular"
+                },
+                {
+                  "id": "familiar",
+                  "title": "Familiar",
+                  "price": "R$ 39,90/mês",
+                  "composition": "Titular e até 3 dependentes elegíveis neste exemplo.",
+                  "description": "R$ 39,90/mês · titular e dependentes elegíveis"
+                }
+              ],
+              "conditions": "Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.",
+              "note": "Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.",
+              "outcomes": [
+                {
+                  "id": "finish",
+                  "label": "Concluir descoberta",
+                  "target": "DES-11"
+                },
+                {
+                  "id": "contract",
+                  "label": "Iniciar contratação",
+                  "target": "ADE-01"
+                }
+              ]
+            }
           },
           "requiresAuth": false,
           "rule": "Produtos, preços e benefícios mostrados são fictícios. Assistência não é plano de saúde.",
@@ -976,7 +1016,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Serviços de assistência",
+              "label": "Ver assistências",
               "target": "DES-03"
             },
             {
@@ -1254,7 +1294,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar com autenticação",
+              "label": "Informar CPF",
               "target": "ADE-03"
             },
             {
@@ -1690,7 +1730,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Abrir demonstração segura",
+              "label": "Abrir demonstração",
               "target": "PAG-04"
             },
             {
@@ -1829,7 +1869,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Solicitar atendimento",
+              "label": "Pedir atendimento",
               "target": "HUM-08"
             }
           ],
@@ -2256,7 +2296,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Informar dados que faltam",
+              "label": "Completar dados",
               "target": "DEP-34"
             },
             {
@@ -2329,7 +2369,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular dado informado",
+              "label": "Simular dado",
               "target": "DEP-06"
             },
             {
@@ -2678,7 +2718,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular correção de data",
+              "label": "Simular nova data",
               "target": "DEP-16"
             }
           ],
@@ -2698,7 +2738,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Substituir pessoa do pedido",
+              "label": "Trocar pessoa",
               "target": "DEP-04"
             },
             {
@@ -2722,7 +2762,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Ver revisão atualizada",
+              "label": "Ver nova revisão",
               "target": "DEP-17"
             }
           ],
@@ -2845,7 +2885,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Simular correção informada",
+              "label": "Simular correção",
               "target": "DEP-20"
             }
           ],
@@ -2865,7 +2905,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Revisar alteração permitida",
+              "label": "Revisar alteração",
               "target": "DEP-21"
             },
             {
@@ -3053,7 +3093,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Corrigir pela conversa",
+              "label": "Corrigir no chat",
               "target": "DEP-14"
             }
           ],
@@ -3121,7 +3161,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Acompanhar agendamento",
+              "label": "Ver agendamento",
               "target": "SOL-05"
             }
           ],
@@ -3141,7 +3181,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar solicitação",
+              "label": "Ver solicitação",
               "target": "SOL-04"
             },
             {
@@ -3165,7 +3205,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar meus benefícios",
+              "label": "Meus benefícios",
               "target": "UTI-01"
             },
             {
@@ -4092,11 +4132,11 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Ver acesso disponível",
+              "label": "Ver acesso",
               "target": "UTI-04"
             },
             {
-              "label": "Ver caso com carência",
+              "label": "Caso com carência",
               "target": "UTI-07"
             }
           ],
@@ -4188,7 +4228,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Ver outros benefícios",
+              "label": "Outros benefícios",
               "target": "UTI-01"
             },
             {
@@ -4515,7 +4555,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar atendimento",
+              "label": "Continuar conversa",
               "target": "HUM-02"
             }
           ],
@@ -4732,7 +4772,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar atualização",
+              "label": "Ver atualização",
               "target": "COB-08"
             },
             {
@@ -5163,7 +5203,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Acompanhar restituição",
+              "label": "Ver restituição",
               "target": "SOL-04"
             },
             {
@@ -5207,7 +5247,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Solicitar atendimento",
+              "label": "Pedir atendimento",
               "target": "HUM-08"
             }
           ],
@@ -5299,11 +5339,11 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Sim, encerrar conversa",
+              "label": "Sim, encerrar",
               "target": "FIM-02"
             },
             {
-              "label": "Continuar atendimento",
+              "label": "Continuar conversa",
               "target": "NAV-01"
             }
           ],
@@ -5323,7 +5363,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Começar nova conversa",
+              "label": "Nova conversa",
               "target": "ENT-02"
             }
           ],
@@ -5552,7 +5592,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar opção atual",
+              "label": "Ver opção atual",
               "target": "REN-02"
             }
           ],
@@ -5699,7 +5739,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar atualização",
+              "label": "Ver atualização",
               "target": "SOL-06"
             },
             {
@@ -5858,7 +5898,7 @@
               "target": "DEP-09"
             },
             {
-              "label": "Verificação necessária",
+              "label": "Informar CPF",
               "target": "IDE-01"
             }
           ],
@@ -5977,7 +6017,7 @@
               "target": "HUM-08"
             },
             {
-              "label": "Continuar autosserviço",
+              "label": "Continuar no chat",
               "target": "NAV-01"
             }
           ],
@@ -6046,7 +6086,7 @@
               "target": "HUM-09"
             },
             {
-              "label": "Continuar autosserviço",
+              "label": "Continuar no chat",
               "target": "NAV-01"
             }
           ],
@@ -6090,7 +6130,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar atendimento",
+              "label": "Continuar conversa",
               "target": "HUM-04"
             }
           ],
@@ -6131,7 +6171,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Confirmar encerramento do retorno",
+              "label": "Encerrar retorno",
               "target": "HUM-07"
             }
           ],
@@ -6157,7 +6197,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar solicitação",
+              "label": "Continuar pedido",
               "target": "RET-02"
             },
             {
@@ -6265,7 +6305,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Recomeçar com contexto",
+              "label": "Retomar contexto",
               "target": "ADE-01"
             }
           ],
@@ -6471,7 +6511,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Consultar restituição",
+              "label": "Ver restituição",
               "target": "CAN-10"
             }
           ],
@@ -6491,7 +6531,7 @@
           "mode": "chat",
           "actions": [
             {
-              "label": "Continuar atendimento",
+              "label": "Continuar conversa",
               "target": "HUM-10"
             }
           ],

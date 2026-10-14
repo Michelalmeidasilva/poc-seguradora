@@ -191,7 +191,7 @@ bash infra/deploy.sh smoke --url https://SEU_HOST_WEB
 
 Sem URL, o comando lê web_url do Terraform. O smoke final de deploy/rollback resolve URL sem Terraform: flag, domínio configurado ou URL determinística do web pelo número do projeto. Use `--url` quando precisar fixar a mesma URL confirmada no output.
 
-Sete passos: web, session, stream, chatbot, demo-flow, quote, replay. Verifica navegador/mesma origem → web/nginx → gateway → chatbot → serviços. Limite de 10 s por passo e 55 s global; cold start pode excedê-lo. No primeiro deploy ou após scale-to-zero, espere serviços prontos e repita somente o smoke se o diagnóstico indicar aquecimento. Não conclua que rede/autenticação funcionam só porque o placeholder sobe.
+Sete passos: web, session, stream, chatbot, assistance-products, cpf-contract, replay. Verifica navegador/mesma origem → web/nginx → gateway → chatbot → adapter mock de assistências, incluindo catálogo dos três serviços, CPF e retomada do contrato. Não navega pelas telas legadas nem chama cotação/apólice/sinistro; a conectividade com os `svc-*` exige verificação separada. Não comprova todas as 247 telas. Limite de 10 s por passo e 55 s global; cold start pode excedê-lo. No primeiro deploy ou após scale-to-zero, espere serviços prontos e repita somente o smoke se o diagnóstico indicar aquecimento. Não conclua que rede/autenticação funcionam só porque o placeholder sobe.
 
 Para conferir localmente (não acessa GCP):
 
@@ -205,7 +205,7 @@ pnpm compose:down
 
 Terraform configura web/gateway públicos; chatbot e os três serviços internos recebem somente ingress interno. Gateway/chatbot têm Direct VPC egress ALL_TRAFFIC na sub-rede com Private Google Access, sem Cloud NAT. Todos recebem invocador allUsers por decisão da POC; restrição de ingresso é a barreira dos internos, ainda sem autenticação por ID token.
 
-No primeiro deploy real, confira no console/YAML dos serviços: ingress dos quatro internos, egress/sub-rede de gateway/chatbot, e Private Google Access. De fora da VPC, GET /health dos quatro internos deve ser bloqueado (resposta de bloqueio pode variar); pela web pública, o smoke deve completar, inclusive quote. Compare URLs com outputs antes de atribuir a falha à rede. Teste depois de cold start também. **Este percurso não foi validado no GCP.** Egress ALL_TRAFFIC sem NAT não oferece saída geral para internet: integração futura com API externa exige redesenho.
+No deploy, confira no console/YAML dos serviços: ingress dos quatro internos, egress/sub-rede de gateway/chatbot, e Private Google Access. De fora da VPC, GET /health dos quatro internos deve ser bloqueado (resposta de bloqueio pode variar); pela web pública, o smoke de assistências deve completar. Compare URLs com outputs antes de atribuir a falha à rede. Teste depois de cold start também. A nova experiência deve ser validada na revisão publicada; o smoke atual não comprova as chamadas aos `svc-*`. Egress ALL_TRAFFIC sem NAT não oferece saída geral para internet: integração futura com API externa exige redesenho.
 
 Se a política da organização proibir allUsers (restrição de domínio), o apply de IAM pode falhar. Peça ao administrador uma solução autorizada ou implemente autenticação por ID token e invocadores específicos; não contorne a política. O fluxo público atual também depende dessa concessão.
 

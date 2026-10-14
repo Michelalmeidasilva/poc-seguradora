@@ -91,7 +91,14 @@
 
 - [x] Playwright verifica CPF-canário visível somente no turno ativo, mascarado no `sessionStorage` e restaurado já mascarado
 - [x] Gateway simulado não ecoa mensagens com CPF; E2E confirma que o canário não aparece no histórico persistido nem após recarga
-- [x] Suíte Playwright completa executada com Chromium
+- [ ] Suíte Playwright ampliada: 19/19 passou após diagnóstico de 429/Retry-After e espera inicial de 30 s (sem alterar rate limit); 11/11 percursos live passaram. Última correção contextual PLA/CAN foi validada por HTTP/unidade e integrada em novo rebuild local; aceite completo da Task 9 permanece pendente dos 247 estados.
+- [x] Fixture IDE-08 sincronizada mecanicamente com o backend: único screen FORM terminal e Footer complete. Suíte web 933/933 e typecheck passaram; demais fontes frontend preservadas.
+
+## Plano WhatsApp Assistance Experience — Task 10
+
+- [x] Checkpoint parcial: 938/938 testes web com um worker e limites temporais originais; 19/19 E2E após respeitar Retry-After, 11/11 live e 24/24 grupos representativos. Typecheck/lint/build aprovados. Execução padrão paralela ainda apresentou falha temporal de renderização; isso foi registrado, não eliminado das asserções.
+- [ ] Fidelidade completa ao atlas e acessibilidade de todos os estados ainda pendentes. Capturas representativas dos 24 grupos passaram em localhost:8080 nas larguras 320/390/1440 px (24/24); não equivalem aos 247 estados nem a todas as alternativas.
+- [ ] Consolidar revisão visual: Flow branco, seções de revisão em duas colunas, nascimento DD/MM/AAAA, CPF mascarado, formatação canônica e agrupamento de texto/quick replies no mesmo turno. Captura mobile DEP-06 conferida após percurso real de inclusão; regressões finais em andamento.
 
 ## Plano 7 (deploy) — atualizado pelo Plano 8
 
@@ -111,6 +118,10 @@ Pendências (detalhes na seção Pendências do runbook):
 - ID token entre serviços, `svc-*` reais, domínio próprio/Cloud Armor/uptime checks, versões fixadas das imagens base.
 
 ## Qualidade
+
+- [x] Identificação CPF sem formulário Flow; migração de histórico IDE-06/08 para orientação textual ao recarregar, mantendo mascaramento do CPF digitado em storage. Novas regressões RED→GREEN; suíte web 942/942, tipos e build verificados em 2026-10-14. CPF de dependente permanece campo cadastral.
+
+- [x] Descoberta em um único Flow com retorno nativo preservando escolhas e envio somente na conclusão. Verificação de 2026-10-13: 940 testes web, 19 E2E padrão; 13 cenários live passando e regressão de dependente repetida separadamente com sucesso após corrigir seletor concorrente.
 
 - [x] Testes unitários e de componente
 - [x] Lint, formatação e tsconfig estrito sem erros

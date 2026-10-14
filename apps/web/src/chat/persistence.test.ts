@@ -17,9 +17,58 @@ const sample = (): ChatState => {
 };
 
 describe('persistence', () => {
+  it.each(['IDE-08', 'IDE-06'])(
+    'replaces obsolete identity Flow %s on reload with a text prompt',
+    (flowId) => {
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({
+          v: 1,
+          sessionId: 's9',
+          lastSeq: 3,
+          items: [
+            {
+              kind: 'bot',
+              id: uuid(7),
+              ts: '2026-10-10T12:00:00.000Z',
+              event: {
+                v: 1,
+                id: uuid(8),
+                seq: 3,
+                sessionId: 's9',
+                correlationId: 'c',
+                ts: '2026-10-10T12:00:00.000Z',
+                type: 'message.flow',
+                payload: {
+                  flowId,
+                  body: 'Informe CPF',
+                  ctaLabel: 'Abrir formulário',
+                  flowJson: {},
+                },
+              },
+            },
+          ],
+        }),
+      );
+      const loaded = loadChat(sessionStorage);
+      expect(loaded?.items[0]).toMatchObject({
+        kind: 'bot',
+        event: {
+          type: 'message.text',
+          payload: {
+            text: 'A identificação agora é pelo chat. Digite um CPF com 11 números ou XXX.XXX.XXX-XX para continuar.',
+          },
+        },
+      });
+      expect(sessionStorage.getItem(KEY)).not.toContain('message.flow');
+    },
+  );
   const userText = (text: string): UserItem => ({
-    kind: 'user', id: uuid(99), ts: '2026-10-10T12:00:00.000Z',
-    status: 'sent', content: { type: 'text', text },
+    kind: 'user',
+    id: uuid(99),
+    ts: '2026-10-10T12:00:00.000Z',
+    status: 'sent',
+    content: { type: 'text', text },
   });
 
   it.each([
@@ -41,48 +90,75 @@ describe('persistence', () => {
   it.each([
     ['CPF 98765432100 confirmado', 'CPF *********00 confirmado', '98765432100'],
     ['CPF 987.654.321-00 confirmado', 'CPF ***.***.***-00 confirmado', '987.654.321-00'],
-  ])('masks quick-reply title on save without changing active text or identifiers: %s', (title, expected, rawCpf) => {
-    const reply: UserItem = {
-      kind: 'user', id: uuid(90), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
-      content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
-    };
-    const live = chatReducer(sample(), { type: 'user_queued', item: reply });
-    saveChat(sessionStorage, live);
+  ])(
+    'masks quick-reply title on save without changing active text or identifiers: %s',
+    (title, expected, rawCpf) => {
+      const reply: UserItem = {
+        kind: 'user',
+        id: uuid(90),
+        ts: '2026-10-10T12:00:00.000Z',
+        status: 'sent',
+        content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
+      };
+      const live = chatReducer(sample(), { type: 'user_queued', item: reply });
+      saveChat(sessionStorage, live);
 
-    expect(live.items.at(-1)).toMatchObject({ content: { title } });
-    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content).toEqual({
-      type: 'quick_reply', title: expected, optionId: 'menu.confirm', replyToId: uuid(7),
-    });
-    expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
-    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({
-      content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
-    });
-  });
+      expect(live.items.at(-1)).toMatchObject({ content: { title } });
+      expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content).toEqual({
+        type: 'quick_reply',
+        title: expected,
+        optionId: 'menu.confirm',
+        replyToId: uuid(7),
+      });
+      expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
+      expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({
+        content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
+      });
+    },
+  );
 
   it.each([
     ['CPF 98765432100 confirmado', 'CPF *********00 confirmado', '98765432100'],
     ['CPF 987.654.321-00 confirmado', 'CPF ***.***.***-00 confirmado', '987.654.321-00'],
-  ])('masks a legacy quick-reply title before restoring and rewriting: %s', (title, expected, rawCpf) => {
-    const reply: UserItem = {
-      kind: 'user', id: uuid(91), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
-      content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
-    };
-    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, sessionId: 's9', lastSeq: 0, items: [reply] }));
+  ])(
+    'masks a legacy quick-reply title before restoring and rewriting: %s',
+    (title, expected, rawCpf) => {
+      const reply: UserItem = {
+        kind: 'user',
+        id: uuid(91),
+        ts: '2026-10-10T12:00:00.000Z',
+        status: 'sent',
+        content: { type: 'quick_reply', title, optionId: 'menu.confirm', replyToId: uuid(7) },
+      };
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({ v: 1, sessionId: 's9', lastSeq: 0, items: [reply] }),
+      );
 
-    expect(loadChat(sessionStorage)?.items[0]).toMatchObject({
-      content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
-    });
-    expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content).toEqual({
-      type: 'quick_reply', title: expected, optionId: 'menu.confirm', replyToId: uuid(7),
-    });
-    expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
-  });
+      expect(loadChat(sessionStorage)?.items[0]).toMatchObject({
+        content: { title: expected, optionId: 'menu.confirm', replyToId: uuid(7) },
+      });
+      expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content).toEqual({
+        type: 'quick_reply',
+        title: expected,
+        optionId: 'menu.confirm',
+        replyToId: uuid(7),
+      });
+      expect(sessionStorage.getItem(KEY)).not.toContain(rawCpf);
+    },
+  );
 
   it('sanitizes old user text and rewrites storage before returning the restored state', () => {
     const text = 'CPF 98765432100 e 123.456.789-01';
-    sessionStorage.setItem(KEY, JSON.stringify({
-      v: 1, sessionId: 's9', lastSeq: 0, items: [userText(text)],
-    }));
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        v: 1,
+        sessionId: 's9',
+        lastSeq: 0,
+        items: [userText(text)],
+      }),
+    );
     const loaded = loadChat(sessionStorage);
     const expected = 'CPF *********00 e ***.***.***-01';
     expect(loaded?.items[0]).toMatchObject({ content: { text: expected } });
@@ -91,12 +167,20 @@ describe('persistence', () => {
   });
 
   it('does not expose old CPF text if the storage rewrite fails', () => {
-    sessionStorage.setItem(KEY, JSON.stringify({
-      v: 1, sessionId: 's9', lastSeq: 0, items: [userText('CPF 98765432100')],
-    }));
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        v: 1,
+        sessionId: 's9',
+        lastSeq: 0,
+        items: [userText('CPF 98765432100')],
+      }),
+    );
     const broken = {
       getItem: (key: string) => sessionStorage.getItem(key),
-      setItem: () => { throw new Error('QuotaExceededError'); },
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
       removeItem: (key: string) => sessionStorage.removeItem(key),
     } as unknown as Storage;
     expect(loadChat(broken)).toBeUndefined();
@@ -106,31 +190,62 @@ describe('persistence', () => {
   const catalogSteps = catalog.groups.flatMap((group) =>
     group.steps.map(({ id, mode }) => ({ id, mode })),
   );
-  const legacyReview = (flowId: string) => chatReducer(sample(), {
-    type: 'server_event',
-    event: {
-      ...botText(3), type: 'message.flow',
-      payload: {
-        flowId, body: 'Revise', ctaLabel: 'Confirmar',
-        flowJson: { version: '7.1', screens: [{ id: 'REVIEW', terminal: true, layout: {
-          type: 'SingleColumnLayout', children: [{ type: 'Footer', label: 'Confirmar',
-            'on-click-action': { name: 'complete', payload: { confirmed: true } } }],
-        } }] },
+  const legacyReview = (flowId: string) =>
+    chatReducer(sample(), {
+      type: 'server_event',
+      event: {
+        ...botText(3),
+        type: 'message.flow',
+        payload: {
+          flowId,
+          body: 'Revise',
+          ctaLabel: 'Confirmar',
+          flowJson: {
+            version: '7.1',
+            screens: [
+              {
+                id: 'REVIEW',
+                terminal: true,
+                layout: {
+                  type: 'SingleColumnLayout',
+                  children: [
+                    {
+                      type: 'Footer',
+                      label: 'Confirmar',
+                      'on-click-action': { name: 'complete', payload: { confirmed: true } },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
       },
-    },
-  });
+    });
 
-  it.each(catalogSteps)('scopes legacy detection to canonical review mode: $id ($mode)', ({ id, mode }) => {
-    const live = legacyReview(id);
-    // Exercise old raw snapshots and normal saves independently.
-    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
-    const expectedType = mode === 'review' ? 'message.text' : 'message.flow';
-    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ event: { type: expectedType } });
-    expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1)).toMatchObject({ event: { type: expectedType } });
-    saveChat(sessionStorage, live);
-    expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({ event: { type: expectedType } });
-    expect(live.items.at(-1)).toMatchObject({ event: { type: 'message.flow', payload: { ctaLabel: 'Confirmar' } } });
-  });
+  it.each(catalogSteps)(
+    'scopes legacy detection to canonical review mode: $id ($mode)',
+    ({ id, mode }) => {
+      const live = legacyReview(id);
+      // Exercise old raw snapshots and normal saves independently.
+      sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
+      const expectedType =
+        mode === 'review' || ['IDE-06', 'IDE-08'].includes(id) ? 'message.text' : 'message.flow';
+      expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({
+        event: { type: expectedType },
+      });
+      expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1)).toMatchObject({
+        event: { type: expectedType },
+      });
+      saveChat(sessionStorage, live);
+      expect(loadChat(sessionStorage)?.items.at(-1)).toMatchObject({
+        event: { type: expectedType },
+      });
+      expect(live.items.at(-1)).toMatchObject({
+        event: { type: 'message.flow', payload: { ctaLabel: 'Confirmar' } },
+      });
+    },
+  );
 
   it('preserves an unrelated terminal REVIEW Flow and its complete action after save/load', () => {
     const live = legacyReview('external-review');
@@ -139,20 +254,25 @@ describe('persistence', () => {
     expect(JSON.parse(sessionStorage.getItem(KEY)!).items).toEqual(live.items);
   });
 
-  it.each([false, true])('never restores an unsafe snapshot when rewriting fails (removal fails: %s)', (removalFails) => {
-    const live = legacyReview('DEP-06');
-    sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
-    const broken = {
-      getItem: (key: string) => sessionStorage.getItem(key),
-      setItem: () => { throw new Error('QuotaExceededError'); },
-      removeItem: (key: string) => {
-        if (removalFails) throw new Error('SecurityError');
-        sessionStorage.removeItem(key);
-      },
-    } as unknown as Storage;
-    expect(loadChat(broken)).toBeUndefined();
-    if (!removalFails) expect(sessionStorage.getItem(KEY)).toBeNull();
-  });
+  it.each([false, true])(
+    'never restores an unsafe snapshot when rewriting fails (removal fails: %s)',
+    (removalFails) => {
+      const live = legacyReview('DEP-06');
+      sessionStorage.setItem(KEY, JSON.stringify({ v: 1, ...live }));
+      const broken = {
+        getItem: (key: string) => sessionStorage.getItem(key),
+        setItem: () => {
+          throw new Error('QuotaExceededError');
+        },
+        removeItem: (key: string) => {
+          if (removalFails) throw new Error('SecurityError');
+          sessionStorage.removeItem(key);
+        },
+      } as unknown as Storage;
+      expect(loadChat(broken)).toBeUndefined();
+      if (!removalFails) expect(sessionStorage.getItem(KEY)).toBeNull();
+    },
+  );
 
   it('round-trips the session, the seq and the messages', () => {
     saveChat(sessionStorage, sample());
@@ -249,82 +369,190 @@ describe('persistence', () => {
     const summary = 'CPF 987.654.321-00 confirmado';
     const expected = 'CPF ***.***.***-00 confirmado';
     const legacy = {
-      kind: 'user', id: uuid(30), ts: '2026-10-10T12:00:00.000Z', status: 'sent',
+      kind: 'user',
+      id: uuid(30),
+      ts: '2026-10-10T12:00:00.000Z',
+      status: 'sent',
       content: { type: 'flow_submit', flowId: 'cotacao', summary, data: { cpf: '12345678901' } },
     } as unknown as UserItem;
     const live = chatReducer(sample(), { type: 'user_queued', item: legacy });
     saveChat(sessionStorage, live);
     expect(live.items.at(-1)).toMatchObject({ content: { summary } });
     expect(JSON.parse(sessionStorage.getItem(KEY)!).items.at(-1).content).toEqual({
-      type: 'flow_submit', flowId: 'cotacao', summary: expected,
+      type: 'flow_submit',
+      flowId: 'cotacao',
+      summary: expected,
     });
 
-    sessionStorage.setItem(KEY, JSON.stringify({
-      v: 1, sessionId: 's9', lastSeq: 0, items: [legacy],
-    }));
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        v: 1,
+        sessionId: 's9',
+        lastSeq: 0,
+        items: [legacy],
+      }),
+    );
     expect(loadChat(sessionStorage)?.items[0]).toMatchObject({ content: { summary: expected } });
     expect(JSON.parse(sessionStorage.getItem(KEY)!).items[0].content).toEqual({
-      type: 'flow_submit', flowId: 'cotacao', summary: expected,
+      type: 'flow_submit',
+      flowId: 'cotacao',
+      summary: expected,
     });
     expect(sessionStorage.getItem(KEY)).not.toContain('987.654.321-00');
     expect(sessionStorage.getItem(KEY)).not.toContain('12345678901');
   });
 
-  it.each(['DEP-06', 'external-review'])('does not persist volatile Flow initialData for %s', (flowId) => {
-    const event = {
-      v: 1 as const, id: uuid(4), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z',
-      type: 'message.flow' as const,
-      payload: { flowId, body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'review' as const, values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' } } },
-    };
-    const live = chatReducer(sample(), { type: 'server_event', event });
-    saveChat(sessionStorage, live);
-    expect(sessionStorage.getItem(KEY)).not.toContain('CPF-CANARY-98765432100');
-    expect(sessionStorage.getItem(KEY)).not.toContain('initialData');
-    const liveFlow = live.items.find((item) => item.kind === 'bot' && item.event.type === 'message.flow');
-    expect(liveFlow).toMatchObject({ kind: 'bot', event: { type: 'message.flow', payload: { ctaLabel: 'Abrir', initialData: { intent: 'review' } } } });
-    const saved = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as {
-      items: Array<{
-        kind: string;
-        event?: { type: string; payload?: { text?: string; ctaLabel?: string } };
-      }>;
-    };
-    const expired = saved.items.find((item) => item.kind === 'bot' && item.event?.payload?.text?.includes('expirou'));
-    expect(expired?.event?.type).toBe('message.text');
-    expect(expired?.event?.payload?.ctaLabel).toBeUndefined();
-  });
+  it.each(['DEP-06', 'external-review'])(
+    'does not persist volatile Flow initialData for %s',
+    (flowId) => {
+      const event = {
+        v: 1 as const,
+        id: uuid(4),
+        seq: 3,
+        sessionId: 's9',
+        correlationId: 'c',
+        ts: '2026-10-10T12:00:00.000Z',
+        type: 'message.flow' as const,
+        payload: {
+          flowId,
+          body: 'Revise',
+          ctaLabel: 'Abrir',
+          flowJson: {},
+          initialData: {
+            intent: 'review' as const,
+            values: { cpf: 'CPF-CANARY-98765432100', name: 'Ana' },
+          },
+        },
+      };
+      const live = chatReducer(sample(), { type: 'server_event', event });
+      saveChat(sessionStorage, live);
+      expect(sessionStorage.getItem(KEY)).not.toContain('CPF-CANARY-98765432100');
+      expect(sessionStorage.getItem(KEY)).not.toContain('initialData');
+      const liveFlow = live.items.find(
+        (item) => item.kind === 'bot' && item.event.type === 'message.flow',
+      );
+      expect(liveFlow).toMatchObject({
+        kind: 'bot',
+        event: {
+          type: 'message.flow',
+          payload: { ctaLabel: 'Abrir', initialData: { intent: 'review' } },
+        },
+      });
+      const saved = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as {
+        items: Array<{
+          kind: string;
+          event?: { type: string; payload?: { text?: string; ctaLabel?: string } };
+        }>;
+      };
+      const expired = saved.items.find(
+        (item) => item.kind === 'bot' && item.event?.payload?.text?.includes('expirou'),
+      );
+      expect(expired?.event?.type).toBe('message.text');
+      expect(expired?.event?.payload?.ctaLabel).toBeUndefined();
+    },
+  );
 
-  it.each(['DEP-06', 'external-review'])('scrubs volatile Flow initialData from legacy messages for %s', (flowId) => {
-    sessionStorage.setItem(KEY, JSON.stringify({
-      v: 1, sessionId: 's9', lastSeq: 3,
-      items: [{ kind: 'bot', id: uuid(5), ts: '2026-10-10T12:00:00.000Z', event: {
-        v: 1, id: uuid(6), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z', type: 'message.flow',
-        payload: { flowId, body: 'Revise', ctaLabel: 'Abrir', flowJson: {}, initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } } },
-      } }],
-    }));
-    const loaded = loadChat(sessionStorage);
-    const serialized = JSON.stringify(loaded);
-    expect(serialized).not.toContain('CPF-CANARY-98765432100');
-    expect(serialized).not.toContain('initialData');
-    const storedImmediatelyAfterLoad = sessionStorage.getItem(KEY) ?? '';
-    expect(storedImmediatelyAfterLoad).not.toContain('CPF-CANARY-98765432100');
-    expect(storedImmediatelyAfterLoad).not.toContain('initialData');
-    expect(serialized).not.toContain('message.flow');
-    const expired = loaded?.items.find((item) => item.kind === 'bot' && item.event.type === 'message.text');
-    expect(expired?.kind === 'bot' && expired.event.type === 'message.text' && expired.event.payload.text).toMatch(/expirou/i);
-    expect(storedImmediatelyAfterLoad).not.toContain('message.flow');
-  });
+  it.each(['DEP-06', 'external-review'])(
+    'scrubs volatile Flow initialData from legacy messages for %s',
+    (flowId) => {
+      sessionStorage.setItem(
+        KEY,
+        JSON.stringify({
+          v: 1,
+          sessionId: 's9',
+          lastSeq: 3,
+          items: [
+            {
+              kind: 'bot',
+              id: uuid(5),
+              ts: '2026-10-10T12:00:00.000Z',
+              event: {
+                v: 1,
+                id: uuid(6),
+                seq: 3,
+                sessionId: 's9',
+                correlationId: 'c',
+                ts: '2026-10-10T12:00:00.000Z',
+                type: 'message.flow',
+                payload: {
+                  flowId,
+                  body: 'Revise',
+                  ctaLabel: 'Abrir',
+                  flowJson: {},
+                  initialData: { intent: 'correction', values: { cpf: 'CPF-CANARY-98765432100' } },
+                },
+              },
+            },
+          ],
+        }),
+      );
+      const loaded = loadChat(sessionStorage);
+      const serialized = JSON.stringify(loaded);
+      expect(serialized).not.toContain('CPF-CANARY-98765432100');
+      expect(serialized).not.toContain('initialData');
+      const storedImmediatelyAfterLoad = sessionStorage.getItem(KEY) ?? '';
+      expect(storedImmediatelyAfterLoad).not.toContain('CPF-CANARY-98765432100');
+      expect(storedImmediatelyAfterLoad).not.toContain('initialData');
+      expect(serialized).not.toContain('message.flow');
+      const expired = loaded?.items.find(
+        (item) => item.kind === 'bot' && item.event.type === 'message.text',
+      );
+      expect(
+        expired?.kind === 'bot' &&
+          expired.event.type === 'message.text' &&
+          expired.event.payload.text,
+      ).toMatch(/expirou/i);
+      expect(storedImmediatelyAfterLoad).not.toContain('message.flow');
+    },
+  );
 
   it('expires legacy terminal REVIEW Flows even when initialData was already stripped', () => {
-    sessionStorage.setItem(KEY, JSON.stringify({
-      v: 1, sessionId: 's9', lastSeq: 3,
-      items: [{ kind: 'bot', id: uuid(7), ts: '2026-10-10T12:00:00.000Z', event: {
-        v: 1, id: uuid(8), seq: 3, sessionId: 's9', correlationId: 'c', ts: '2026-10-10T12:00:00.000Z', type: 'message.flow',
-        payload: {
-          flowId: 'DEP-06', body: 'Revise seus dados', ctaLabel: 'Confirmar solicitação',
-          flowJson: { version: '7.1', screens: [{ id: 'REVIEW', terminal: true, layout: { type: 'SingleColumnLayout', children: [{ type: 'TextBody', text: 'CPF: ••00 — Rua Canary' }, { type: 'Footer', label: 'Confirmar' }] } }] },
-        },
-      } }],
-    }));
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        v: 1,
+        sessionId: 's9',
+        lastSeq: 3,
+        items: [
+          {
+            kind: 'bot',
+            id: uuid(7),
+            ts: '2026-10-10T12:00:00.000Z',
+            event: {
+              v: 1,
+              id: uuid(8),
+              seq: 3,
+              sessionId: 's9',
+              correlationId: 'c',
+              ts: '2026-10-10T12:00:00.000Z',
+              type: 'message.flow',
+              payload: {
+                flowId: 'DEP-06',
+                body: 'Revise seus dados',
+                ctaLabel: 'Confirmar solicitação',
+                flowJson: {
+                  version: '7.1',
+                  screens: [
+                    {
+                      id: 'REVIEW',
+                      terminal: true,
+                      layout: {
+                        type: 'SingleColumnLayout',
+                        children: [
+                          { type: 'TextBody', text: 'CPF: ••00 — Rua Canary' },
+                          { type: 'Footer', label: 'Confirmar' },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }),
+    );
 
     const loaded = loadChat(sessionStorage);
     const serialized = JSON.stringify(loaded);

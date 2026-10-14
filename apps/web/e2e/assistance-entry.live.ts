@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { identifyByChat } from './identity-text.helpers';
 
 const products = [
   ['Assistência Funeral', 'A Assistência Funeral oferece suporte ao titular e aos dependentes.'],
@@ -19,14 +20,16 @@ for (const [product, detail] of products) {
   }) => {
     await openWelcome(page);
     await page.getByRole('button', { name: 'Conhecer produtos', exact: true }).click();
-    await page.getByRole('button', { name: 'Ver detalhes', exact: true }).click();
+    await page.getByRole('button', { name: 'Selecionar uma opção', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Conhecer produtos' });
     for (const [name] of products)
       await expect(dialog.getByRole('radio', { name: new RegExp(name) })).toBeVisible();
     await dialog.getByRole('radio', { name: new RegExp(product) }).check();
     await dialog.getByRole('button', { name: 'Ver detalhes', exact: true }).click();
-    await expect(page.getByText(detail, { exact: false })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Voltar aos serviços' })).toBeVisible();
+    const details = page.getByRole('dialog', { name: 'Detalhes do serviço' });
+    await expect(details.getByText(detail, { exact: false })).toBeVisible();
+    await expect(details.getByRole('button', { name: 'Ver planos', exact: true })).toBeVisible();
+    await expect(details.getByRole('button', { name: 'Voltar', exact: true })).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Informar CPF' })).toHaveCount(0);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -39,15 +42,25 @@ test('personal contract entry asks for CPF and accepts eleven digits without che
 }) => {
   await openWelcome(page);
   await page.getByRole('button', { name: 'Meu contrato', exact: true }).click();
-  await page.getByRole('button', { name: 'Informar CPF', exact: true }).click();
-  await page.getByRole('button', { name: 'Validar formato', exact: true }).click();
-  let dialog = page.getByRole('dialog', { name: 'Informar CPF' });
-  await dialog.getByLabel('CPF', { exact: true }).fill('00000000000');
-  await dialog.getByRole('button', { name: 'Validar formato', exact: true }).click();
-  dialog = page.getByRole('dialog', { name: 'Revisar dados' });
-  await dialog.getByRole('button', { name: 'Enviar formulário', exact: true }).click();
+  await identifyByChat(page, '00000000000');
   await expect(page.getByText('O formato do CPF foi aceito.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Ver contrato', exact: true })).toBeVisible();
+});
+
+test('unsupported insurance text keeps actionable assistance choices without showing legacy screens', async ({
+  page,
+}) => {
+  await openWelcome(page);
+  await page.getByRole('textbox', { name: 'Mensagem' }).fill('quero cotar meu carro');
+  await page.getByRole('textbox', { name: 'Mensagem' }).press('Enter');
+  await expect(page.getByText(/opções disponíveis/)).toBeVisible();
+  const products = page.getByRole('button', { name: 'Conhecer produtos', exact: true }).last();
+  await expect(products).toBeEnabled({ timeout: 5_000 });
+  await products.click();
+  await expect(
+    page.getByRole('button', { name: 'Selecionar uma opção', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fazer cotação' })).toHaveCount(0);
 });
 
 for (const storedStatus of ['delivered', 'sent']) {
@@ -73,7 +86,7 @@ for (const storedStatus of ['delivered', 'sent']) {
     await expect(welcome).toHaveCount(2);
     await expect(welcome.first()).toBeDisabled();
     await welcome.last().click();
-    await page.getByRole('button', { name: 'Ver detalhes', exact: true }).click();
+    await page.getByRole('button', { name: 'Selecionar uma opção', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Conhecer produtos' })).toBeVisible();
   });
 }

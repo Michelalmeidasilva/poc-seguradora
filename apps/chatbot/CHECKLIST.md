@@ -43,9 +43,12 @@
 
 ## Plano WhatsApp Assistance Experience — Task 9
 
-- [ ] E2E enumera os 247 IDs e seus modos/conteúdos/ações, mas não comprova alcance total: a travessia a partir dos 24 `group.steps[0]` ainda registra 54 telas sem caminho; essas telas não são declaradas cobertas nem têm destinos inventados. Bloqueio de produto: decidir quais entradas de grupo são válidas ou quais telas alternativas devem existir e resolver os alvos duplicados em `IDE-01`, `IDE-03` e `DEP-11`. O teste registra esse baseline; revisão Task 9 permanece pendente.
-- [ ] Um cenário HTTP cobre a frase única de dependente, revisão, navegação pela correção, confirmação com exatamente uma mutação `addDependent`, ausência do CPF-canário em respostas/logs e zero chamadas à `ServicesPort` legada. A API existente não aceita edição de campo no ramo `DEP-14`/`DEP-16`; assim, a confirmação exercita os dados originais do rascunho, não uma correção efetiva. Permanecem sem cobertura integrada por HTTP: alteração/leitura persistente e isolamento de sessões, cancelamento/solicitação, áudio fixture/documento e indisponibilidade/retry/expiração/idempotência de mutação.
-- [x] Smoke Compose 7/7 da pilha web → gateway → chatbot → fake-services é evidência da pilha geral; não percorre jornadas de assistência e não conta como aceite Task 9
+- [x] Expiração distingue sessão ausente/expirada e usa TTL `>=`: IDE-05 é emitida no próximo turno, descarta o gate/rascunho e não executa submit antigo. Testes HTTP na fronteira exata e após TTL. Seleção válida PLA-02 preserva modalidade até PLA-06; confirmação reconsulta dependentes e bloqueia Individual incompatível. Sem alteração antes do aceite e replay testados. Suíte chatbot 636/636, typecheck/lint/build aprovados.
+- [x] Checkpoint parcial: confirmação textual PLA/CAN mantém a jornada ativa (RED→GREEN); CPF inválido, entradas compartilhadas e proveniência do formulário testados pelo driver HTTP. Chatbot 633/633, protocol 93/93, resilience 63/63, gateway 177/177; typecheck/lint/build/depcruise aprovados. Auditoria global segue vermelha, sem aceite dos 247 estados.
+- [ ] Aceite completo dos 247 IDs pendente. Removida a whitelist do baseline anterior (55 IDs na lista, embora o ledger dissesse 54). Audit HTTP separado e estrito: `pnpm --filter @seguradora/chatbot exec vitest run --config src/test/catalog-audit.config.mjs`; lê screenId após ações reais, sem direct-open/injeção. Checkpoint atual com fixtures canônica e sem dependentes: 233 estados observados, 14 não observados; falha de transição PLA-08, zero rótulos acima do limite. O teste estrito continua vermelho e o alcance não comprova todos os predicados/mutações.
+- [x] Subset HTTP: correção efetiva de nascimento DEP-14→DEP-16→DEP-17, confirmação única e preservação dos demais campos; cancelamento/replay, retorno humano, leitura do adapter após mutação, isolamento, unavailable/retry, expiração, quatro áudios e documentos com retorno canônico. Suíte chatbot 604/604; logs/eventos do dependente sem CPF-canário e zero chamadas legadas nos cenários de assistência. Isso não comprova leitura dinâmica por todas as telas de cliente nem E2E de todas as mutações.
+- [x] Exceção IDE: IDE-01 em chat e IDE-08 com único submit terminal; fixture web IDE-08 sincronizada mecanicamente. Entrada de texto desconhecida inicial/ativa não oferece menu legado; ServicesPort e regressões internas preservadas.
+- [ ] Smoke atualizado da assistência observado 7/7 após rebuild atual (393 ms): catálogo com exatamente três serviços, gate CPF, documento do contrato pelo adapter e replay na pilha local. Consolidar alterações e regressões no checkpoint; o smoke não equivale ao aceite dos 247 estados.
 
 ## Estrutura
 
@@ -80,6 +83,10 @@
 - [x] Fonte única dos Flows em `src/domain/flows/` com teste de deriva contra as cópias da web
 
 ## Qualidade
+
+- [x] Identificação por CPF digitado no chat (2026-10-14): mensagem inteira após trim, somente 11 dígitos ASCII ou formato canônico, sem checksum; erro preserva pedido e nova tentativa. Retomada mantém plano/dados do dependente enquanto o estado volátil existir; Flow antigo não libera gate e IDE-06 não confirma operações. Suíte chatbot 661/661, tipos e build verificados.
+
+- [x] DES-01 reúne serviços, detalhes, planos e condições em um único Flow; validação estrita da conclusão e plano preservado após o gate CPF. Verificação de 2026-10-13: 645 testes chatbot passando; aceite geral das Tasks 9–10 permanece pendente.
 
 - [x] Testes unitários (domain e application)
 - [x] Testes do diálogo com o classificador real (mock LLM) e frases digitadas por estado (`src/infra/typed-journeys.test.ts`)

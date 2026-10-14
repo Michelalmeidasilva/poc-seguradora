@@ -6,6 +6,7 @@ import address from './fixtures/CAD-02.flow.json';
 import addressReview from './fixtures/CAD-03.flow.json';
 import dependentForm from './fixtures/DEP-05.flow.json';
 import consentFlow from './fixtures/ADE-07.flow.json';
+import products from './fixtures/DES-01.flow.json';
 import { FlowSheet, type FlowSheetRequest } from './index';
 
 const request: FlowSheetRequest = { flowId: 'cotacao', flowJson: cotacao, header: 'Cotação' };
@@ -35,19 +36,97 @@ async function toDados(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('FlowSheet', () => {
+  it.each(['Individual', 'Familiar'])(
+    'keeps service details, comparison and %s conditions inside one Flow until completion',
+    async (plan) => {
+      const { user, submit, exchange, onClose } = setup({ flowId: 'DES-01', flowJson: products });
+      const original = dialog();
+      for (const [service, detail] of [
+        ['Assistência Funeral', /suporte ao titular e aos dependentes/i],
+        ['Assistência Farmácia', /descontos em redes credenciadas/i],
+        ['Telemedicina', /ambiente do prestador/i],
+      ] as const) {
+        await user.click(screen.getByRole('radio', { name: new RegExp(service) }));
+        await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+        expect(dialog()).toBe(original);
+        expect(within(dialog()).getByText(detail)).toBeInTheDocument();
+        expect(submit).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('button', { name: 'Voltar' }));
+      }
+      await user.click(screen.getByRole('radio', { name: /Telemedicina/ }));
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+      await user.click(screen.getByRole('button', { name: 'Ver planos' }));
+      expect(
+        within(dialog()).getByRole('heading', { name: 'Comparação de planos' }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog()).getByText('R$ 29,90/mês · somente titular', { exact: true }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog()).getByText('R$ 39,90/mês · titular e dependentes elegíveis', {
+          exact: true,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getAllByRole('radio').every((radio) => !(radio as HTMLInputElement).checked),
+      ).toBe(true);
+      await user.click(screen.getByRole('radio', { name: new RegExp(`^${plan}`) }));
+      await user.click(screen.getByRole('button', { name: 'Ver condições' }));
+      expect(dialog()).toBe(original);
+      expect(
+        within(dialog()).getByText(
+          plan === 'Individual'
+            ? 'Somente titular.'
+            : 'Titular e até 3 dependentes elegíveis neste exemplo.',
+        ),
+      ).toBeInTheDocument();
+      expect(submit).not.toHaveBeenCalled();
+      await user.click(screen.getByRole('button', { name: 'Continuar' }));
+      await user.click(screen.getByRole('radio', { name: 'Concluir descoberta' }));
+      await user.click(screen.getByRole('button', { name: 'Concluir' }));
+      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledWith(
+        'DES-01',
+        { intent: 'finish', service: '2', modality: plan.toLowerCase() },
+        expect.any(String),
+      );
+      expect(exchange).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('explains the list interaction and identifies the structured demonstration like the atlas', () => {
+    setup({ flowId: 'DES-01', flowJson: products });
+    expect(screen.getByText('Selecione uma opção para continuar')).toBeInTheDocument();
+    expect(screen.getByText('Digio · experiência estruturada no WhatsApp')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+  });
   it('shows safe cross-step review values and prefills correction without losing other fields', async () => {
     const draft = { postal: '01000-000', address: 'Rua A, 1', city: 'São Paulo/SP' };
     const { user, submit, rerender } = setup({
-      flowId: 'CAD-03', flowJson: addressReview,
+      flowId: 'CAD-03',
+      flowJson: addressReview,
       initialData: { intent: 'review', values: draft },
     });
-    expect(screen.getByText('CEP: 01000-000')).toBeInTheDocument();
-    expect(screen.getByText('Endereço: Rua A, 1')).toBeInTheDocument();
-    expect(screen.getByText('Cidade e estado: São Paulo/SP')).toBeInTheDocument();
+    expect(screen.getByText('CEP').closest('.flow-review-line')).toHaveTextContent('01000-000');
+    expect(screen.getByText('Endereço').closest('.flow-review-line')).toHaveTextContent('Rua A, 1');
+    expect(screen.getByText('Cidade e estado').closest('.flow-review-line')).toHaveTextContent(
+      'São Paulo/SP',
+    );
     await user.click(screen.getByRole('button', { name: 'Enviar solicitação' }));
     expect(submit).toHaveBeenCalledTimes(1);
 
-    rerender(<FlowSheet request={{ flowId: 'CAD-02', flowJson: address, initialData: { intent: 'correction', values: draft } }} onClose={() => undefined} submit={submit} exchange={vi.fn()} />);
+    rerender(
+      <FlowSheet
+        request={{
+          flowId: 'CAD-02',
+          flowJson: address,
+          initialData: { intent: 'correction', values: draft },
+        }}
+        onClose={() => undefined}
+        submit={submit}
+        exchange={vi.fn()}
+      />,
+    );
     expect(screen.getByLabelText('CEP')).toHaveValue('01000-000');
     expect(screen.getByLabelText('Endereço e número')).toHaveValue('Rua A, 1');
     expect(screen.getByLabelText('Cidade e estado')).toHaveValue('São Paulo/SP');
@@ -59,9 +138,21 @@ describe('FlowSheet', () => {
   it('keeps correction CPF only in runtime memory and renders the masked review value', async () => {
     const rawCpf = '98765432109';
     expect(JSON.stringify(dependentForm)).not.toContain(rawCpf);
-    const { user } = setup({ flowId: 'DEP-05', flowJson: dependentForm, initialData: { intent: 'correction', values: {
-      name: 'Maria Silva', birth: '2014-03-12', document: rawCpf, relationship: 'Filha', phone: '11999999999', biologicalSex: 'Feminino',
-    } } });
+    const { user } = setup({
+      flowId: 'DEP-05',
+      flowJson: dependentForm,
+      initialData: {
+        intent: 'correction',
+        values: {
+          name: 'Maria Silva',
+          birth: '2014-03-12',
+          document: rawCpf,
+          relationship: 'Filha',
+          phone: '11999999999',
+          biologicalSex: 'Feminino',
+        },
+      },
+    });
     expect(screen.getByLabelText('CPF')).toHaveValue(rawCpf);
     await user.clear(screen.getByLabelText('CPF'));
     await user.type(screen.getByLabelText('CPF'), '12345678900');
@@ -93,7 +184,11 @@ describe('FlowSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Revisar pedido' }));
     await user.click(screen.getByRole('button', { name: 'Enviar formulário' }));
     expect(submit).toHaveBeenCalledTimes(1);
-    expect(submit).toHaveBeenCalledWith('CAD-02', { postal: '01000-000', address: 'Rua B, 2', city: 'São Paulo/SP' }, expect.any(String));
+    expect(submit).toHaveBeenCalledWith(
+      'CAD-02',
+      { postal: '01000-000', address: 'Rua B, 2', city: 'São Paulo/SP' },
+      expect.any(String),
+    );
     expect(exchange).not.toHaveBeenCalled();
   });
   it('is a modal dialog labelled by the current screen title, focused on its heading', () => {

@@ -12,7 +12,42 @@
     ...options,
   });
   const variant = (options = {}) => ({ alternative: true, ...options });
-  const action = (label, target) => ({ label, target });
+  // Explicit customer copy, never silent truncation: quick-reply titles are limited to 20.
+  // IDs, intent and destinations are unchanged; the runtime and offline atlas share this source.
+  const actionTitles = {
+    'Continuar atendimento': 'Continuar conversa',
+    'Consultar meus benefícios': 'Meus benefícios',
+    'Abandonar solicitação': 'Abandonar pedido',
+    'Continuar solicitação': 'Continuar pedido',
+    'Solicitar atendimento': 'Pedir atendimento',
+    'Serviços de assistência': 'Ver assistências',
+    'Continuar com autenticação': 'Informar CPF',
+    'Abrir demonstração segura': 'Abrir demonstração',
+    'Informar dados que faltam': 'Completar dados',
+    'Simular dado informado': 'Simular dado',
+    'Simular correção de data': 'Simular nova data',
+    'Substituir pessoa do pedido': 'Trocar pessoa',
+    'Ver revisão atualizada': 'Ver nova revisão',
+    'Simular correção informada': 'Simular correção',
+    'Revisar alteração permitida': 'Revisar alteração',
+    'Corrigir pela conversa': 'Corrigir no chat',
+    'Acompanhar agendamento': 'Ver agendamento',
+    'Consultar solicitação': 'Ver solicitação',
+    'Ver acesso disponível': 'Ver acesso',
+    'Ver caso com carência': 'Caso com carência',
+    'Ver outros benefícios': 'Outros benefícios',
+    'Consultar atualização': 'Ver atualização',
+    'Acompanhar restituição': 'Ver restituição',
+    'Sim, encerrar conversa': 'Sim, encerrar',
+    'Começar nova conversa': 'Nova conversa',
+    'Consultar opção atual': 'Ver opção atual',
+    'Verificação necessária': 'Informar CPF',
+    'Continuar autosserviço': 'Continuar no chat',
+    'Confirmar encerramento do retorno': 'Encerrar retorno',
+    'Recomeçar com contexto': 'Retomar contexto',
+    'Consultar restituição': 'Ver restituição',
+  };
+  const action = (label, target) => ({ label: actionTitles[label] ?? label, target });
   const form = (title, fields, submit, target, extra = {}) => ({
     mode: 'form',
     flow: { title, fields, submit, target, ...extra },
@@ -322,15 +357,15 @@
         'IDE-01',
         'CPF necessário',
         'Quero consultar meu contrato.',
-        'Para continuar nesta demonstração, informe um CPF fictício. Depois retomamos seu pedido.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        'Para continuar nesta demonstração, digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Depois retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-02',
         'Como informar o CPF',
         'Como posso continuar?',
         'Digite um CPF fictício com 11 números, com ou sem pontos e hífen. Depois você poderá continuar sua solicitação.',
-        { actions: [action('Informar CPF', 'IDE-08')] },
+        { actions: [] },
       ),
       screen(
         'IDE-03',
@@ -354,7 +389,7 @@
         'Sessão expirada',
         'Quero continuar.',
         'Sua sessão demonstrativa expirou. Os dados da solicitação estão salvos nesta página. Informe o CPF novamente para continuar.',
-        { ...variant(), actions: [action('Informar CPF', 'IDE-08')] },
+        { ...variant(), actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
       screen(
         'IDE-06',
@@ -362,7 +397,7 @@
         'Quero confirmar o cancelamento.',
         'Informe o CPF para renovar o acesso demonstrativo. Depois, você poderá revisar o cancelamento.',
         {
-          actions: [action('Informar CPF', 'IDE-08')],
+          actions: [action('Pedir ajuda', 'HUM-01')],
           behavior: 'Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.',
         },
       ),
@@ -377,10 +412,8 @@
         'IDE-08',
         'Informar CPF',
         'Vou informar meu CPF.',
-        'Informe um CPF fictício com 11 números, com ou sem pontos e hífen, para continuar na demonstração.',
-        form('Informar CPF', [
-          { name: 'authCpf', label: 'CPF demonstrativo', placeholder: '000.000.000-00', required: true },
-        ], 'Continuar', 'IDE-03'),
+        'Digite seu CPF fictício aqui na conversa: 11 números ou XXX.XXX.XXX-XX. Validamos apenas o formato e retomamos seu pedido.',
+        { actions: [action('Pedir ajuda', 'HUM-01')] },
       ),
     ],
   );
@@ -2927,6 +2960,27 @@
       index[step.id] = step;
     });
   }
+  // One informational experience: its internal screens never submit to chat.
+  // Existing catalog states remain references for their approved copy.
+  index['DES-01'].flow.discovery = {
+    services: ['DES-12', 'DES-13', 'DES-14'].map((id, position) => ({
+      id: String(position), title: index['DES-01'].flow.choices[position].label,
+      description: index[id].bot, note: index[id].rule,
+    })),
+    comparison: index['DES-06'].bot,
+    plans: [
+      { id: 'individual', title: 'Individual', price: 'R$ 29,90/mês', composition: 'Somente titular.',
+        description: index['DES-05'].flow.choices[0].detail },
+      { id: 'familiar', title: 'Familiar', price: 'R$ 39,90/mês', composition: 'Titular e até 3 dependentes elegíveis neste exemplo.',
+        description: index['DES-05'].flow.choices[1].detail },
+    ],
+    conditions: 'Confira elegibilidade, limites, carências e disponibilidade nas condições de cada plano. Não há contratação nem pagamento nesta etapa.',
+    note: 'Preços e composição são fictícios, apresentados somente para demonstração. Assistência não é plano de saúde.',
+    outcomes: [
+      { id: 'finish', label: 'Concluir descoberta', target: 'DES-11' },
+      { id: 'contract', label: 'Iniciar contratação', target: 'ADE-01' },
+    ],
+  };
   window.EXPERIENCE = {
     groups,
     index,

@@ -187,12 +187,32 @@ describe('openStream + waitForEvent', () => {
 
 /** Minimal fake of web + gateway + chatbot, with configurable delays (ms) per hop. */
 async function startFakeGateway(delays = {}) {
-  const d = { page: 0, session: 0, stream: 0, events: 0, reply: 0, ...delays };
+  const d = {
+    page: 0,
+    session: 0,
+    stream: 0,
+    events: 0,
+    reply: 0,
+    products: ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina'],
+    additionalScreens: [],
+    ...delays,
+  };
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const events = [];
+  const requests = [];
   let live;
   const push = (type, payload) => {
-    const e = { seq: events.length + 1, type, payload };
+    const seq = events.length + 1;
+    const e = {
+      v: 1,
+      id: `00000000-0000-4000-8000-${String(seq).padStart(12, '0')}`,
+      sessionId: 's1',
+      correlationId: 'smoke',
+      ts: new Date().toISOString(),
+      seq,
+      type,
+      payload,
+    };
     events.push(e);
     live?.write(`id: ${e.seq}\nevent: ${type}\ndata: ${JSON.stringify(e)}\n\n`);
   };
@@ -226,13 +246,64 @@ async function startFakeGateway(delays = {}) {
       const chunks = [];
       for await (const c of req) chunks.push(c);
       const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      requests.push(body);
       await sleep(d.events);
       res.writeHead(202, { 'content-type': 'application/json' });
       res.end('{"status":"accepted"}');
       await sleep(d.reply);
-      if (body.type === 'user.flow_submit') push('message.template', { header: 'Cotação CT-3001' });
-      else if (body.payload.text === 'demo flow') push('message.flow', { flowId: 'demo' });
-      else push('message.quick_replies', { options: [] });
+      if (body.payload.text === 'O que vocês oferecem?')
+        push('message.flow', {
+          flowId: 'DES-01',
+          body: 'Conhecer produtos',
+          ctaLabel: 'Selecionar uma opção',
+          flowJson: {
+            version: '7.1',
+            screens: [
+              {
+                id: 'LIST',
+                terminal: true,
+                layout: {
+                  type: 'SingleColumnLayout',
+                  children: [
+                    {
+                      type: 'RadioButtonsGroup',
+                      name: 'choice',
+                      label: 'Conhecer produtos',
+                      required: true,
+                      'data-source': d.products.map((title, i) => ({ id: String(i), title })),
+                    },
+                  ],
+                },
+              },
+              ...d.additionalScreens,
+            ],
+          },
+        });
+      else if (body.payload.text === 'Quero ver meu contrato.')
+        push('message.text', {
+          text: 'Digite o CPF demonstrativo aqui na conversa: 11 números.',
+        });
+      else if (body.type === 'user.text' && body.payload.text === '11111111111')
+        push('message.flow', {
+          flowId: 'CON-01',
+          body: 'Contrato demonstrativo',
+          ctaLabel: 'Selecionar uma opção',
+          flowJson: {},
+        });
+      else if (body.type === 'user.flow_submit' && body.payload.flowId === 'CON-01')
+        push('message.quick_replies', {
+          text: 'Contrato demonstrativo',
+          options: [{ id: 'CON-07', title: 'Ver documentos' }],
+        });
+      else if (body.type === 'user.quick_reply' && body.payload.optionId === 'CON-07')
+        push('message.document', {
+          documents: [{ id: 'DOC-DEMO', title: 'Documento demonstrativo', status: 'available' }],
+        });
+      else
+        push('message.quick_replies', {
+          text: 'Escolha uma opção',
+          options: [{ id: 'DES-01', title: 'Conhecer produtos' }],
+        });
       return undefined;
     }
     res.writeHead(404);
@@ -241,6 +312,7 @@ async function startFakeGateway(delays = {}) {
   await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
   return {
     url: `http://127.0.0.1:${srv.address().port}`,
+    requests,
     close: () => {
       srv.closeAllConnections();
       return new Promise((resolve) => srv.close(resolve));
@@ -271,6 +343,12 @@ describe('runSmoke deadlines (scaled-down budgets)', () => {
     const fake = await startFakeGateway();
     try {
       await runSmoke(fake.url, { log: (l) => lines.push(l), ...budgets });
+      assert.ok(
+        fake.requests.some(
+          (event) => event.type === 'user.quick_reply' && event.payload.optionId === 'CON-07',
+        ),
+        'smoke must read mock documents after the CPF gate',
+      );
     } finally {
       await fake.close();
     }
@@ -279,10 +357,61 @@ describe('runSmoke deadlines (scaled-down budgets)', () => {
       'ok session',
       'ok stream',
       'ok chatbot',
-      'ok demo-flow',
-      'ok quote',
+      'ok assistance-products',
+      'ok cpf-contract',
       'ok replay',
     ]);
+  });
+
+  it('accepts plans and final intents inside the discovery Flow without treating them as extra services', async () => {
+    const fake = await startFakeGateway({
+      additionalScreens: [
+        {
+          id: 'PLANS',
+          layout: {
+            children: [
+              {
+                type: 'RadioButtonsGroup',
+                'data-source': [{ title: 'Individual' }, { title: 'Familiar' }],
+              },
+            ],
+          },
+        },
+        {
+          id: 'FINISH',
+          layout: {
+            children: [
+              {
+                type: 'RadioButtonsGroup',
+                'data-source': [{ title: 'Concluir descoberta' }, { title: 'Iniciar contratação' }],
+              },
+            ],
+          },
+        },
+      ],
+    });
+    try {
+      await runSmoke(fake.url, { log: quiet, ...budgets });
+    } finally {
+      await fake.close();
+    }
+  });
+
+  it('rejects a public catalog with services outside the three approved assistance services', async () => {
+    const fake = await startFakeGateway({
+      products: ['Assistência Funeral', 'Assistência Farmácia', 'Telemedicina', 'Seguro Auto'],
+    });
+    try {
+      await assert.rejects(
+        runSmoke(fake.url, { log: quiet, ...budgets }),
+        (error) =>
+          error instanceof SmokeError &&
+          error.hop === 'chatbot' &&
+          /three assistance services/.test(error.message),
+      );
+    } finally {
+      await fake.close();
+    }
   });
 
   it('shares one step deadline between the POST and the wait', { timeout: 3000 }, async () => {

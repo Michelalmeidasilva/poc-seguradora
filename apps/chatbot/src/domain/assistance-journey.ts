@@ -22,6 +22,8 @@ export interface AssistanceTransition {
 }
 
 const personalGate = assistanceCatalog.byId['IDE-01']!;
+export const isAssistanceCpfPrompt = (screenId: string): boolean =>
+  ['IDE-01', 'IDE-02', 'IDE-04', 'IDE-05', 'IDE-06', 'IDE-08'].includes(screenId);
 
 function customerFacingStep(step: AssistanceStep): AssistanceStep {
   if (step.journeyId !== 'IDE') return step;
@@ -82,7 +84,7 @@ export function nextAssistanceState(
   input: AssistanceInput,
 ): AssistanceTransition {
   if (input.type === 'cpf_submit') {
-    if (state.screenId !== 'IDE-08') return preserve(state);
+    if (!isAssistanceCpfPrompt(state.screenId)) return preserve(state);
     const parsed = parseAssistanceCpf(input.cpf);
     const step = assistanceCatalog.byId[parsed.ok ? 'IDE-03' : 'IDE-04']!;
     return transition(state, step, parsed.ok);
@@ -105,5 +107,5 @@ export function nextAssistanceState(
   if (target.requiresAuth && !state.gateApproved && target.journeyId !== 'IDE') {
     return transition(state, personalGate, false);
   }
-  return transition(state, target);
+  return transition(state, target, ['IDE-05', 'IDE-06'].includes(target.id) ? false : state.gateApproved);
 }
