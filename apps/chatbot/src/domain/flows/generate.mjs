@@ -126,17 +126,53 @@ function build(step) {
         payload: {},
       },
     });
+    if (source.contracting) payload.consent = ref('consent');
     const review = [
-      { type: 'TextHeading', text: 'Revise os dados' },
+      {
+        type: 'TextHeading',
+        text: source.contracting ? 'Revise sua contratação' : 'Revise os dados',
+      },
+      ...(source.contracting
+        ? [
+            { type: 'TextSubheading', text: source.contracting.product },
+            { type: 'TextBody', text: source.contracting.price },
+            { type: 'TextCaption', text: source.contracting.participants },
+          ]
+        : []),
       ...source.fields.map((field) => ({
         type: 'TextBody',
         text: `${field.label}: ${isSensitiveField(field) ? '••••' : ref(field.name)}`,
       })),
-      { type: 'Footer', label: 'Enviar formulário', 'on-click-action': complete(payload) },
+      ...(source.contracting
+        ? [
+            { type: 'TextSubheading', text: 'Condições e documentos' },
+            { type: 'TextBody', text: source.contracting.conditions },
+            ...source.contracting.documents.map((text) => ({ type: 'TextBody', text })),
+            {
+              type: 'TextCaption',
+              text: 'A cobrança mensal depende do seu aceite. Outro meio será autorizado no ambiente seguro da instituição.',
+            },
+            {
+              type: 'OptIn',
+              name: 'consent',
+              label: source.contracting.consent,
+              required: true,
+              'init-value': false,
+            },
+          ]
+        : []),
+      {
+        type: 'Footer',
+        label: source.contracting ? 'Confirmar contratação' : 'Enviar formulário',
+        'on-click-action': complete(payload),
+      },
     ];
     return {
       version: '7.1',
       routing_model: { FORM: ['REVIEW'], REVIEW: [] },
+      ...(source.contracting
+        ? { resetConsentOnEdit: source.fields.map((field) => field.name) }
+        : {}),
       screens: [
         {
           id: 'FORM',
@@ -148,7 +184,7 @@ function build(step) {
         },
         {
           id: 'REVIEW',
-          title: 'Revisar dados',
+          title: source.contracting ? 'Revisar contratação' : 'Revisar dados',
           terminal: true,
           success: true,
           ...(source.fields.some(isSensitiveField)

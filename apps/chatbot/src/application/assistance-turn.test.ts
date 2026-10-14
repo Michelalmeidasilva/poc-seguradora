@@ -339,6 +339,92 @@ describe('runAssistanceTurn', () => {
       expect(assistance.createRequest).not.toHaveBeenCalled();
     },
   );
+  it.each(['individual', 'familiar'])(
+    'submits holder, payment and consent once for %s without intermediate Flows',
+    async (modality) => {
+      const assistance = port();
+      const state = {
+        journeyId: 'ADE',
+        screenId: 'ADE-03',
+        gateApproved: true,
+        temporaryData: { service: '2', modality },
+      };
+      const data = {
+        holder: 'Beatriz Costa',
+        email: 'beatriz@example.com',
+        payment: 'Cartão cadastrado •• 2048',
+        consent: true,
+      };
+      const result = await runAssistanceTurn(
+        { type: 'flow_submit', flowId: 'ADE-03', data },
+        { port: assistance, state, sessionId: 'contract', context: ctx },
+      );
+      expect(result.ok && result.value.state.screenId).toBe('ADE-08');
+      expect(result.ok && result.value.state.temporaryData).toMatchObject({
+        ...data,
+        consent: 'true',
+        modality,
+        service: '2',
+      });
+      expect(JSON.stringify(result.ok && result.value.replies)).not.toContain('Escolher pagamento');
+      expect(result.ok && result.value.replies.some((reply) => reply.type === 'message.flow')).toBe(
+        false,
+      );
+    },
+  );
+  it.each([
+    {
+      holder: 'Beatriz',
+      email: 'beatriz@example.com',
+      payment: 'Cartão cadastrado •• 2048',
+      consent: false,
+    },
+    { holder: 'Beatriz', email: 'inválido', payment: 'Cartão cadastrado •• 2048', consent: true },
+    { holder: 'Beatriz', email: 'beatriz@example.com', payment: 'inexistente', consent: true },
+    { holder: 'Beatriz', email: 'beatriz@example.com', payment: 'Cartão cadastrado •• 2048' },
+  ])('rejects incomplete or unconfirmed contracting submission %j', async (data) => {
+    const assistance = port();
+    const result = await runAssistanceTurn(
+      { type: 'flow_submit', flowId: 'ADE-03', data },
+      {
+        port: assistance,
+        state: { journeyId: 'ADE', screenId: 'ADE-03', gateApproved: true },
+        sessionId: 'contract',
+        context: ctx,
+      },
+    );
+    expect(result.ok && result.value.state.screenId).toBe('ADE-03');
+    expect(assistance.createRequest).not.toHaveBeenCalled();
+  });
+  it('preserves selected holder and payment when correcting a contract', async () => {
+    const result = await runAssistanceTurn(
+      { type: 'flow_submit', flowId: 'ADE-06', data: { correction: true } },
+      {
+        port: port(),
+        state: {
+          journeyId: 'ADE',
+          screenId: 'ADE-06',
+          gateApproved: true,
+          temporaryData: {
+            service: '1',
+            modality: 'individual',
+            holder: 'Beatriz',
+            email: 'beatriz@example.com',
+            payment: 'Outro meio disponível',
+          },
+        },
+        sessionId: 'contract',
+        context: ctx,
+      },
+    );
+    expect(result.ok && result.value.state.screenId).toBe('ADE-03');
+    const flow = result.ok && result.value.replies.find((reply) => reply.type === 'message.flow');
+    expect(flow && flow.type === 'message.flow' && flow.payload.initialData).toMatchObject({
+      values: { holder: 'Beatriz', email: 'beatriz@example.com', payment: 'Outro meio disponível' },
+    });
+    expect(JSON.stringify(flow)).toContain('Assistência Farmácia');
+    expect(JSON.stringify(flow)).toContain('R$ 29,90');
+  });
   it('rejects invalid discovery CPF without approving the gate or losing the current journey', async () => {
     const result = await runAssistanceTurn(
       {
@@ -1102,7 +1188,9 @@ describe('runAssistanceTurn', () => {
       type: 'message.text',
       payload: { text: expect.stringContaining('concluir esta etapa') },
     });
-    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('Não foi possível continuar');
+    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain(
+      'Não foi possível continuar',
+    );
   });
 
   it('preserves the review state and reports a specific cancellation conflict', async () => {
@@ -1118,7 +1206,9 @@ describe('runAssistanceTurn', () => {
       },
     );
     expect(result.ok && result.value.state.screenId).toBe('CAN-05');
-    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain('Não foi possível continuar');
+    expect(result.ok && JSON.stringify(result.value.replies)).not.toContain(
+      'Não foi possível continuar',
+    );
   });
 
   it.each([
@@ -1147,7 +1237,9 @@ describe('runAssistanceTurn', () => {
         },
       );
       expect(result.ok && result.value.state.screenId).toBe(expectedScreen);
-      expect(result.ok && JSON.stringify(result.value.replies)).toContain('Não foi possível continuar');
+      expect(result.ok && JSON.stringify(result.value.replies)).toContain(
+        'Não foi possível continuar',
+      );
     },
   );
 

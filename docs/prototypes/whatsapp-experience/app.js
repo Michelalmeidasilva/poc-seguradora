@@ -214,6 +214,10 @@
       $('overlay').hidden = true;
       return;
     }
+    if (flow.contracting) {
+      renderContractingFlow(step);
+      return;
+    }
     if (flow.discovery) {
       Object.assign(discoveryState, { page: 0, service: null, modality: null, intent: null });
       renderDiscoveryFlow(step);
@@ -283,6 +287,42 @@
         }
       }
       if (target) go(target);
+    });
+  }
+  function renderContractingFlow(step, reviewing = false) {
+    const flow = step.flow;
+    const source = flow.contracting;
+    const title = reviewing ? 'Revisar contratação' : flow.title;
+    const selectedService = index['DES-01'].flow.discovery.services.find((item) => item.id === discoveryState.service);
+    const individual = selectedPlan === 'Individual';
+    let content = fieldsMarkup(flow.fields);
+    if (reviewing) {
+      content = rowsMarkup([
+        { title: `${selectedService?.title || 'Serviços de Assistência'} ${selectedPlan}`, rows: [
+          ['Total mensal', individual ? 'R$ 29,90/mês' : source.price],
+          ...flow.fields.map((field) => [field.label, memory[field.name] || '']),
+        ] },
+      ]);
+      content += `<p>${escape(individual ? 'Este plano atende somente o titular.' : source.participants)}</p><p>${escape(source.conditions)}</p>`;
+      content += source.documents.map((name) => `<button type="button" class="flow-document" data-document="${escape(name)}">▤ ${escape(name)}</button>`).join('');
+      content += `<label class="consent"><input type="checkbox" name="consent" required /><span>${escape(source.consent)}</span></label>`;
+    }
+    $('overlay').innerHTML = `<form id="flow-form" class="sheet" aria-label="${escape(title)}"><div class="sheet-handle"></div><header class="sheet-header"><div><h3>${escape(title)}</h3><p>${reviewing ? 'Confira as informações antes de confirmar' : 'Preencha os dados e escolha o pagamento'}</p></div><button type="button" class="sheet-close" data-close-flow aria-label="Fechar formulário">✕</button></header><div class="sheet-content">${content}</div><footer class="sheet-footer">${reviewing ? '<button type="button" class="sheet-secondary" data-contract-back>Voltar</button>' : ''}<button type="submit" class="sheet-primary">${reviewing ? 'Confirmar contratação' : flow.submit}</button><p class="flow-note">DIGIO Care</p></footer></form>`;
+    $('overlay').hidden = false;
+    $('flow-form').addEventListener('input', (event) => {
+      if (reviewing) return;
+      if (flow.fields.some((field) => field.name === event.target.name)) memory[event.target.name] = event.target.value;
+    });
+    $('flow-form').querySelector('[data-contract-back]')?.addEventListener('click', () => renderContractingFlow(step));
+    $('flow-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      if (!reviewing) {
+        for (const field of flow.fields) memory[field.name] = String(data.get(field.name) || '').trim();
+        renderContractingFlow(step, true);
+      } else if (data.has('consent')) {
+        go(flow.target);
+      }
     });
   }
   function renderDiscoveryFlow(step) {

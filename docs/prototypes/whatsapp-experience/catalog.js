@@ -683,23 +683,26 @@
       ),
       screen(
         'ADE-03',
-        'Dados do titular',
+        'Dados e pagamento',
         'Identidade verificada.',
-        'Confira os dados do titular necessários à contratação.',
+        'Confira seus dados e escolha o pagamento. Você poderá revisar o plano, o valor e as condições antes de confirmar.',
         form(
-          'Dados do titular',
+          'Dados e pagamento',
           [
-            { name: 'holder', label: 'Nome completo', value: 'Ana Silva', required: true },
-            {
-              name: 'email',
-              label: 'E-mail para documentos',
-              type: 'email',
-              value: 'ana@example.com',
-              required: true,
-            },
+            { name: 'holder', label: 'Nome completo', required: true },
+            { name: 'email', label: 'E-mail para documentos', type: 'email', required: true },
+            { name: 'payment', label: 'Forma de pagamento', type: 'select',
+              choices: ['Selecione', 'Cartão cadastrado •• 2048', 'Outro meio disponível'], required: true },
           ],
-          'Continuar',
-          'ADE-04',
+          'Revisar contratação',
+          'ADE-08',
+          { contracting: {
+            product: 'Serviços de Assistência Familiar', price: 'R$ 39,90/mês',
+            conditions: 'Vigência após confirmação da emissão. Consulte carências, limites e condições de cancelamento nos documentos do produto.',
+            participants: 'Somente titular nesta etapa. No plano Familiar, você pode incluir dependentes após a contratação.',
+            documents: ['Termo de adesão', 'Condições do produto'],
+            consent: 'Confirmo os dados e aceito as condições contratuais apresentadas, incluindo a cobrança recorrente indicada.',
+          } },
         ),
       ),
       screen(
@@ -714,7 +717,7 @@
         'Elegibilidade validada',
         'Vou incluir depois.',
         'Os dados do titular foram validados. Vamos consultar os meios de pagamento disponíveis.',
-        { actions: [action('Escolher pagamento', 'PAG-02')] },
+        { actions: [action('Dados e pagamento', 'ADE-03')] },
       ),
       screen(
         'ADE-06',
@@ -864,7 +867,7 @@
         'Consultar meios elegíveis',
         'Como posso pagar?',
         'Vou consultar os meios disponíveis para este produto e seu cadastro.',
-        { actions: [action('Ver opções', 'PAG-02')] },
+        { actions: [action('Dados e pagamento', 'ADE-03')] },
       ),
       screen(
         'PAG-02',
@@ -946,8 +949,8 @@
         {
          ...variant(),
           actions: [
-            action('Tentar novamente', 'PAG-04'),
-            action('Trocar pagamento', 'PAG-02'),
+            action('Tentar novamente', 'ADE-03'),
+            action('Trocar pagamento', 'ADE-03'),
             action('Pedir ajuda', 'HUM-01'),
           ],
         },

@@ -152,6 +152,17 @@ describe('chatbot end to end (fake internal services)', () => {
           state: { journeyId: '', screenId: '', gateApproved: true },
         },
       );
+      if (['ADE-05', 'PAG-01', 'PAG-02', 'PAG-03', 'PAG-04'].includes(step.id)) {
+        expect(result.ok && result.value.state.screenId, step.id).toBe('ADE-03');
+        expect(
+          result.ok &&
+            result.value.replies.some(
+              (reply) => reply.type === 'message.flow' && reply.payload.flowId === 'ADE-03',
+            ),
+          step.id,
+        ).toBe(true);
+        continue;
+      }
       if (!result.ok || result.value.state.screenId !== step.id) {
         missing.push(step.id);
         continue;

@@ -35,21 +35,27 @@ it.each(['individual', 'familiar'])(
     const resumed = await turn(bot.url, textReq('11111111111', { session }));
     const title = modality === 'individual' ? 'Individual' : 'Familiar';
     expect(textsOf(resumed.events)).toContain(`Assistência Funeral ${title}`);
-    await turn(bot.url, choiceReq('ADE-02', { session }));
+    const opened = await turn(bot.url, choiceReq('ADE-02', { session }));
     expect(bot.screenId(session)).toBe('ADE-03');
+    const json = JSON.stringify(findEvent(opened.events, 'message.flow').payload.flowJson);
+    expect(json).toContain(`Assistência Funeral ${title}`);
+    expect(json).toContain(modality === 'individual' ? 'R$ 29,90' : 'R$ 39,90');
+    expect(json).toContain('Forma de pagamento');
+    expect(json).toContain('Confirmar contratação');
+    if (modality === 'individual') expect(json).not.toContain('incluir dependentes');
     await turn(
       bot.url,
       flowSubmitReq(
-        { holder: 'Ana Silva', email: 'ana@example.com' },
+        {
+          holder: 'Beatriz Costa',
+          email: 'beatriz@example.com',
+          payment: 'Cartão cadastrado •• 2048',
+          consent: true,
+        },
         { session, flowId: 'ADE-03' },
       ),
     );
-    expect(bot.screenId(session)).toBe(modality === 'individual' ? 'ADE-05' : 'ADE-04');
-    const review = await turn(bot.url, textReq('Escolhi o pagamento.', { session }));
-    const json = JSON.stringify(findEvent(review.events, 'message.flow').payload.flowJson);
-    expect(json).toContain('Produto: Assistência Funeral');
-    expect(json).toContain(`Plano: ${title}`);
-    expect(json).toContain(modality === 'individual' ? 'R$ 29,90' : 'R$ 39,90');
+    expect(bot.screenId(session)).toBe('ADE-08');
     const state = await mock.getSessionSnapshot(session, readContext);
     expect(state.ok && state.value.requests).toEqual([]);
   },

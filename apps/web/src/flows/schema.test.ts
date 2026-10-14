@@ -351,3 +351,10 @@ describe('parseFlow', () => {
 function goto2(id: string, to: string): Json {
   return screen(id, [goto(to)]);
 }
+
+it.each([true, {}, ['holder', 42], ['bad.name']])(
+  'rejects malformed acceptance reset fields %j',
+  (resetConsentOnEdit) => {
+    expect(codes(flow([end()], { resetConsentOnEdit }))).toContain('invalid_fields');
+  },
+);

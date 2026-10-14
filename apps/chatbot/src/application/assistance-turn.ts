@@ -76,6 +76,18 @@ function validateFlowData(
   input: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
   const flow = recordOf(step.flow);
+  if (flow?.contracting) {
+    const parsed = z
+      .object({
+        holder: z.string().trim().min(1).max(500),
+        email: z.string().trim().email().max(500),
+        payment: z.enum(['Cartão cadastrado •• 2048', 'Outro meio disponível']),
+        consent: z.literal(true),
+      })
+      .strict()
+      .safeParse(input);
+    return parsed.success ? parsed.data : undefined;
+  }
   if (flow?.discovery) {
     const parsed = z
       .object({
@@ -162,6 +174,16 @@ const flowInitialData = (
   state: AssistanceState | undefined,
   intent: 'review' | 'correction' | undefined,
 ) => {
+  if (step.id === 'ADE-03' && state?.temporaryData) {
+    return {
+      intent: 'correction' as const,
+      values: Object.fromEntries(
+        ['holder', 'email', 'payment']
+          .filter((key) => state.temporaryData?.[key] !== undefined)
+          .map((key) => [key, state.temporaryData![key]]),
+      ),
+    };
+  }
   if (step.id === 'DES-01' && state?.temporaryData?.service) {
     return {
       intent: 'correction' as const,
@@ -230,6 +252,12 @@ const textReply = (
   const individualPlan =
     draft?.modality === 'individual' && ['ADE', 'PAG'].includes(step.journeyId);
   const personalize = (text: string) => {
+    if (
+      step.id === 'ADE-03' &&
+      individualPlan &&
+      text === recordOf(recordOf(step.flow)?.contracting)?.participants
+    )
+      return 'Este plano atende somente o titular.';
     const personalized =
       step.journeyId === 'EXC' && draft?.dependentName
         ? text.replace(/Maria Silva|Maria/g, () => draft.dependentName!)
@@ -296,11 +324,13 @@ const textReply = (
         flowId: step.id,
         body,
         ctaLabel:
-          step.mode === 'list'
-            ? 'Selecionar uma opção'
-            : step.mode === 'review'
-              ? 'Abrir revisão'
-              : 'Abrir formulário',
+          step.id === 'ADE-03'
+            ? 'Dados e pagamento'
+            : step.mode === 'list'
+              ? 'Selecionar uma opção'
+              : step.mode === 'review'
+                ? 'Abrir revisão'
+                : 'Abrir formulário',
         flowJson:
           body === step.bot &&
           !listChoices &&
@@ -837,6 +867,15 @@ export async function runAssistanceTurn(
     nextState = { ...pending.state };
     delete nextState.pendingStep;
     step = pending.step;
+  }
+  // Legacy payment entry points reopen the same contracting Flow with the saved draft.
+  if (
+    ['PAG-01', 'PAG-02', 'PAG-03', 'PAG-04', 'ADE-05'].includes(step.id) &&
+    nextState.gateApproved
+  ) {
+    const unified = nextAssistanceState(nextState, { type: 'open', target: 'ADE-03' });
+    nextState = unified.state;
+    step = unified.step;
   }
   // An identified customer continues straight to holder details.
   if (step.id === 'ADE-02' && state.screenId === 'ADE-01' && nextState.gateApproved) {
