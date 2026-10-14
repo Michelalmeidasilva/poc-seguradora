@@ -37,6 +37,21 @@ validados. Branch de entrega: `feat/web-experience-shell`.
 Esta entrega é local, sem merge, push ou deploy. As pendências anteriores de
 fidelidade e aceite das Tasks 9–10 continuam fora deste escopo.
 
+### Reconstrução do ambiente local — 2026-10-14
+
+Após autorização do usuário, a imagem `seguradora-web:latest` foi reconstruída
+com `docker compose -f infra/docker-compose.yml build web` e o container web foi
+recriado com `up -d --no-deps --no-build --wait web`. A nova interface está servida
+em http://localhost:8080. Gateway, chatbot e fake-services mantiveram seus IDs
+e permaneceram saudáveis. Imagem web: `c1090cb28928`; bundle JS: `index-4Y_JS2Na.js`.
+
+A suíte raiz passou após repetição com permissão para abrir portas locais
+(a execução inicial foi interrompida devido a EPERM do sandbox). Build concluído,
+smoke 7/7 e oito verificações de navegador no ambiente real passaram: backend
+online, catálogo/imagens, tema, aparelho, conclusão local de Flow e Android em
+tela cheia. Screenshots revisados em `/private/tmp/seguradora-web-runtime-*.png`.
+Operação local; sem merge, push ou GCP.
+
 ## Estrutura
 
 - [x] Pastas feature-sliced criadas (chat, renderers, transport, ui; flows entregues no Plano 5)
