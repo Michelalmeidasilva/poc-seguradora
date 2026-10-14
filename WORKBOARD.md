@@ -1,6 +1,8 @@
 # Workboard
 
-Última atualização: 2026-10-13
+Última atualização: 2026-10-14
+
+Coordenação 2026-10-14: após concluir DES-01 em 1e677d5, Codex modifica a identificação CPF para mensagem digitada no chat, validando somente formato e retomando pedido pendente, sem Flow de identificação. CPF de dependente permanece dado cadastral. Caminhos já reivindicados chatbot, web-chat/web-flows e ux-whatsapp-prototype; SPEC será equalizada somente nessa regra. Subtarefas sem sobreposição: implementação chatbot; testes E2E web; fonte do atlas e documentação pelo controlador. Tasks 9–10 continuam abertas.
 
 Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec (`docs/superpowers/specs/2026-10-10-whatsapp-chatbot-poc-design.md`) e skill `workboard-protocol`.
 
