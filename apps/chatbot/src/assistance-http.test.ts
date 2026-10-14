@@ -97,7 +97,7 @@ it.each(['finish', 'contract'])(
     );
     const result = await turn(bot.url, request);
     expect(bot.screenId(session)).toBe(intent === 'contract' ? 'IDE-01' : 'DES-11');
-    if (intent === 'contract') expect(textsOf(result.events)).toContain('11 dígitos');
+    if (intent === 'contract') expect(textsOf(result.events)).toContain('informe seu CPF');
     await turn(bot.url, request);
     const after = await mock.getSessionSnapshot(session, readContext);
     expect(after.ok && after.value.requests).toEqual([]);
@@ -171,7 +171,7 @@ it.each([
     bot = await startChatbot({ overrides: { assistance: mock } });
     const session = 'single-statement';
     const gated = await turn(bot.url, textReq(statement, { session }));
-    expect(textsOf(gated.events)).toContain('11 dígitos');
+    expect(textsOf(gated.events)).toContain('informe seu CPF');
     expect(textsOf(gated.events)).not.toContain(name);
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const resumed = await turn(bot.url, textReq('11111111111', { session }));
@@ -205,7 +205,7 @@ it.each([
 
 async function identify(session: string) {
   const initial = await turn(bot.url, textReq('Quero ver meu contrato.', { session }));
-  expect(textsOf(initial.events)).toContain('11 dígitos');
+  expect(textsOf(initial.events)).toContain('informe seu CPF');
   expect(initial.events.some((event) => event.type === 'message.flow')).toBe(false);
   await turn(bot.url, choiceReq('IDE-08', { session }));
   const accepted = await turn(bot.url, textReq('11111111111', { session }));
@@ -429,18 +429,11 @@ it('prompts for typed CPF without emitting an identification Flow', async () => 
   expect(obsolete.events.some((event) => event.type === 'message.flow')).toBe(false);
 });
 
-it('emits CPF receipt and format approval before resuming a protected request', async () => {
+it('resumes the protected contract directly without CPF receipt or approval messages', async () => {
   bot = await startChatbot();
   await turn(bot.url, textReq('Quero ver meu contrato.'));
-  await turn(bot.url, choiceReq('IDE-08'));
   const result = await turn(bot.url, textReq('98765432100'));
-  const messages = result.events
-    .filter((event) => event.type === 'message.text')
-    .map((event) => event.payload.text);
-  expect(messages.slice(0, 2)).toEqual([
-    'Recebi seu CPF. Vamos continuar.',
-    'Tudo pronto. Vamos continuar seu pedido.',
-  ]);
+  expect(result.events.filter((event) => event.type === 'message.text')).toEqual([]);
   expect(findEvent(result.events, 'message.flow').payload.flowId).toBe('CON-01');
   expect(JSON.stringify(result.events)).not.toContain('98765432100');
 });

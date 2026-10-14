@@ -544,19 +544,14 @@
           "id": "IDE-01",
           "title": "Informe o CPF",
           "user": "",
-          "bot": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
+          "bot": "Para continuar, informe seu CPF.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Pedir ajuda",
-              "target": "HUM-01"
-            }
-          ],
+          "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Quero consultar meu contrato.",
-          "behavior": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
+          "behavior": "Para continuar, informe seu CPF.",
           "next": "IDE-02",
           "journeyId": "IDE"
         },
@@ -564,14 +559,14 @@
           "id": "IDE-02",
           "title": "Validando formato",
           "user": "",
-          "bot": "Recebi seu CPF. Vamos continuar.",
+          "bot": "Informe seu CPF.",
           "mode": "chat",
           "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Como posso continuar?",
-          "behavior": "Informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
+          "behavior": "Informe seu CPF.",
           "next": "IDE-03",
           "journeyId": "IDE"
         },
@@ -579,23 +574,14 @@
           "id": "IDE-03",
           "title": "Formato aceito",
           "user": "",
-          "bot": "Tudo pronto. Vamos continuar seu pedido.",
+          "bot": "Confira seus contratos.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Continuar pedido",
-              "target": "CON-02"
-            },
-            {
-              "label": "Ver contrato",
-              "target": "CON-02"
-            }
-          ],
+          "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "CPF informado.",
-          "behavior": "Tudo pronto. Vamos continuar seu pedido.",
+          "behavior": "Confira seus contratos.",
           "next": "IDE-06",
           "journeyId": "IDE"
         },
@@ -603,16 +589,12 @@
           "id": "IDE-04",
           "title": "Formato inválido",
           "user": "",
-          "bot": "O CPF precisa ter 11 dígitos. Tente novamente ou peça ajuda.",
+          "bot": "O CPF precisa ter 11 dígitos. Tente novamente.",
           "mode": "chat",
           "actions": [
             {
               "label": "Tentar novamente",
               "target": "IDE-08"
-            },
-            {
-              "label": "Pedir ajuda",
-              "target": "HUM-01"
             }
           ],
           "alternative": true,
@@ -629,12 +611,7 @@
           "user": "",
           "bot": "Sua sessão expirou. Informe seu CPF para continuar.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Pedir ajuda",
-              "target": "HUM-01"
-            }
-          ],
+          "actions": [],
           "alternative": true,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
@@ -649,12 +626,7 @@
           "user": "",
           "bot": "Informe seu CPF para retomar a revisão do seu pedido.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Pedir ajuda",
-              "target": "HUM-01"
-            }
-          ],
+          "actions": [],
           "alternative": false,
           "behavior": "Após validar o formato, retornar à revisão da ação, sem executá-la automaticamente.",
           "requiresAuth": false,
@@ -687,19 +659,14 @@
           "id": "IDE-08",
           "title": "Informar CPF",
           "user": "",
-          "bot": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
+          "bot": "Para continuar, informe seu CPF.",
           "mode": "chat",
-          "actions": [
-            {
-              "label": "Pedir ajuda",
-              "target": "HUM-01"
-            }
-          ],
+          "actions": [],
           "alternative": false,
           "requiresAuth": false,
           "rule": "Demonstração local: somente validação de formato, sem cálculo de dígitos verificadores. Sessão de 15 minutos em memória.",
           "intent": "Vou informar meu CPF.",
-          "behavior": "Para continuar, informe seu CPF com 11 dígitos, com ou sem pontos e hífen.",
+          "behavior": "Para continuar, informe seu CPF.",
           "next": null,
           "journeyId": "IDE"
         }

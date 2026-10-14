@@ -634,7 +634,7 @@ describe('runAssistanceTurn', () => {
       : undefined;
     expect(flow?.type === 'message.flow' && flow.payload.initialData).toBeUndefined();
   });
-  it('returns the domain transition state exactly and never retains the submitted gate CPF', async () => {
+  it('opens contracts directly and never retains the submitted gate CPF', async () => {
     const assistance = port();
     const result = await runAssistanceTurn(
       { type: 'cpf_submit', cpf: '123.456.789-01' },
@@ -648,8 +648,8 @@ describe('runAssistanceTurn', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.state).toEqual({
-        journeyId: 'IDE',
-        screenId: 'IDE-03',
+        journeyId: 'CON',
+        screenId: 'CON-01',
         gateApproved: true,
       });
       expect(JSON.stringify(result.value.state)).not.toContain('12345678901');
@@ -1479,5 +1479,55 @@ describe('direct dependent intake', () => {
       assistance,
     );
     expect(result.ok && result.value.state.screenId).toBe('DEP-25');
+  });
+});
+
+describe('concise CPF entry', () => {
+  it('asks objectively without help and opens contracts directly after CPF', async () => {
+    const assistance = port();
+    const entered = await runAssistanceTurn(
+      { type: 'quick_reply', target: 'IDE-01' },
+      {
+        state: { journeyId: 'ENT', screenId: 'ENT-02', gateApproved: false },
+        port: assistance,
+        sessionId: 'cpf-ux',
+        context: ctx,
+      },
+    );
+    expect(entered.ok && entered.value.replies).toEqual([
+      { type: 'message.text', payload: { text: 'Para continuar, informe seu CPF.' } },
+    ]);
+    if (!entered.ok) return;
+    const accepted = await runAssistanceTurn(
+      { type: 'text', text: '11111111111' },
+      { state: entered.value.state, port: assistance, sessionId: 'cpf-ux', context: ctx },
+    );
+    expect(accepted.ok && accepted.value.state.screenId).toBe('CON-01');
+    expect(accepted.ok && JSON.stringify(accepted.value.replies)).not.toMatch(
+      /Recebi seu CPF|Tudo pronto|Continuar pedido|Pedir ajuda/,
+    );
+  });
+  it('returns only the pending journey after valid CPF and only the error for invalid CPF', async () => {
+    const assistance = port();
+    const state = {
+      journeyId: 'IDE',
+      screenId: 'IDE-01',
+      gateApproved: false,
+      pendingStep: 'DEP-02',
+      temporaryData: { dependentIntake: 'true' },
+    };
+    const rejected = await runAssistanceTurn(
+      { type: 'text', text: '123' },
+      { state, port: assistance, sessionId: 'cpf-ux', context: ctx },
+    );
+    expect(rejected.ok && JSON.stringify(rejected.value.replies)).not.toContain('Recebi seu CPF');
+    const accepted = await runAssistanceTurn(
+      { type: 'text', text: '11111111111' },
+      { state, port: assistance, sessionId: 'cpf-ux', context: ctx },
+    );
+    expect(accepted.ok && accepted.value.state.screenId).toBe('DEP-02');
+    expect(accepted.ok && accepted.value.replies.map((reply) => reply.type)).toEqual([
+      'message.flow',
+    ]);
   });
 });

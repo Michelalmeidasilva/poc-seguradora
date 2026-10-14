@@ -667,35 +667,31 @@ describe('HandleTurn', () => {
     expect(assistanceStates.get('s1')?.gateApproved).toBe(false);
   });
 
-  it('routes valid assistance CPF submit, persists the exact domain state, and discards CPF', async () => {
+  it('routes valid assistance CPF submit directly to contracts and discards CPF', async () => {
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false });
     const { handler, dialogs } = make({ assistance: assistancePort(), assistanceStates });
     await collect(handler.run(text('12345678901', 44)));
     expect(assistanceStates.get('s1')).toEqual({
-      journeyId: 'IDE',
-      screenId: 'IDE-03',
+      journeyId: 'CON',
+      screenId: 'CON-01',
       gateApproved: true,
     });
     expect(JSON.stringify(assistanceStates.get('s1'))).not.toContain('12345678901');
     expect(dialogs.get('s1')).toEqual(IDLE);
   });
 
-  it('emits valid, distinct CPF-success buttons and routes the contract alternative', async () => {
+  it('opens the contract list after CPF without success buttons', async () => {
     const assistanceStates = new InMemoryAssistanceStateStore(10, 60_000);
     assistanceStates.set('s1', { journeyId: 'IDE', screenId: 'IDE-08', gateApproved: false });
     const { handler } = make({ assistance: assistancePort(), assistanceStates });
     const success = await collect(handler.run(text('00000000000', 406)));
     expect(success.some((event) => event.type === 'error')).toBe(false);
-    const options = success.find((event) => event.type === 'message.quick_replies');
-    expect(
-      options?.type === 'message.quick_replies' &&
-        options.payload.options.map((option) => option.title),
-    ).toEqual(['Continuar pedido', 'Ver contrato']);
-    if (options?.type !== 'message.quick_replies') throw new Error('missing CPF-success choices');
-    expect(new Set(options.payload.options.map((option) => option.id)).size).toBe(2);
-    await collect(handler.run(quickReply(options.payload.options[1]!.id, 407)));
-    expect(assistanceStates.get('s1')?.screenId).toBe('CON-02');
+    expect(success.some((event) => event.type === 'message.quick_replies')).toBe(false);
+    expect(success.find((event) => event.type === 'message.flow')).toMatchObject({
+      payload: { flowId: 'CON-01' },
+    });
+    expect(assistanceStates.get('s1')?.screenId).toBe('CON-01');
   });
 
   it('replays a confirmed assistance operation without creating a second request', async () => {

@@ -8,7 +8,7 @@ export async function sendChatText(page: Page, text: string) {
 }
 
 export async function expectTextIdentityGate(page: Page) {
-  await expect(page.getByText(/CPF.*11|11.*CPF/).last()).toBeVisible();
+  await expect(page.getByText(/informe seu CPF|CPF precisa ter/i).last()).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Informar CPF', exact: true })).toHaveCount(0);
   // DES-01 and dependent registration remain legitimate Flow history.
@@ -22,9 +22,14 @@ export async function expectTextIdentityGate(page: Page) {
 
 export async function identifyByChat(page: Page, cpf = '11111111111') {
   await expectTextIdentityGate(page);
+  const replies = () =>
+    page.getByRole('group', { name: /^(Mensagem|Formulário) do assistente$/ }).count();
+  const before = await replies();
   await sendChatText(page, cpf);
+  await expect.poll(replies).toBeGreaterThan(before);
+  await expect(page.getByText('Recebi seu CPF. Vamos continuar.', { exact: true })).toHaveCount(0);
   await expect(
-    page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: false }),
-  ).toBeVisible();
+    page.getByText('Tudo pronto. Vamos continuar seu pedido.', { exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByRole('dialog', { name: 'Informar CPF' })).toHaveCount(0);
 }

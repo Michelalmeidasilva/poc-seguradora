@@ -255,7 +255,7 @@ describe('chatbot end to end (fake internal services)', () => {
       bot.url,
       textReq('Quero ver meu contrato.', { session: 'private' }),
     );
-    expect(textsOf(privateStart.events)).toContain('11 dígitos');
+    expect(textsOf(privateStart.events)).toContain('informe seu CPF');
     const cpfForm = await turn(bot.url, choiceReq('IDE-08', { session: 'private' }));
     expect(cpfForm.events.some((event) => event.type === 'message.flow')).toBe(false);
     const malformed = await turn(bot.url, textReq('12345', { session: 'private' }));
@@ -322,7 +322,7 @@ describe('chatbot end to end (fake internal services)', () => {
     const oneSentence =
       'Oi, quero incluir meu filho João da Silva no plano. O CPF dele é 123.456.789-10 e ele nasceu em 12/03/2004.';
     const gated = await turn(bot.url, textReq(oneSentence, { session }));
-    expect(textsOf(gated.events)).toContain('11 dígitos');
+    expect(textsOf(gated.events)).toContain('informe seu CPF');
     await turn(bot.url, choiceReq('IDE-08', { session }));
     const acceptedCpf = await turn(bot.url, textReq(cpfCanary, { session }));
     expect(textsOf(acceptedCpf.events)).not.toContain(cpfCanary);
