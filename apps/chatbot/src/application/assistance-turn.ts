@@ -381,6 +381,11 @@ async function confirmedMutation(
     case 'PLA-06': {
       const modality = data.modality;
       if (modality !== 'individual' && modality !== 'familiar') return err('invalid');
+      if (modality === 'individual') {
+        const dependents = await port.listDependents(sessionId, context);
+        if (!dependents.ok) return err(dependents.error);
+        if (dependents.value.length) return err('conflict');
+      }
       return port.changeModality(sessionId, { confirmed: true, modality }, context);
     }
     case 'CAN-05': {
@@ -641,7 +646,10 @@ export async function runAssistanceTurn(
         return ok(
           preserveReply(state, 'O formulário não foi enviado corretamente. Tente novamente.'),
         );
-      submitted = validated;
+      submitted =
+        currentStep.id === 'PLA-02' && validated.target === 'PLA-03'
+          ? { ...validated, modality: 'individual' }
+          : validated;
       const correction = submitted.correction === true && recordOf(currentStep.flow)?.correction;
       const target =
         typeof correction === 'string'
@@ -847,13 +855,19 @@ export class InMemoryAssistanceStateStore {
     private readonly now: () => number = Date.now,
   ) {}
   get(sessionId: string): AssistanceState | undefined {
+    const result = this.read(sessionId);
+    return result.status === 'active' ? result.state : undefined;
+  }
+  read(
+    sessionId: string,
+  ): { status: 'active'; state: AssistanceState } | { status: 'missing' | 'expired' } {
     const entry = this.entries.get(sessionId);
-    if (!entry) return undefined;
-    if (this.now() - entry.updatedAt > this.ttlMs) {
+    if (!entry) return { status: 'missing' };
+    if (this.now() - entry.updatedAt >= this.ttlMs) {
       this.entries.delete(sessionId);
-      return undefined;
+      return { status: 'expired' };
     }
-    return entry.state;
+    return { status: 'active', state: entry.state };
   }
   set(sessionId: string, state: AssistanceState): void {
     this.entries.delete(sessionId);

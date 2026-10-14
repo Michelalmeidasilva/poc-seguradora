@@ -128,7 +128,14 @@ export class HandleTurn implements TurnRunner {
         return;
       }
       emit({ type: 'status.typing', payload: { state: 'start' } });
-      let assistanceState = this.d.assistanceStates?.get(request.sessionId);
+      const lookup = this.d.assistanceStates?.read(request.sessionId);
+      const expiredAssistance = lookup?.status === 'expired' && Boolean(this.d.assistance);
+      let assistanceState =
+        lookup?.status === 'active'
+          ? lookup.state
+          : expiredAssistance
+            ? assistanceEntry('IDE-05').state
+            : undefined;
       const legacyDialogIsIdle = this.d.dialogs.get(request.sessionId).name === 'idle';
       // Older integrations can omit the assistance adapter. Once the new experience
       // is active, customer text must never escape into legacy insurance screens.
@@ -149,15 +156,17 @@ export class HandleTurn implements TurnRunner {
           assistanceState = assistanceEntry('ENT-02').state;
         }
       }
-      const assistanceInput = assistanceState
-        ? this.assistanceInput(request)
-        : legacyDialogIsIdle && event.type === 'user.text'
-          ? this.assistanceInput(request, assistanceStepForText(event.payload.text))
-          : legacyDialogIsIdle &&
-              event.type === 'user.voice' &&
-              assistanceStepForAudio(event.payload.mediaId)
-            ? this.assistanceInput(request)
-            : undefined;
+      const assistanceInput: AssistanceInput | undefined = expiredAssistance
+        ? { type: 'open', target: 'IDE-05' }
+        : assistanceState
+          ? this.assistanceInput(request)
+          : legacyDialogIsIdle && event.type === 'user.text'
+            ? this.assistanceInput(request, assistanceStepForText(event.payload.text))
+            : legacyDialogIsIdle &&
+                event.type === 'user.voice' &&
+                assistanceStepForAudio(event.payload.mediaId)
+              ? this.assistanceInput(request)
+              : undefined;
       if (assistanceInput && this.d.assistance && this.d.assistanceStates) {
         const initial = assistanceState ?? this.entryState(request, assistanceInput);
         if (initial) {

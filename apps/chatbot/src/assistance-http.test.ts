@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { MockAssistance } from './infra/mock-assistance';
+import { canonicalInitialDependents } from './infra/assistance-fixtures';
 import type { AssistancePort } from './application/ports';
 import {
   choiceReq,
@@ -18,6 +19,34 @@ afterEach(async () => {
   await bot?.close();
 });
 const readContext = { correlationId: 'assert-state', idempotencyKey: 'assert-state' };
+
+it.each([false, true])(
+  'confirms only a compatible selected modality (has dependents: %s)',
+  async (hasDependents) => {
+    const mock = new MockAssistance({
+      capacity: 8,
+      ttlMs: 60_000,
+      initialDependents: hasDependents ? canonicalInitialDependents : [],
+    });
+    bot = await startChatbot({ overrides: { assistance: mock } });
+    const session = 'selected-modality';
+    await identify(session);
+    await turn(bot.url, textReq('Quero uma opção mais barata.', { session }));
+    await turn(bot.url, flowSubmitReq({ choice: '0' }, { session, flowId: 'PLA-02' }));
+    await turn(bot.url, textReq('Os participantes estão compatíveis.', { session }));
+    expect(bot.screenId(session)).toBe('PLA-06');
+    const before = await mock.getSessionSnapshot(session, readContext);
+    expect(before.ok && before.value.contract.modality).toBe('familiar');
+    const request = flowSubmitReq({}, { session, flowId: 'PLA-06' });
+    await turn(bot.url, request);
+    expect(bot.screenId(session)).toBe(hasDependents ? 'PLA-06' : 'PLA-08');
+    await turn(bot.url, request);
+    const after = await mock.getSessionSnapshot(session, readContext);
+    expect(after.ok && after.value.contract.modality).toBe(
+      hasDependents ? 'familiar' : 'individual',
+    );
+  },
+);
 
 it('does not expose legacy insurance screens from the active assistance conversation', async () => {
   bot = await startChatbot();
@@ -290,21 +319,32 @@ it('keeps a failed confirmation pending and retries with a new event without dup
   expect(after.ok && after.value.requests.filter((r) => r.kind === 'cancellation')).toHaveLength(1);
 });
 
-it('expires the personal gate and refuses an old confirmation without mutating the new fixture', async () => {
-  let now = Date.now();
-  const mock = new MockAssistance({ capacity: 8, ttlMs: 60_000, now: () => now });
-  bot = await startChatbot({
-    env: { SESSION_TTL_SECONDS: '60' },
-    overrides: { assistance: mock, now: () => now },
-  });
-  await identify('expired');
-  now += 60_001;
-  await turn(bot.url, flowSubmitReq({}, { session: 'expired', flowId: 'CAN-05' }));
-  const snapshot = await mock.getSessionSnapshot('expired', readContext);
-  expect(snapshot.ok && snapshot.value.contract.status).toBe('active');
-  const restart = await turn(bot.url, textReq('Quero ver meu contrato.', { session: 'expired' }));
-  expect(textsOf(restart.events)).toContain('11 dígitos');
-});
+it.each([60_000, 60_001])(
+  'emits the expired gate at %i ms and refuses an old confirmation without mutation',
+  async (elapsed) => {
+    let now = Date.now();
+    const mock = new MockAssistance({ capacity: 8, ttlMs: 60_000, now: () => now });
+    bot = await startChatbot({
+      env: { SESSION_TTL_SECONDS: '60' },
+      overrides: { assistance: mock, now: () => now },
+    });
+    await identify('expired');
+    now += elapsed;
+    const expired = await turn(
+      bot.url,
+      flowSubmitReq({}, { session: 'expired', flowId: 'CAN-05' }),
+    );
+    expect(bot.screenId('expired')).toBe('IDE-05');
+    expect(textsOf(expired.events)).toContain('sessão demonstrativa expirou');
+    expect(findEvent(expired.events, 'message.quick_replies').payload.options[0]?.id).toBe(
+      'IDE-08',
+    );
+    const snapshot = await mock.getSessionSnapshot('expired', readContext);
+    expect(snapshot.ok && snapshot.value.contract.status).toBe('active');
+    const restart = await turn(bot.url, textReq('Quero ver meu contrato.', { session: 'expired' }));
+    expect(textsOf(restart.events)).toContain('11 dígitos');
+  },
+);
 
 it('emits a single terminal CPF form without a second review or CPF in its initial data', async () => {
   bot = await startChatbot();
