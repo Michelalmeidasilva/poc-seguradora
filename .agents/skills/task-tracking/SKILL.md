@@ -56,3 +56,7 @@ The logs are append-only for completed runs. Correct an entry by appending a cor
 - Test timing log: `.agents/metrics/test-execution-timings.md`
 - Governance integration: `.agents/skills/workboard-protocol/SKILL.md`
 
+## Validation
+
+Run `.venv/bin/python /Users/user/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/task-tracking` after editing this skill. Create the local environment with `python3 -m venv .venv && .venv/bin/python -m pip install -r requirements-dev.txt` when it is absent.
+
