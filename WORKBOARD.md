@@ -4,6 +4,8 @@
 
 Fonte única de quem desenvolve o quê. Protocolo completo: seção 15.3 do spec (`docs/superpowers/specs/2026-10-10-whatsapp-chatbot-poc-design.md`) e skill `workboard-protocol`.
 
+Coordenação 2026-10-13: usuário aprovou consolidar a descoberta de produtos DES-01 em um único Flow com serviços, detalhes, planos, comparação e condições; somente conclusão ou início de contratação sai para o chat, mantendo o gate de CPF. Codex executa nos caminhos já reivindicados de chatbot, web-flows/web-chat e ux-whatsapp-prototype, na branch feat/assistance-final-validation. As Tasks 9–10 gerais continuam abertas e não serão declaradas concluídas por este ajuste.
+
 | Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
 |---|---|---|---|---|---|---|---|
 | protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Task 1 concluída: `message.document`, schema estrito e parser sem seq; suíte protocol 92/92. Workstream segue aberto por pendência preexistente do schema completo de Flow JSON no CHECKLIST |
