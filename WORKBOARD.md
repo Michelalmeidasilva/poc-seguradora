@@ -8,6 +8,8 @@ Coordenação 2026-10-13: usuário aprovou consolidar a descoberta de produtos D
 
 Coordenação smoke desta alteração: dentro da autorização já registrada na linha deploy, Codex ajustará somente infra/smoke.mjs e infra/smoke.test.mjs para validar os três serviços na tela inicial do Flow, sem confundir opções de planos e conclusão das outras telas com serviços adicionais.
 
+Coordenação documental: Codex atualiza somente a seção 5.3 da SPEC de experiência (2026-10-12-whatsapp-assistance-experience-design.md) com a consolidação DES-01 aprovada pelo usuário, para evitar reintroduzir a fragmentação em implementações futuras; demais decisões e contratos permanecem inalterados.
+
 | Workstream | Caminho | Status | Dono | Branch | Iniciado | Atualizado | Notas |
 |---|---|---|---|---|---|---|---|
 | protocol | packages/protocol | in_progress | codex | feat/whatsapp-assistance-implementation | 2026-10-12 | 2026-10-12 | Task 1 concluída: `message.document`, schema estrito e parser sem seq; suíte protocol 92/92. Workstream segue aberto por pendência preexistente do schema completo de Flow JSON no CHECKLIST |
